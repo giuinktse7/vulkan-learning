@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${vcpkgRoot}/x64-windows/include",
+        "${vcpkgRoot}/x86-windows/include",
+        "D:/Programs/glfw-3.3.2.bin.WIN64/include",
+        "D:/Programs/glm-0.9.9.8/glm",
+        "D:/Programs/VulkanSDK/1.2.141.0/Include"
+      ],
+      "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
+      "windowsSdkVersion": "10.0.18362.0",
+      "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.26.28801/bin/Hostx64/x64/cl.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "msvc-x64"
+    }
+  ],
+  "version": 4
+}
