@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "sprite.h"
+
 #include <chrono>
 
 #include <iostream>
@@ -22,82 +24,23 @@
 
 #include "validation.h"
 #include "util.h"
+#include "file.h"
+
+#include "Engine.h"
+
+#include "Logger.h"
+
+#include "VulkanHelpers.h"
+
+#include "resource-descriptor.h"
+
+#include "Vertex.h"
+#include "texture.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
-
-const char *khronosValidation = "VK_LAYER_KHRONOS_validation";
-const char *standardValidation = "VK_LAYER_LUNARG_standard_validation";
-
-const std::vector<const char *> deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-struct QueueFamilyIndices
-{
-	std::optional<uint32_t> graphicsFamily;
-	std::optional<uint32_t> presentFamily;
-
-	bool isComplete()
-	{
-		return graphicsFamily.has_value() && presentFamily.has_value();
-	}
-};
-
-struct SwapChainSupportDetails
-{
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct UniformBufferObject
-{
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
-};
-
-struct Vertex
-{
-	glm::vec2 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription()
-	{
-		VkVertexInputBindingDescription bindingDescription{};
-
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
-	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-		return attributeDescriptions;
-	}
-};
 
 const std::vector<Vertex> vertices = {
 		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
@@ -114,12 +57,9 @@ bool chronosOrStandardValidation(std::vector<VkLayerProperties> &props)
 			props.begin(),
 			props.end(),
 			[](VkLayerProperties k) {
-				return (strcmp(khronosValidation, k.layerName) == 0) || strcmp(standardValidation, k.layerName) == 0;
+				return (strcmp(VulkanHelpers::khronosValidation, k.layerName) == 0) || strcmp(VulkanHelpers::standardValidation, k.layerName) == 0;
 			});
 }
-
-const std::vector<const char *> validationLayers = {
-		"VK_LAYER_KHRONOS_validation"};
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
 {
@@ -215,26 +155,6 @@ private:
 
 	VkImageView textureImageView;
 	VkSampler textureSampler;
-
-	static std::vector<char> readFile(const std::string &filename)
-	{
-		std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-		if (!file.is_open())
-		{
-			throw std::runtime_error(std::string("Failed to open file ") + filename);
-		}
-
-		size_t fileSize = (size_t)file.tellg();
-		std::vector<char> buffer(fileSize);
-
-		file.seekg(0);
-		file.read(buffer.data(), fileSize);
-
-		file.close();
-
-		return buffer;
-	}
 
 	void initWindow()
 	{
@@ -356,8 +276,8 @@ private:
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 		if (Validation::enableValidationLayers)
 		{
-			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-			createInfo.ppEnabledLayerNames = validationLayers.data();
+			createInfo.enabledLayerCount = static_cast<uint32_t>(VulkanHelpers::validationLayers.size());
+			createInfo.ppEnabledLayerNames = VulkanHelpers::validationLayers.data();
 
 			populateDebugMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
@@ -1325,8 +1245,8 @@ private:
 
 	void createGraphicsPipeline()
 	{
-		std::vector<char> vertShaderCode = readFile("shaders/vert.spv");
-		std::vector<char> fragShaderCode = readFile("shaders/frag.spv");
+		std::vector<char> vertShaderCode = File::read("shaders/vert.spv");
+		std::vector<char> fragShaderCode = File::read("shaders/frag.spv");
 
 		VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
 		VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -1606,13 +1526,13 @@ private:
 
 		createInfo.pEnabledFeatures = &deviceFeatures;
 
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(VulkanHelpers::deviceExtensions.size());
+		createInfo.ppEnabledExtensionNames = VulkanHelpers::deviceExtensions.data();
 
 		if (Validation::enableValidationLayers)
 		{
-			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-			createInfo.ppEnabledLayerNames = validationLayers.data();
+			createInfo.enabledLayerCount = static_cast<uint32_t>(VulkanHelpers::validationLayers.size());
+			createInfo.ppEnabledLayerNames = VulkanHelpers::validationLayers.data();
 		}
 		else
 		{
@@ -1655,7 +1575,7 @@ private:
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-		std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+		std::set<std::string> requiredExtensions(VulkanHelpers::deviceExtensions.begin(), VulkanHelpers::deviceExtensions.end());
 
 		for (const auto &extension : availableExtensions)
 		{
@@ -1824,7 +1744,7 @@ private:
 			return false;
 		}
 
-		for (const char *layerName : validationLayers)
+		for (const char *layerName : VulkanHelpers::validationLayers)
 		{
 			bool layerFound = std::any_of(
 					availableLayers.begin(),
@@ -1848,14 +1768,61 @@ private:
 	}
 };
 
+Sprite createSampleSprite(Texture texture)
+{
+	const std::vector<Vertex> vertices = {
+			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+			{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+			{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
+
+	const std::vector<uint16_t> indices = {
+			0, 1, 2, 2, 3, 0};
+
+	Sprite sprite(texture, vertices, indices);
+	return sprite;
+}
+
 int main()
 {
-	HelloTriangleApplication app;
+	// HelloTriangleApplication app;
+	MapRenderer *mapRenderer;
 
 	try
 	{
-		std::cout << "Starting.." << std::endl;
-		app.run();
+		Engine *engine = Engine::GetInstance();
+		Logger::info("Starting..");
+
+		mapRenderer = new MapRenderer();
+		engine->setMapRenderer(mapRenderer);
+
+		engine->init();
+
+		mapRenderer->init();
+
+		engine->createGraphicsPipeline();
+		engine->getSwapChain().createFramebuffers();
+		engine->createCommandPool();
+
+		Texture texture("crossbow.png");
+
+		texture.createImage();
+		texture.createSampler();
+
+		Sprite sprite = createSampleSprite(texture);
+		sprite.createBuffers();
+
+		engine->createDescriptorPool();
+
+		ResourceDescriptor::createDescriptorSets(sprite);
+
+		engine->addSprite(sprite);
+		engine->createCommandBuffers();
+		engine->createSyncObjects();
+		// app.run();
+		engine->start();
+
+		delete mapRenderer;
 	}
 	catch (const std::exception &e)
 	{
