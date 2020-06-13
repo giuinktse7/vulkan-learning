@@ -1,11 +1,11 @@
-#include "SwapChain.h"
+#include "swapchain.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <stdexcept>
 
 #include "VulkanHelpers.h"
-#include "Engine.h"
+#include "engine.h"
 
 void SwapChain::init()
 {

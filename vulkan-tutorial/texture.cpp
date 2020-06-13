@@ -7,7 +7,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "Engine.h"
+#include "engine.h"
 #include "VulkanHelpers.h"
 
 #include "buffer.h"

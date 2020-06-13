@@ -1,6 +1,6 @@
 
 
-#include "Engine.h"
+#include "engine.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -11,7 +11,7 @@
 #include "VulkanDebug.h"
 #include "Logger.h"
 #include "file.h"
-#include "Vertex.h"
+#include "vertex.h"
 
 /* 
   Singleton variables

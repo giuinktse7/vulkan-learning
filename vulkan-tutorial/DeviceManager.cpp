@@ -4,11 +4,11 @@
 #include <stdexcept>
 #include <set>
 
-#include "SwapChain.h"
+#include "swapchain.h"
 
 #include "validation.h"
 #include "VulkanHelpers.h"
-#include "Engine.h"
+#include "engine.h"
 
 void DeviceManager::pickPhysicalDevice()
 {

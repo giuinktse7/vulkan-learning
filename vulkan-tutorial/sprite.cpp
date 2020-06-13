@@ -1,7 +1,7 @@
 #include "sprite.h"
 
 #include "buffer.h"
-#include "Engine.h"
+#include "engine.h"
 
 Sprite::Sprite(Texture &texture, std::vector<Vertex> vertices, std::vector<uint16_t> indices)
     : texture(texture),

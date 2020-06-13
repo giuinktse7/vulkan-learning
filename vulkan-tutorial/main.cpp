@@ -26,7 +26,7 @@
 #include "util.h"
 #include "file.h"
 
-#include "Engine.h"
+#include "engine.h"
 
 #include "Logger.h"
 
@@ -34,7 +34,7 @@
 
 #include "resource-descriptor.h"
 
-#include "Vertex.h"
+#include "vertex.h"
 #include "texture.h"
 
 const uint32_t WIDTH = 800;
@@ -1812,11 +1812,16 @@ int main()
 		Sprite sprite = createSampleSprite(texture);
 		sprite.createBuffers();
 
+		Sprite sprite2 = createSampleSprite(texture);
+		sprite2.createBuffers();
+
 		engine->createDescriptorPool();
 
 		ResourceDescriptor::createDescriptorSets(sprite);
+		ResourceDescriptor::createDescriptorSets(sprite2);
 
 		engine->addSprite(sprite);
+		engine->addSprite(sprite2);
 		engine->createCommandBuffers();
 		engine->createSyncObjects();
 		// app.run();

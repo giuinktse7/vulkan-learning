@@ -3,7 +3,7 @@
 #include <array>
 #include <stdexcept>
 
-#include "Engine.h"
+#include "engine.h"
 
 VkDescriptorSetLayout ResourceDescriptor::createLayout(const VkDevice &device)
 {

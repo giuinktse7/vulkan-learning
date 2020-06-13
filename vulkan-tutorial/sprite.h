@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "texture.h"
-#include "Vertex.h"
+#include "vertex.h"
 #include <vector>
 
 class Sprite

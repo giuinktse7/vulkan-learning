@@ -4,8 +4,8 @@
 #include <chrono>
 #include "file.h"
 #include "resource-descriptor.h"
-#include "Vertex.h"
-#include "Engine.h"
+#include "vertex.h"
+#include "engine.h"
 
 void MapRenderer::init()
 {

@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 #include "VulkanHelpers.h"
-#include "Engine.h"
+#include "engine.h"
 
 void Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory)
 {
