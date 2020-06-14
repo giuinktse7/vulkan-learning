@@ -171,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h" />
+    <ClInclude Include="bound-buffer.h" />
     <ClInclude Include="DeviceManager.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="file.h" />

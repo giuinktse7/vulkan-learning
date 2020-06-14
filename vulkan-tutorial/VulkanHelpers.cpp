@@ -60,7 +60,7 @@ QueueFamilyIndices VulkanHelpers::findQueueFamilies(VkPhysicalDevice device, VkS
   return indices;
 }
 
-VkImageView VulkanHelpers::createImageView(VkDevice device, VkImage image, VkFormat format, uint32_t mipLevels)
+VkImageView VulkanHelpers::createImageView(VkDevice device, VkImage image, VkFormat format)
 {
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

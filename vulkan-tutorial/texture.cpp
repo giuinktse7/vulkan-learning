@@ -12,19 +12,12 @@
 
 #include "buffer.h"
 
-Texture::Texture(const char *filename)
-    : filename(filename)
+Texture::Texture(const std::string &filename)
 {
-}
-
-void Texture::createImage()
-{
-  Engine *engine = Engine::GetInstance();
-  VkDevice device = engine->getDevice();
-  int width, height, channels;
-
   std::string path = "textures/";
   path += filename;
+
+  int width, height, channels;
 
   stbi_uc *pixels = stbi_load(path.c_str(),
                               &width,
@@ -34,33 +27,42 @@ void Texture::createImage()
 
   mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-  VkDeviceSize imageSize = width * height * 4;
-
   if (!pixels)
   {
     throw std::runtime_error("failed to load texture image!");
   }
 
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-
-  Buffer::create(imageSize,
-                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer,
-                 stagingBufferMemory);
-
-  void *data;
-  vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-  memcpy(data, pixels, static_cast<size_t>(imageSize));
-  vkUnmapMemory(device, stagingBufferMemory);
+  init(static_cast<uint32_t>(width), static_cast<uint32_t>(height), pixels);
 
   stbi_image_free(pixels);
+}
+
+Texture::Texture(uint32_t width, uint32_t height, uint8_t *pixels)
+{
+  init(width, height, pixels);
+}
+
+void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
+{
+  this->width = width;
+  this->height = height;
+  VkDeviceSize imageSize = width * height * 4;
+
+  Engine *engine = Engine::GetInstance();
+  VkDevice device = engine->getDevice();
+
+  auto stagingBuffer = Buffer::create(imageSize,
+                                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  Buffer::copyToMemory(stagingBuffer.bufferMemory, pixels, imageSize);
+
+  VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 
   createImage(width,
               height,
               mipLevels,
-              VK_FORMAT_R8G8B8A8_SRGB,
+              format,
               VK_IMAGE_TILING_OPTIMAL,
               VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -68,21 +70,22 @@ void Texture::createImage()
               textureImageMemory);
 
   engine->transitionImageLayout(textureImage,
-                                VK_FORMAT_R8G8B8A8_SRGB,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
-  engine->copyBufferToImage(stagingBuffer,
+  engine->copyBufferToImage(stagingBuffer.buffer,
                             textureImage,
                             static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height));
 
-  vkDestroyBuffer(device, stagingBuffer, nullptr);
-  vkFreeMemory(device, stagingBufferMemory, nullptr);
+  vkDestroyBuffer(device, stagingBuffer.buffer, nullptr);
+  vkFreeMemory(device, stagingBuffer.bufferMemory, nullptr);
 
-  engine->generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+  engine->generateMipmaps(textureImage, format, width, height, mipLevels);
 
-  imageView = VulkanHelpers::createImageView(device, textureImage, VK_FORMAT_R8G8B8A8_SRGB, mipLevels);
+  imageView = VulkanHelpers::createImageView(device, textureImage, format);
+  sampler = createSampler();
+  descriptorSet = createDescriptorSet(imageView, sampler);
 }
 
 void Texture::createImage(uint32_t width,
@@ -132,16 +135,16 @@ void Texture::createImage(uint32_t width,
   vkBindImageMemory(device, image, imageMemory, 0);
 }
 
-void Texture::createSampler()
+VkSampler Texture::createSampler()
 {
   VkSamplerCreateInfo samplerInfo{};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
   samplerInfo.magFilter = VK_FILTER_LINEAR;
   samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
   samplerInfo.anisotropyEnable = VK_TRUE;
   samplerInfo.maxAnisotropy = 16.0f;
@@ -150,13 +153,71 @@ void Texture::createSampler()
 
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
+  samplerInfo.compareEnable = VK_FALSE;
+  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
   samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerInfo.minLod = 0.0f; // Optional
   samplerInfo.maxLod = static_cast<float>(mipLevels);
-  samplerInfo.mipLodBias = 0.0f; // Optional
 
+  VkSampler sampler;
   if (vkCreateSampler(Engine::GetInstance()->getDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
   {
     throw std::runtime_error("Failed to create texture sampler!");
   }
+
+  return sampler;
+}
+
+VkDescriptorSet Texture::createDescriptorSet(VkImageView imageView, VkSampler sampler)
+{
+  Engine *engine = Engine::GetInstance();
+
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = engine->getDescriptorPool();
+  allocInfo.descriptorSetCount = 1;
+  allocInfo.pSetLayouts = &engine->getPerTextureDescriptorSetLayout();
+
+  VkDescriptorSet descriptorSet;
+  if (vkAllocateDescriptorSets(engine->getDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to allocate texture descriptor set");
+  }
+
+  VkDescriptorImageInfo imageInfo = {};
+  imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  imageInfo.imageView = imageView;
+  imageInfo.sampler = sampler;
+
+  VkWriteDescriptorSet descriptorWrites = {};
+  descriptorWrites.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrites.dstSet = descriptorSet;
+  descriptorWrites.dstBinding = 0;
+  descriptorWrites.dstArrayElement = 0;
+  descriptorWrites.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  descriptorWrites.descriptorCount = 1;
+  descriptorWrites.pImageInfo = &imageInfo;
+
+  vkUpdateDescriptorSets(engine->getDevice(), 1, &descriptorWrites, 0, nullptr);
+
+  return descriptorSet;
+}
+
+int Texture::getWidth()
+{
+  return width;
+}
+
+int Texture::getHeight()
+{
+  return height;
+}
+
+VkDescriptorSet Texture::getDescriptorSet()
+{
+  return descriptorSet;
+}
+
+TextureWindow Texture::getTextureWindow()
+{
+  return TextureWindow{0.0f, 0.0f, 1.0f, 1.0f};
 }

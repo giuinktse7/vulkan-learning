@@ -2,10 +2,11 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vector>
 
 #include "texture.h"
 #include "vertex.h"
-#include <vector>
+#include "pipeline.h"
 
 class Sprite
 {
@@ -54,12 +55,18 @@ public:
 		return descriptorSets;
 	}
 
+	void setDescriptorSets()
+	{
+	}
+
 	VkDescriptorSet &getDescriptorSet(size_t index)
 	{
 		return descriptorSets[index];
 	}
 
 	void createUniformBuffers();
+
+	Pipeline pipeline;
 
 private:
 	Texture &texture;

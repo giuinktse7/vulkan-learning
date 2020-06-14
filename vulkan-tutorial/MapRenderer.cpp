@@ -10,7 +10,6 @@
 void MapRenderer::init()
 {
   Engine::GetInstance()->createRenderPass();
-  createDescriptorSetLayout();
 }
 
 void MapRenderer::drawFrame()
@@ -149,22 +148,8 @@ VkRenderPass MapRenderer::createRenderPass()
 
   VkSubpassDescription subpass{};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &colorAttachmentRef;
-
-  VkRenderPassCreateInfo renderPassInfo{};
-  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  renderPassInfo.attachmentCount = 1;
-  renderPassInfo.pAttachments = &colorAttachment;
-  renderPassInfo.subpassCount = 1;
-  renderPassInfo.pSubpasses = &subpass;
-
-  VkRenderPass renderPass;
-  if (vkCreateRenderPass(engine->getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create render pass!");
-  }
 
   VkSubpassDependency dependency{};
   dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -174,14 +159,20 @@ VkRenderPass MapRenderer::createRenderPass()
   dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+  VkRenderPassCreateInfo renderPassInfo{};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  renderPassInfo.attachmentCount = 1;
+  renderPassInfo.pAttachments = &colorAttachment;
+  renderPassInfo.subpassCount = 1;
+  renderPassInfo.pSubpasses = &subpass;
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies = &dependency;
 
-  return renderPass;
-}
+  VkRenderPass renderPass;
+  if (vkCreateRenderPass(engine->getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to create render pass!");
+  }
 
-void MapRenderer::createDescriptorSetLayout()
-{
-  Engine *engine = Engine::GetInstance();
-  engine->setDescriptorSetLayout(ResourceDescriptor::createLayout(engine->getDevice()));
+  return renderPass;
 }

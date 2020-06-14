@@ -90,7 +90,7 @@ void SwapChain::recreate()
   createImageViews();
 
   engine->createRenderPass();
-  engine->createGraphicsPipeline();
+  // engine->createGraphicsPipeline();
 
   createFramebuffers();
   engine->createDescriptorPool();
@@ -98,10 +98,11 @@ void SwapChain::recreate()
   for (auto &sprite : engine->getSprites())
   {
     sprite.createUniformBuffers();
+    sprite.pipeline = Pipeline(engine->getSwapChain());
     ResourceDescriptor::createDescriptorSets(sprite);
   }
 
-  engine->createCommandBuffers();
+  engine->recordCommands();
 }
 
 VkSwapchainKHR &SwapChain::get()
@@ -196,7 +197,7 @@ void SwapChain::createImageViews()
 
   for (size_t i = 0; i < images.size(); i++)
   {
-    imageViews[i] = VulkanHelpers::createImageView(engine->getDevice(), images[i], imageFormat, 1);
+    imageViews[i] = VulkanHelpers::createImageView(engine->getDevice(), images[i], imageFormat);
   }
 }
 
@@ -204,6 +205,7 @@ void SwapChain::createFramebuffers()
 {
   Engine *engine = Engine::GetInstance();
   framebuffers.resize(imageViews.size());
+  engine->getCommandBuffers().resize(imageViews.size());
 
   for (size_t i = 0; i < imageViews.size(); ++i)
   {
@@ -239,8 +241,12 @@ void SwapChain::cleanup()
 
   vkFreeCommandBuffers(device, engine->getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
-  vkDestroyPipeline(device, engine->getGraphicsPipeline(), nullptr);
-  vkDestroyPipelineLayout(device, engine->getPipelineLayout(), nullptr);
+  for (auto sprite : engine->getSprites())
+  {
+    vkDestroyPipeline(device, sprite.pipeline.vulkanPipeline, nullptr);
+    vkDestroyPipelineLayout(device, sprite.pipeline.layout, nullptr);
+  }
+
   vkDestroyRenderPass(device, engine->getRenderPass(), nullptr);
 
   for (size_t i = 0; i < imageViews.size(); i++)

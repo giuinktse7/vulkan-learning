@@ -8,20 +8,15 @@
 Pipeline::Pipeline(SwapChain swapChain)
 		: swapChain(swapChain)
 {
-}
-
-Pipeline Pipeline::createItemPipeline()
-{
 	Engine *engine = Engine::GetInstance();
-	Pipeline pipeline(engine->getSwapChain());
 
-	setupDescriptorSetLayout(engine->getDevice(), &pipeline.descriptorSetLayout);
+	Pipeline::setupDescriptorSetLayout(engine->getDevice(), &descriptorSetLayout);
 
 	std::vector<char> vertShaderCode = File::read("shaders/vert.spv");
 	std::vector<char> fragShaderCode = File::read("shaders/frag.spv");
 
-	VkShaderModule vertShaderModule = createShaderModule(engine->getDevice(), vertShaderCode);
-	VkShaderModule fragShaderModule = createShaderModule(engine->getDevice(), fragShaderCode);
+	VkShaderModule vertShaderModule = Pipeline::createShaderModule(engine->getDevice(), vertShaderCode);
+	VkShaderModule fragShaderModule = Pipeline::createShaderModule(engine->getDevice(), fragShaderCode);
 
 	// Create shaders
 
@@ -39,8 +34,7 @@ Pipeline Pipeline::createItemPipeline()
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
 
-	VkPipelineShaderStageCreateInfo shaderStages[] = {
-			vertShaderStageInfo, fragShaderStageInfo};
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {vertShaderStageInfo, fragShaderStageInfo};
 
 	auto bindingDescription = Vertex::getBindingDescription();
 	auto attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -60,14 +54,14 @@ Pipeline Pipeline::createItemPipeline()
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)pipeline.swapChain.getExtent().width;
-	viewport.height = (float)pipeline.swapChain.getExtent().height;
+	viewport.width = (float)swapChain.getExtent().width;
+	viewport.height = (float)swapChain.getExtent().height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor{};
 	scissor.offset = {0, 0};
-	scissor.extent = pipeline.swapChain.getExtent();
+	scissor.extent = swapChain.getExtent();
 
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -128,9 +122,9 @@ Pipeline Pipeline::createItemPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &pipeline.descriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-	if (vkCreatePipelineLayout(engine->getDevice(), &pipelineLayoutInfo, nullptr, &pipeline.layout) != VK_SUCCESS)
+	if (vkCreatePipelineLayout(engine->getDevice(), &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
@@ -138,7 +132,7 @@ Pipeline Pipeline::createItemPipeline()
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pStages = shaderStages.data();
 
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -149,25 +143,23 @@ Pipeline Pipeline::createItemPipeline()
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
 
-	pipelineInfo.layout = pipeline.layout;
+	pipelineInfo.layout = layout;
 	pipelineInfo.renderPass = engine->getRenderPass();
 	pipelineInfo.subpass = 0;
 
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 	pipelineInfo.basePipelineIndex = -1;							// Optional
 
-	if (vkCreateGraphicsPipelines(engine->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.vulkanPipeline) != VK_SUCCESS)
+	if (vkCreateGraphicsPipelines(engine->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vulkanPipeline) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
 	vkDestroyShaderModule(engine->getDevice(), fragShaderModule, nullptr);
 	vkDestroyShaderModule(engine->getDevice(), vertShaderModule, nullptr);
-
-	return pipeline;
 }
 
-VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code)
+VkShaderModule Pipeline::createShaderModule(VkDevice device, const std::vector<char> &code)
 {
 	VkShaderModuleCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -183,7 +175,7 @@ VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code
 	return shaderModule;
 }
 
-void setupDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout *descriptorSetLayout)
+void Pipeline::setupDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout *descriptorSetLayout)
 {
 	VkDescriptorSetLayoutBinding uboLayout{};
 	uboLayout.binding = 0;

@@ -4,10 +4,15 @@
 #include "VulkanHelpers.h"
 #include "engine.h"
 
-void Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory)
+using namespace What;
+
+BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
   Engine *engine = Engine::GetInstance();
   VkDevice device = engine->getDevice();
+
+  VkBuffer buffer;
+  VkDeviceMemory bufferMemory;
 
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -17,7 +22,7 @@ void Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
 
   if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
   {
-    throw std::runtime_error("Failed to create vertex buffer!");
+    throw std::runtime_error("Failed to create buffer!");
   }
 
   VkMemoryRequirements memRequirements;
@@ -30,10 +35,12 @@ void Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
 
   if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
   {
-    throw std::runtime_error("Failed to allocate vertex buffer memory!");
+    throw std::runtime_error("Failed to allocate buffer memory!");
   }
 
   vkBindBufferMemory(device, buffer, bufferMemory, 0);
+
+  return BoundBuffer{buffer, bufferMemory};
 }
 
 void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -45,4 +52,13 @@ void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
   vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
   Engine::GetInstance()->endSingleTimeCommands(commandBuffer);
+}
+
+void Buffer::copyToMemory(VkDeviceMemory bufferMemory, uint8_t *data, VkDeviceSize size)
+{
+  VkDevice device = Engine::GetInstance()->getDevice();
+  void *mapped = nullptr;
+  vkMapMemory(device, bufferMemory, 0, size, 0, &mapped);
+  memcpy(mapped, data, size);
+  vkUnmapMemory(device, bufferMemory);
 }

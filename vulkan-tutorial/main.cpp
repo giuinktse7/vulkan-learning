@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "sprite.h"
+#include "pipeline.h"
 
 #include <chrono>
 
@@ -42,14 +43,13 @@ const uint32_t HEIGHT = 600;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-const std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
+std::array<uint16_t, 6> indices{0, 1, 3, 3, 1, 2};
 
-const std::vector<uint16_t> indices = {
-		0, 1, 2, 2, 3, 0};
+const std::vector<Vertex> vertices = {
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
 
 bool chronosOrStandardValidation(std::vector<VkLayerProperties> &props)
 {
@@ -692,7 +692,7 @@ private:
 
 	void createIndexBuffer()
 	{
-		VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+		VkDeviceSize bufferSize = sizeof(indices.data()[0]) * indices.size();
 
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
@@ -1768,19 +1768,33 @@ private:
 	}
 };
 
-Sprite createSampleSprite(Texture texture)
+void test()
 {
-	const std::vector<Vertex> vertices = {
-			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-			{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-			{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
+	MapRenderer *mapRenderer;
 
-	const std::vector<uint16_t> indices = {
-			0, 1, 2, 2, 3, 0};
+	Engine engine;
 
-	Sprite sprite(texture, vertices, indices);
-	return sprite;
+	Engine::setInstance(&engine);
+
+	mapRenderer = new MapRenderer();
+	engine.setMapRenderer(mapRenderer);
+
+	engine.initialize();
+
+	auto texture = engine.CreateTexture("textures/crossbow.png");
+
+	while (!glfwWindowShouldClose(engine.getWindow()))
+	{
+		glfwPollEvents();
+		if (engine.StartFrame())
+		{
+			engine.SetTexture(texture);
+			engine.DrawSprite(32, 32, texture->getWidth(), texture->getHeight());
+			engine.EndFrame();
+		}
+	}
+
+	engine.WaitUntilDeviceIdle();
 }
 
 int main()
@@ -1790,44 +1804,41 @@ int main()
 
 	try
 	{
-		Engine *engine = Engine::GetInstance();
-		Logger::info("Starting..");
-
-		mapRenderer = new MapRenderer();
-		engine->setMapRenderer(mapRenderer);
-
-		engine->init();
-
-		mapRenderer->init();
-
-		engine->createGraphicsPipeline();
-		engine->getSwapChain().createFramebuffers();
-		engine->createCommandPool();
-
-		Texture texture("crossbow.png");
-
-		texture.createImage();
-		texture.createSampler();
-
-		Sprite sprite = createSampleSprite(texture);
-		sprite.createBuffers();
-
-		Sprite sprite2 = createSampleSprite(texture);
-		sprite2.createBuffers();
-
-		engine->createDescriptorPool();
-
-		ResourceDescriptor::createDescriptorSets(sprite);
-		ResourceDescriptor::createDescriptorSets(sprite2);
-
-		engine->addSprite(sprite);
-		engine->addSprite(sprite2);
-		engine->createCommandBuffers();
-		engine->createSyncObjects();
-		// app.run();
-		engine->start();
-
-		delete mapRenderer;
+		test();
+		//Engine *engine = Engine::GetInstance();
+		//Logger::info("Starting..");
+		//
+		//mapRenderer = new MapRenderer();
+		//engine->setMapRenderer(mapRenderer);
+		//
+		//engine->init();
+		//
+		//mapRenderer->init();
+		//
+		//engine->getSwapChain().createFramebuffers();
+		//engine->createCommandPool();
+		//
+		//Texture texture("crossbow.png");
+		//
+		//Sprite sprite = createSampleSprite(texture);
+		//sprite.createBuffers();
+		//
+		//Sprite sprite2 = createSampleSprite(texture);
+		//sprite2.createBuffers();
+		//
+		//engine->createDescriptorPool();
+		//
+		//ResourceDescriptor::createDescriptorSets(sprite);
+		//// ResourceDescriptor::createDescriptorSets(sprite2);
+		//
+		//engine->addSprite(sprite);
+		//engine->addSprite(sprite2);
+		//engine->recordCommands();
+		//engine->createSyncObjects();
+		//// app.run();
+		//engine->start();
+		//
+		//delete mapRenderer;
 	}
 	catch (const std::exception &e)
 	{

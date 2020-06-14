@@ -36,6 +36,4 @@ private:
 	size_t currentFrame = 0;
 
 	void updateUniformBuffer(uint32_t currentImage);
-
-	void createDescriptorSetLayout();
 };

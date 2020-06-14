@@ -2,16 +2,30 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <string>
 
 #include "DeviceManager.h"
+
+struct TextureWindow
+{
+  float x0;
+  float y0;
+  float x1;
+  float y1;
+};
 
 class Texture
 {
 public:
-  Texture(const char *filename);
+  Texture(const std::string &filename);
+  Texture(uint32_t width, uint32_t height, uint8_t *pixels);
 
-  void createImage();
-  void createSampler();
+  VkDescriptorSet getDescriptorSet();
+  TextureWindow getTextureWindow();
+  int getWidth();
+  int getHeight();
+
+  VkSampler createSampler();
 
   VkImageView &getImageView()
   {
@@ -24,13 +38,18 @@ public:
   }
 
 private:
-  const char *filename;
+  void init(uint32_t width, uint32_t height, uint8_t *pixels);
+
+  uint32_t width;
+  uint32_t height;
 
   VkImage textureImage;
   VkDeviceMemory textureImageMemory;
 
   VkImageView imageView;
   VkSampler sampler;
+
+  VkDescriptorSet descriptorSet;
 
   uint32_t mipLevels;
 
@@ -43,4 +62,6 @@ private:
                    VkMemoryPropertyFlags properties,
                    VkImage &image,
                    VkDeviceMemory &imageMemory);
+
+  VkDescriptorSet createDescriptorSet(VkImageView imageView, VkSampler sampler);
 };

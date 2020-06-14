@@ -5,6 +5,8 @@
 
 #include "engine.h"
 
+#define MAX_NUM_TEXTURES 256
+
 VkDescriptorSetLayout ResourceDescriptor::createLayout(const VkDevice &device)
 {
   VkDescriptorSetLayout layout;
@@ -40,22 +42,20 @@ VkDescriptorPool ResourceDescriptor::createPool()
 {
   Engine *engine = Engine::GetInstance();
 
-  size_t imageCount = engine->getSwapChain().getImages().size();
-
-  std::array<VkDescriptorPoolSize, 2>
-      poolSizes{};
+  std::array<VkDescriptorPoolSize, 2> poolSizes{};
+  size_t descriptorCount = engine->getMaxFramesInFlight() * 2;
 
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSizes[0].descriptorCount = static_cast<uint32_t>(imageCount);
+  poolSizes[0].descriptorCount = descriptorCount;
 
   poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  poolSizes[1].descriptorCount = static_cast<uint32_t>(imageCount);
+  poolSizes[1].descriptorCount = MAX_NUM_TEXTURES;
 
   VkDescriptorPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+  poolInfo.poolSizeCount = poolSizes.size();
   poolInfo.pPoolSizes = poolSizes.data();
-  poolInfo.maxSets = static_cast<uint32_t>(imageCount);
+  poolInfo.maxSets = descriptorCount + MAX_NUM_TEXTURES;
 
   VkDescriptorPool pool;
   if (vkCreateDescriptorPool(engine->getDevice(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
@@ -70,7 +70,7 @@ void ResourceDescriptor::createDescriptorSets(Sprite &sprite)
 {
   Engine *engine = Engine::GetInstance();
   size_t imageCount = engine->getSwapChain().getImages().size();
-  std::vector<VkDescriptorSetLayout> layouts(imageCount, engine->getDescriptorSetLayout());
+  std::vector<VkDescriptorSetLayout> layouts(imageCount, sprite.pipeline.descriptorSetLayout);
 
   VkDescriptorSetAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

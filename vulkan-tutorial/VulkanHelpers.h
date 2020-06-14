@@ -47,12 +47,10 @@ namespace VulkanHelpers
 
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-  VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, uint32_t mipLevels);
+  VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);
 
   VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code);
 
   uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-
-  VkImageView createImageView(VkImage image, VkFormat format, uint32_t mipLevels);
 
 } // namespace VulkanHelpers
