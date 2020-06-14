@@ -51,7 +51,7 @@ private:
 
   VkDescriptorSet descriptorSet;
 
-  uint32_t mipLevels;
+  uint32_t mipLevels = 1;
 
   void createImage(uint32_t width,
                    uint32_t height,

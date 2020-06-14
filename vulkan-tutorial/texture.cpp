@@ -14,18 +14,16 @@
 
 Texture::Texture(const std::string &filename)
 {
-  std::string path = "textures/";
-  path += filename;
 
   int width, height, channels;
 
-  stbi_uc *pixels = stbi_load(path.c_str(),
+  stbi_uc *pixels = stbi_load(filename.c_str(),
                               &width,
                               &height,
                               &channels,
                               STBI_rgb_alpha);
 
-  mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+  // mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
   if (!pixels)
   {

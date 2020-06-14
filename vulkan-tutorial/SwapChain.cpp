@@ -6,6 +6,7 @@
 
 #include "VulkanHelpers.h"
 #include "engine.h"
+#include "Logger.h"
 
 void SwapChain::init()
 {
@@ -20,7 +21,7 @@ void SwapChain::create()
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-  extent = chooseSwapExtent(swapChainSupport.capabilities, *engine->getWindow());
+  this->extent = chooseSwapExtent(swapChainSupport.capabilities, *engine->getWindow());
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
@@ -72,6 +73,7 @@ void SwapChain::create()
 
 void SwapChain::recreate()
 {
+  Logger::info("Recreating swap chain");
   Engine *engine = Engine::GetInstance();
   GLFWwindow *window = engine->getWindow();
   int width = 0, height = 0;
@@ -85,24 +87,17 @@ void SwapChain::recreate()
   vkDeviceWaitIdle(engine->getDevice());
 
   cleanup();
-
   create();
+
   createImageViews();
 
   engine->createRenderPass();
-  // engine->createGraphicsPipeline();
+  engine->createGraphicsPipeline();
 
   createFramebuffers();
-  engine->createDescriptorPool();
 
-  for (auto &sprite : engine->getSprites())
-  {
-    sprite.createUniformBuffers();
-    sprite.pipeline = Pipeline(engine->getSwapChain());
-    ResourceDescriptor::createDescriptorSets(sprite);
-  }
-
-  engine->recordCommands();
+  engine->cleanupSyncObjects();
+  engine->createSyncObjects();
 }
 
 VkSwapchainKHR &SwapChain::get()
@@ -234,36 +229,34 @@ void SwapChain::cleanup()
   VkDevice device = engine->getDevice();
   std::vector<VkCommandBuffer> commandBuffers = engine->getCommandBuffers();
 
-  for (size_t i = 0; i < framebuffers.size(); i++)
+  for (auto framebuffer : framebuffers)
   {
-    vkDestroyFramebuffer(device, framebuffers[i], nullptr);
+    vkDestroyFramebuffer(device, framebuffer, nullptr);
   }
 
-  vkFreeCommandBuffers(device, engine->getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-
-  for (auto sprite : engine->getSprites())
+  for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
   {
-    vkDestroyPipeline(device, sprite.pipeline.vulkanPipeline, nullptr);
-    vkDestroyPipelineLayout(device, sprite.pipeline.layout, nullptr);
-  }
-
-  vkDestroyRenderPass(device, engine->getRenderPass(), nullptr);
-
-  for (size_t i = 0; i < imageViews.size(); i++)
-  {
-    vkDestroyImageView(device, imageViews[i], nullptr);
-  }
-
-  vkDestroySwapchainKHR(device, swapChain, nullptr);
-
-  for (auto sprite : engine->getSprites())
-  {
-    for (size_t i = 0; i < images.size(); i++)
+    auto &perFrameCmds = engine->getPerFrameCommandBuffer(i);
+    if (!perFrameCmds.empty())
     {
-      vkDestroyBuffer(device, sprite.getUniformBuffer(i), nullptr);
-      vkFreeMemory(device, sprite.getUniformBufferMemory(i), nullptr);
+      vkFreeCommandBuffers(device,
+                           engine->getPerFrameCommandPool(i),
+                           static_cast<uint32_t>(perFrameCmds.size()),
+                           perFrameCmds.data());
+
+      perFrameCmds.clear();
     }
   }
 
-  vkDestroyDescriptorPool(device, engine->getDescriptorPool(), nullptr);
+  engine->clearCurrentCommandBuffer();
+  vkDestroyPipeline(device, engine->getGraphicsPipeline(), nullptr);
+  vkDestroyPipelineLayout(device, engine->getPipelineLayout(), nullptr);
+  vkDestroyRenderPass(device, engine->getRenderPass(), nullptr);
+
+  for (auto imageView : imageViews)
+  {
+    vkDestroyImageView(device, imageView, nullptr);
+  }
+
+  vkDestroySwapchainKHR(device, swapChain, nullptr);
 }

@@ -65,14 +65,14 @@ void Engine::setInstance(Engine *instance)
   pinstance_ = instance;
 }
 
-void Engine::initialize()
+void Engine::initialize(GLFWwindow *window)
 {
   if (isInitialized)
   {
     throw std::runtime_error("Engine is already initialized");
   }
 
-  initWindow();
+  this->window = window;
 
   createInstance();
 
@@ -119,12 +119,6 @@ void Engine::init()
   swapChain.init();
 }
 
-void Engine::start()
-{
-  Logger::info("Starting engine..");
-  mainLoop();
-}
-
 void Engine::initWindow()
 {
   glfwInit();
@@ -132,18 +126,8 @@ void Engine::initWindow()
 
   setWindow(glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr));
   glfwSetWindowUserPointer(window, this);
+
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-}
-
-void Engine::mainLoop()
-{
-  while (!glfwWindowShouldClose(window))
-  {
-    glfwPollEvents();
-    mapRenderer->drawFrame();
-  }
-
-  vkDeviceWaitIdle(device);
 }
 
 void Engine::createInstance()
@@ -200,6 +184,7 @@ void Engine::createSurface()
 
 void Engine::framebufferResizeCallback(GLFWwindow *window, int width, int height)
 {
+  Logger::info("Changed");
   auto app = reinterpret_cast<Engine *>(glfwGetWindowUserPointer(window));
   app->framebufferResized = true;
 }
@@ -660,7 +645,7 @@ void Engine::createSyncObjects()
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+  for (size_t i = 0; i < getMaxFramesInFlight(); i++)
   {
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
@@ -918,7 +903,6 @@ std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
 
 bool Engine::StartFrame()
 {
-
   vkWaitForFences(
       device,
       1,
@@ -934,10 +918,17 @@ bool Engine::StartFrame()
       VK_NULL_HANDLE,
       &nextFrame);
 
-  if (result == VK_ERROR_OUT_OF_DATE_KHR)
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
   {
+    Logger::info("StartFrame::recreate");
+    
     swapChain.recreate();
     return false;
+  }
+  if (framebufferResized) {
+	  framebufferResized = false;
+	  swapChain.recreate();
+	  return StartFrame();
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
   {
@@ -1015,8 +1006,10 @@ void Engine::EndFrame()
 
   auto result = vkQueuePresentKHR(*getPresentQueue(), &presentInfo);
 
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
   {
+    Logger::info("EndFrame::recreate");
+    framebufferResized = false;
     swapChain.recreate();
   }
   else if (result != VK_SUCCESS)
@@ -1166,8 +1159,8 @@ void Engine::DrawTriangles(const uint16_t *indices, size_t numIndices, const Ver
     indexRead++;
   }
 
-  numIndices += numIndices;
-  numVertices += numVertices;
+  this->numIndices += numIndices;
+  this->numVertices += numVertices;
 }
 
 void Engine::mapStagingBufferMemory()
@@ -1372,7 +1365,6 @@ void Engine::drawBatches()
       if (cmd.bufferIndex != curBuffer)
       {
         curBuffer = cmd.bufferIndex;
-        Logger::info("Binding some frame");
 
         VkBuffer vertexBuffers[] = {this->vertexBuffers[currentFrame][curBuffer].buffer};
         VkDeviceSize offsets[] = {0};
@@ -1383,6 +1375,7 @@ void Engine::drawBatches()
             1,
             vertexBuffers,
             offsets);
+
         vkCmdBindIndexBuffer(
             currentCommandBuffer,
             indexBuffers[currentFrame][curBuffer].buffer,
@@ -1413,4 +1406,14 @@ void Engine::drawBatches()
 void Engine::WaitUntilDeviceIdle()
 {
   vkDeviceWaitIdle(device);
+}
+
+void Engine::cleanupSyncObjects()
+{
+  for (size_t i = 0; i < getMaxFramesInFlight(); ++i)
+  {
+    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+    vkDestroyFence(device, inFlightFences[i], nullptr);
+  }
 }

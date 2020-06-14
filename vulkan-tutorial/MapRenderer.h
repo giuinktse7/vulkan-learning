@@ -13,7 +13,6 @@ class MapRenderer
 {
 public:
 	void init();
-	void drawFrame();
 
 	VkQueue *getGraphicsQueue()
 	{
@@ -28,12 +27,8 @@ public:
 	VkRenderPass createRenderPass();
 
 private:
-	const int MAX_FRAMES_IN_FLIGHT = 2;
-
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 
 	size_t currentFrame = 0;
-
-	void updateUniformBuffer(uint32_t currentImage);
 };

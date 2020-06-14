@@ -36,7 +36,6 @@ public:
 	static void setInstance(Engine *instance);
 
 	void init();
-	void start();
 
 	VkInstance &getVkInstance()
 	{
@@ -143,9 +142,24 @@ public:
 		return commandPool;
 	}
 
+	void clearCurrentCommandBuffer()
+	{
+		currentCommandBuffer = nullptr;
+	}
+
 	void addSprite(Sprite sprite)
 	{
 		sprites.push_back(sprite);
+	}
+
+	VkPipeline &getGraphicsPipeline()
+	{
+		return graphicsPipeline;
+	}
+
+	VkPipelineLayout &getPipelineLayout()
+	{
+		return pipelineLayout;
 	}
 
 	void createCommandPool();
@@ -159,7 +173,6 @@ public:
 	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 	void createCommandBuffers();
-	void createSyncObjects();
 
 	std::vector<VkFence> getInFlightFences()
 	{
@@ -196,6 +209,18 @@ public:
 		return sprites;
 	}
 
+	std::vector<VkCommandBuffer> &getPerFrameCommandBuffer(size_t index)
+	{
+		return perFrameCommandBuffer[index];
+	}
+
+	VkCommandPool getPerFrameCommandPool(size_t index)
+	{
+		return perFrameCommandPool[index];
+	}
+
+	void createGraphicsPipeline();
+
 	void beginRenderCommands();
 	void endRenderCommands();
 	void allocateCommandBuffers();
@@ -211,7 +236,10 @@ public:
 		return perTextureDescriptorSetLayout;
 	}
 
-	void initialize();
+	void initialize(GLFWwindow *window);
+
+	void createSyncObjects();
+	void cleanupSyncObjects();
 
 	glm::vec4 getClearColor() const;
 	void setClearColor(const glm::vec4 &clearColor);
@@ -229,7 +257,6 @@ public:
 
 private:
 	bool isInitialized = false;
-	static const int MAX_FRAMES_IN_FLIGHT = 2;
 
 	static Engine *pinstance_;
 	static std::mutex mutex_;
@@ -333,7 +360,6 @@ private:
 	unsigned long numDrawCommands;
 
 	void initWindow();
-	void mainLoop();
 
 	void createInstance();
 
@@ -357,7 +383,6 @@ private:
 	void renderSprite(size_t bufferIndex, Sprite &sprite);
 
 	void createDescriptorSetLayouts();
-	void createGraphicsPipeline();
 	VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code);
 	void createUniformBuffers();
 
