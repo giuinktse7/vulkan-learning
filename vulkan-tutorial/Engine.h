@@ -9,7 +9,7 @@
 #include "MapRenderer.h"
 #include "sprite.h"
 #include "resource-descriptor.h"
-#include "bound-buffer.h"
+#include "buffer.h"
 
 enum BlendMode
 {
@@ -290,7 +290,7 @@ private:
 
 	VkDescriptorPool descriptorPool;
 
-	std::vector<What::BoundBuffer> uniformBuffers;
+	std::vector<BoundBuffer> uniformBuffers;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -303,10 +303,10 @@ private:
 
 	std::vector<VkDescriptorSet> perFrameDescriptorSets;
 
-	std::vector<std::vector<What::BoundBuffer>> indexBuffers;
-	std::vector<std::vector<What::BoundBuffer>> indexStagingBuffers;
-	std::vector<std::vector<What::BoundBuffer>> vertexBuffers;
-	std::vector<std::vector<What::BoundBuffer>> vertexStagingBuffers;
+	std::vector<std::vector<BoundBuffer>> indexBuffers;
+	std::vector<std::vector<BoundBuffer>> indexStagingBuffers;
+	std::vector<std::vector<BoundBuffer>> vertexBuffers;
+	std::vector<std::vector<BoundBuffer>> vertexStagingBuffers;
 
 	uint16_t *indexWriteStart;
 	uint16_t *currentIndexWrite;
@@ -344,10 +344,11 @@ private:
 
 	struct DrawCommand
 	{
-		DrawCommand(VkDescriptorSet ds, uint16_t bi, uint16_t ni, int buf) : descriptorSet(ds),
-																																				 baseIndex(bi),
-																																				 numIndices(ni),
-																																				 bufferIndex(buf)
+		DrawCommand(VkDescriptorSet descriptorSet, uint16_t baseIndex, uint16_t indexCount, int bufferIndex)
+				: descriptorSet(descriptorSet),
+					baseIndex(baseIndex),
+					numIndices(indexCount),
+					bufferIndex(bufferIndex)
 		{
 		}
 		VkDescriptorSet descriptorSet;
@@ -361,7 +362,7 @@ private:
 
 	void initWindow();
 
-	void createInstance();
+	void createVulkanInstance();
 
 	static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
 
@@ -400,11 +401,11 @@ private:
 
 	void mapStagingBufferMemory();
 
-	What::BoundBuffer &getVertexBuffer();
-	What::BoundBuffer &getIndexBuffer();
+	BoundBuffer &getVertexBuffer();
+	BoundBuffer &getIndexBuffer();
 
-	What::BoundBuffer &getVertexStagingBuffer();
-	What::BoundBuffer &getIndexStagingBuffer();
+	BoundBuffer &getVertexStagingBuffer();
+	BoundBuffer &getIndexStagingBuffer();
 
 	VkDeviceSize getMaxNumIndices();
 	VkDeviceSize getMaxNumVertices();

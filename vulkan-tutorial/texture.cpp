@@ -55,7 +55,8 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 
   Buffer::copyToMemory(stagingBuffer.bufferMemory, pixels, imageSize);
 
-  VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+  // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+  VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
   createImage(width,
               height,

@@ -15,8 +15,6 @@
 #include "pipeline.h"
 #include "buffer.h"
 
-using namespace What;
-
 namespace Render
 {
   struct UniformBufferObject
@@ -74,7 +72,7 @@ void Engine::initialize(GLFWwindow *window)
 
   this->window = window;
 
-  createInstance();
+  createVulkanInstance();
 
   VulkanDebug::setupDebugMessenger(instance, debugMessenger);
 
@@ -106,7 +104,7 @@ void Engine::init()
 {
   Logger::info("Initializing engine..");
   initWindow();
-  createInstance();
+  createVulkanInstance();
 
   VulkanDebug::setupDebugMessenger(instance, debugMessenger);
 
@@ -130,7 +128,7 @@ void Engine::initWindow()
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
-void Engine::createInstance()
+void Engine::createVulkanInstance()
 {
   if (Validation::enableValidationLayers && !checkValidationLayerSupport())
   {
@@ -921,14 +919,15 @@ bool Engine::StartFrame()
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
   {
     Logger::info("StartFrame::recreate");
-    
+
     swapChain.recreate();
     return false;
   }
-  if (framebufferResized) {
-	  framebufferResized = false;
-	  swapChain.recreate();
-	  return StartFrame();
+  if (framebufferResized)
+  {
+    framebufferResized = false;
+    swapChain.recreate();
+    return StartFrame();
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
   {
@@ -1109,7 +1108,7 @@ void Engine::DrawSprite(float x, float y, float width, float height)
   DrawTriangles(indices.data(), indices.size(), vertices.data(), vertices.size());
 }
 
-void Engine::DrawTriangles(const uint16_t *indices, size_t numIndices, const Vertex *vertices, size_t numVertices)
+void Engine::DrawTriangles(const uint16_t *indices, size_t indexCount, const Vertex *vertices, size_t vertexCount)
 {
   if (!currentCommandBuffer)
   {
@@ -1121,8 +1120,8 @@ void Engine::DrawTriangles(const uint16_t *indices, size_t numIndices, const Ver
     mapStagingBufferMemory();
   }
 
-  auto vbFull = currentVertexWrite + numVertices >= vertexWriteEnd;
-  auto ibFull = currentIndexWrite + numIndices >= indexWriteEnd;
+  auto vbFull = currentVertexWrite + vertexCount >= vertexWriteEnd;
+  auto ibFull = currentIndexWrite + indexCount >= indexWriteEnd;
   if (vbFull || ibFull)
   {
     queueCurrentBatch();
@@ -1140,7 +1139,7 @@ void Engine::DrawTriangles(const uint16_t *indices, size_t numIndices, const Ver
   // the index/vertex buffers. The indices need the base added,
   // and the vertices need to be colored, for example.
   auto vertexRead = vertices;
-  for (int i = 0; i < numVertices; ++i)
+  for (int i = 0; i < vertexCount; ++i)
   {
     currentVertexWrite->pos = vertexRead->pos;
     currentVertexWrite->color = vertexRead->color * currentColor;
@@ -1152,15 +1151,15 @@ void Engine::DrawTriangles(const uint16_t *indices, size_t numIndices, const Ver
   }
 
   auto indexRead = indices;
-  for (int i = 0; i < numIndices; ++i)
+  for (int i = 0; i < indexCount; ++i)
   {
     *currentIndexWrite = *indexRead + base;
     currentIndexWrite++;
     indexRead++;
   }
 
-  this->numIndices += numIndices;
-  this->numVertices += numVertices;
+  this->numIndices += indexCount;
+  this->numVertices += vertexCount;
 }
 
 void Engine::mapStagingBufferMemory()

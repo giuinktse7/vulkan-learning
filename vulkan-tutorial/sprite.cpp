@@ -3,8 +3,6 @@
 #include "buffer.h"
 #include "engine.h"
 
-using namespace What;
-
 Sprite::Sprite(Texture &texture, std::vector<Vertex> vertices, std::vector<uint16_t> indices)
     : texture(texture),
       vertices(vertices),

@@ -4,7 +4,6 @@
 #include "VulkanHelpers.h"
 #include "engine.h"
 
-using namespace What;
 
 BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
