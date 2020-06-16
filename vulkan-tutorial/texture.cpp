@@ -70,17 +70,21 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 
   engine->transitionImageLayout(textureImage,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
   engine->copyBufferToImage(stagingBuffer.buffer,
                             textureImage,
                             static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height));
 
+  engine->transitionImageLayout(textureImage,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
   vkDestroyBuffer(device, stagingBuffer.buffer, nullptr);
   vkFreeMemory(device, stagingBuffer.bufferMemory, nullptr);
 
-  engine->generateMipmaps(textureImage, format, width, height, mipLevels);
+  //engine->generateMipmaps(textureImage, format, width, height, mipLevels);
 
   imageView = VulkanHelpers::createImageView(device, textureImage, format);
   sampler = createSampler();

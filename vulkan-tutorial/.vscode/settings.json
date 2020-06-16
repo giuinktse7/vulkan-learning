@@ -82,6 +82,7 @@
     "xtree": "cpp",
     "xutility": "cpp",
     "*.ipp": "cpp",
-    "resumable": "cpp"
+    "resumable": "cpp",
+    "*.rh": "cpp"
   }
 }

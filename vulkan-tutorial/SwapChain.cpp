@@ -76,17 +76,17 @@ void SwapChain::recreate()
   Logger::info("Recreating swap chain");
   Engine *engine = Engine::GetInstance();
   GLFWwindow *window = engine->getWindow();
-  int width = 0, height = 0;
-  glfwGetFramebufferSize(window, &width, &height);
-  while (width == 0 || height == 0)
-  {
-    glfwGetFramebufferSize(window, &width, &height);
-    glfwWaitEvents();
-  }
 
   vkDeviceWaitIdle(engine->getDevice());
 
+  if (!Engine::isValidWindowSize())
+  {
+    this->validExtent = false;
+    return;
+  }
+
   cleanup();
+
   create();
 
   createImageViews();
@@ -98,6 +98,7 @@ void SwapChain::recreate()
 
   engine->cleanupSyncObjects();
   engine->createSyncObjects();
+  this->validExtent = true;
 }
 
 VkSwapchainKHR &SwapChain::get()

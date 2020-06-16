@@ -10,6 +10,7 @@
 #include "sprite.h"
 #include "resource-descriptor.h"
 #include "buffer.h"
+#include "vertex.h"
 
 enum BlendMode
 {
@@ -19,6 +20,52 @@ enum BlendMode
 	BM_ADDX2,
 
 	NUM_BLENDMODES
+};
+
+template <typename T>
+struct WriteRange
+{
+	T *start;
+	T *cursor;
+	T *end;
+};
+
+struct RenderInfo
+{
+	uint16_t indexCount = 0;
+	uint16_t indexOffset = 0;
+	uint16_t vertexCount = 0;
+	uint16_t vertexOffset = 0;
+
+	VkDescriptorSet descriptorSet;
+	TextureWindow textureWindow;
+
+	glm::vec4 color;
+	BlendMode blendMode;
+
+	WriteRange<uint16_t> indexWrite;
+	WriteRange<Vertex> vertexWrite;
+
+	bool isStaged() const
+	{
+		return indexCount > 0;
+	}
+
+	void resetOffset()
+	{
+		indexCount = 0;
+		indexOffset = 0;
+		vertexCount = 0;
+		vertexOffset = 0;
+	}
+
+	void offset()
+	{
+		indexOffset += indexCount;
+		indexCount = 0;
+		vertexOffset += vertexCount;
+		vertexCount = 0;
+	}
 };
 
 class Engine
@@ -164,15 +211,12 @@ public:
 
 	void createCommandPool();
 
-	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
+	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer buffer);
 
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
-
-	void createCommandBuffers();
 
 	std::vector<VkFence> getInFlightFences()
 	{
@@ -221,13 +265,9 @@ public:
 
 	void createGraphicsPipeline();
 
-	void beginRenderCommands();
-	void endRenderCommands();
 	void allocateCommandBuffers();
 	void beginRenderPass();
 	void endRenderPass() const;
-	void renderSprites(size_t bufferIndex);
-	void recordCommands();
 
 	void WaitUntilDeviceIdle();
 
@@ -241,19 +281,21 @@ public:
 	void createSyncObjects();
 	void cleanupSyncObjects();
 
-	glm::vec4 getClearColor() const;
-	void setClearColor(const glm::vec4 &clearColor);
+	// glm::vec4 getClearColor() const;
+	// void setClearColor(const glm::vec4 &clearColor);
 
 	uint32_t getMaxFramesInFlight();
 
 	std::shared_ptr<Texture> CreateTexture(const std::string &filename);
 
-	void SetTexture(std::shared_ptr<Texture> texture);
+	void setTexture(std::shared_ptr<Texture> texture);
 
-	void DrawSprite(float x, float y, float width, float height);
+	void drawSprite(float x, float y, float width, float height);
 
-	bool StartFrame();
-	void EndFrame();
+	bool startFrame();
+	void endFrame();
+
+	static bool isValidWindowSize();
 
 private:
 	bool isInitialized = false;
@@ -264,6 +306,8 @@ private:
 	std::vector<Sprite> sprites;
 
 	GLFWwindow *window;
+	int width;
+	int height;
 
 	VkSurfaceKHR surface;
 
@@ -308,26 +352,9 @@ private:
 	std::vector<std::vector<BoundBuffer>> vertexBuffers;
 	std::vector<std::vector<BoundBuffer>> vertexStagingBuffers;
 
-	uint16_t *indexWriteStart;
-	uint16_t *currentIndexWrite;
-	uint16_t *indexWriteEnd;
-	Vertex *vertexWriteStart;
-	Vertex *currentVertexWrite;
-	Vertex *vertexWriteEnd;
-
-	uint16_t numIndices = 0;
-	uint16_t indexOffset = 0;
-	uint16_t numVertices = 0;
-	uint16_t vertexOffset = 0;
+	RenderInfo currentRenderInfo;
 
 	std::shared_ptr<Texture> defaultTexture;
-
-	// Current
-	VkDescriptorSet currentDescriptorSet;
-	TextureWindow currentTextureWindow;
-
-	glm::vec4 currentColor;
-	BlendMode currentBlendMode;
 
 	int currentBufferIndex = 0;
 
@@ -381,8 +408,6 @@ private:
 		this->window = window;
 	}
 
-	void renderSprite(size_t bufferIndex, Sprite &sprite);
-
 	void createDescriptorSetLayouts();
 	VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code);
 	void createUniformBuffers();
@@ -397,7 +422,7 @@ private:
 
 	bool queueDrawCommand();
 
-	void DrawTriangles(const uint16_t *indices, size_t numIndices, const Vertex *vertices, size_t numVertices);
+	void drawTriangles(const uint16_t *indices, size_t numIndices, const Vertex *vertices, size_t numVertices);
 
 	void mapStagingBufferMemory();
 

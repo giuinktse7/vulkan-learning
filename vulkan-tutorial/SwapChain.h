@@ -56,7 +56,14 @@ public:
     return framebuffers[index];
   }
 
+  bool isValid() const
+  {
+    return validExtent;
+  }
+
 private:
+  bool validExtent = true;
+
   VkSwapchainKHR swapChain;
   std::vector<VkImage> images;
 

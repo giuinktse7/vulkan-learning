@@ -1789,11 +1789,11 @@ void test()
 		glfwPollEvents();
 		if (engine.StartFrame())
 		{
-			engine.SetTexture(crossbowTexture);
-			engine.DrawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
+			engine.setTexture(crossbowTexture);
+			engine.drawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
 
-			engine.SetTexture(plateArmorTexture);
-			engine.DrawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
+			engine.setTexture(plateArmorTexture);
+			engine.drawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
 			engine.EndFrame();
 		}
 	}

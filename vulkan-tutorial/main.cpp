@@ -47,17 +47,16 @@ std::shared_ptr<Texture> plateArmorTexture;
 void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 {
 	Engine *engine = Engine::GetInstance();
-	Logger::info("Changed");
 	engine->setFrameBufferResized(true);
 
-	if (engine->StartFrame())
+	if (engine->startFrame())
 	{
-		engine->SetTexture(crossbowTexture);
-		engine->DrawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
+		engine->setTexture(crossbowTexture);
+		engine->drawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
 
-		engine->SetTexture(plateArmorTexture);
-		engine->DrawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
-		engine->EndFrame();
+		engine->setTexture(plateArmorTexture);
+		engine->drawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
+		engine->endFrame();
 	}
 }
 
@@ -99,14 +98,14 @@ int main()
 		while (!glfwWindowShouldClose(engine.getWindow()))
 		{
 			glfwPollEvents();
-			if (engine.StartFrame())
+			if (engine.startFrame())
 			{
-				engine.SetTexture(crossbowTexture);
-				engine.DrawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
+				engine.setTexture(crossbowTexture);
+				engine.drawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
 
-				engine.SetTexture(plateArmorTexture);
-				engine.DrawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
-				engine.EndFrame();
+				engine.setTexture(plateArmorTexture);
+				engine.drawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
+				engine.endFrame();
 			}
 		}
 
