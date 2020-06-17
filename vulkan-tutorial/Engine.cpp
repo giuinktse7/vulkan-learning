@@ -14,14 +14,6 @@
 #include "vertex.h"
 #include "pipeline.h"
 
-namespace Render
-{
-  struct UniformBufferObject
-  {
-    glm::vec2 extent;
-  };
-} // namespace Render
-
 /* 
   Singleton variables
 */
@@ -44,7 +36,7 @@ Engine::~Engine()
  *      and then we make sure again that the variable is null and then we
  *      set the value. RU:
  */
-Engine *Engine::GetInstance()
+Engine *Engine::getInstance()
 {
   if (pinstance_ == nullptr)
   {
@@ -97,6 +89,9 @@ void Engine::initialize(GLFWwindow *window)
   defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
 
   isInitialized = true;
+
+  camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+  camera.setZoom(8.0f);
 }
 
 void Engine::init()
@@ -742,16 +737,13 @@ bool Engine::startFrame()
     throw std::runtime_error("failed to acquire swap chain image");
   }
 
-  auto &perFrameCmds = perFrameCommandBuffer[currentFrame];
-  if (!perFrameCmds.empty())
-  {
-    vkFreeCommandBuffers(
-        device,
-        perFrameCommandPool[currentFrame],
-        static_cast<uint32_t>(perFrameCmds.size()),
-        &perFrameCmds[0]);
-    perFrameCmds.clear();
-  }
+  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
+  vkFreeCommandBuffers(
+      device,
+      perFrameCommandPool[currentFrame],
+      1,
+      &commandBuffer);
+  commandBuffer = nullptr;
 
   currentRenderInfo.descriptorSet = defaultTexture->getDescriptorSet();
   currentRenderInfo.textureWindow = defaultTexture->getTextureWindow();
@@ -830,7 +822,7 @@ void Engine::endFrame()
 
 void Engine::startMainCommandBuffer()
 {
-  auto &commandBuffers = perFrameCommandBuffer[currentFrame];
+  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
 
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -838,13 +830,12 @@ void Engine::startMainCommandBuffer()
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = 1;
 
-  commandBuffers.resize(1);
-  if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+  if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to allocate command buffer");
   }
 
-  currentCommandBuffer = commandBuffers[0];
+  currentCommandBuffer = commandBuffer;
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -858,17 +849,19 @@ void Engine::startMainCommandBuffer()
   vkCmdBindPipeline(currentCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 }
 
-void Engine::updateUniformBuffer() const
+void Engine::updateUniformBuffer()
 {
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
-  Render::UniformBufferObject ubo = {};
-  ubo.extent.x = width;
-  ubo.extent.y = height;
+  uniformBufferObject.extent.x = width;
+  uniformBufferObject.extent.y = height;
+  uniformBufferObject.projection = camera.matrices.perspective;
+  uniformBufferObject.translation = camera.position;
+  uniformBufferObject.zoom = camera.zoomFactor;
 
   void *data;
-  vkMapMemory(device, uniformBuffers[currentFrame].bufferMemory, 0, sizeof(ubo), 0, &data);
-  memcpy(data, &ubo, sizeof(ubo));
+  vkMapMemory(device, uniformBuffers[currentFrame].bufferMemory, 0, sizeof(UniformBufferObject), 0, &data);
+  memcpy(data, &uniformBufferObject, sizeof(UniformBufferObject));
   vkUnmapMemory(device, uniformBuffers[currentFrame].bufferMemory);
 }
 
@@ -979,14 +972,14 @@ void Engine::mapStagingBufferMemory()
 
   void *data;
 
-  auto isb = getIndexStagingBuffer();
-  vkMapMemory(device, isb.bufferMemory, 0, getIndexBufferSize(), 0, &data);
+  auto indexStagingBuffer = getIndexStagingBuffer();
+  vkMapMemory(device, indexStagingBuffer.bufferMemory, 0, getIndexBufferSize(), 0, &data);
   indexWrite.start = reinterpret_cast<uint16_t *>(data);
   indexWrite.cursor = indexWrite.start;
   indexWrite.end = indexWrite.start + getMaxNumIndices();
 
-  auto vsb = getVertexStagingBuffer();
-  vkMapMemory(device, vsb.bufferMemory, 0, getVertexBufferSize(), 0, &data);
+  auto vertexStagingBuffer = getVertexStagingBuffer();
+  vkMapMemory(device, vertexStagingBuffer.bufferMemory, 0, getVertexBufferSize(), 0, &data);
   vertexWrite.start = reinterpret_cast<Vertex *>(data);
   vertexWrite.cursor = vertexWrite.start;
   vertexWrite.end = vertexWrite.start + getMaxNumVertices();
@@ -1213,7 +1206,7 @@ void Engine::drawBatches()
   }
   endRenderPass();
 
-  numDrawCommands = drawCommands.size();
+  drawCommandCount = drawCommands.size();
   drawCommands.clear();
 }
 
@@ -1235,6 +1228,6 @@ void Engine::cleanupSyncObjects()
 bool Engine::isValidWindowSize()
 {
   int width = 0, height = 0;
-  glfwGetFramebufferSize(Engine::GetInstance()->getWindow(), &width, &height);
+  glfwGetFramebufferSize(Engine::getInstance()->getWindow(), &width, &height);
   return !(width == 0 || height == 0);
 }

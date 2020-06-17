@@ -8,4 +8,8 @@ namespace Logger
   {
     std::cout << data << std::endl;
   }
+  inline void info(std::string data)
+  {
+    std::cout << data << std::endl;
+  }
 } // namespace Logger

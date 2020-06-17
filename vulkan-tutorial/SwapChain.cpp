@@ -16,7 +16,7 @@ void SwapChain::init()
 
 void SwapChain::create()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   SwapChainSupportDetails swapChainSupport = querySupport(engine->getPhysicalDevice(), engine->getSurface());
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -74,7 +74,7 @@ void SwapChain::create()
 void SwapChain::recreate()
 {
   Logger::info("Recreating swap chain");
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   GLFWwindow *window = engine->getWindow();
 
   vkDeviceWaitIdle(engine->getDevice());
@@ -187,7 +187,7 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilit
 
 void SwapChain::createImageViews()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
 
   imageViews.resize(images.size());
 
@@ -199,7 +199,7 @@ void SwapChain::createImageViews()
 
 void SwapChain::createFramebuffers()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   framebuffers.resize(imageViews.size());
   engine->getCommandBuffers().resize(imageViews.size());
 
@@ -226,7 +226,7 @@ void SwapChain::createFramebuffers()
 
 void SwapChain::cleanup()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   VkDevice device = engine->getDevice();
   std::vector<VkCommandBuffer> commandBuffers = engine->getCommandBuffers();
 
@@ -237,15 +237,16 @@ void SwapChain::cleanup()
 
   for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
   {
-    auto &perFrameCmds = engine->getPerFrameCommandBuffer(i);
-    if (!perFrameCmds.empty())
+    auto &commandBuffer = engine->getPerFrameCommandBuffer(i);
+    if (commandBuffer)
     {
-      vkFreeCommandBuffers(device,
-                           engine->getPerFrameCommandPool(i),
-                           static_cast<uint32_t>(perFrameCmds.size()),
-                           perFrameCmds.data());
+      vkFreeCommandBuffers(
+          device,
+          engine->getPerFrameCommandPool(i),
+          1,
+          &commandBuffer);
 
-      perFrameCmds.clear();
+      commandBuffer = nullptr;
     }
   }
 

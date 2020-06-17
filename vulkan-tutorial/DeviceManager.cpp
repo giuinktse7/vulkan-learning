@@ -12,7 +12,7 @@
 
 void DeviceManager::pickPhysicalDevice()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(engine->getVkInstance(), &deviceCount, nullptr);
 
@@ -41,7 +41,7 @@ void DeviceManager::pickPhysicalDevice()
 
 bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(device, engine->getSurface());
 
   bool extensionsSupported = VulkanHelpers::checkDeviceExtensionSupport(device);
@@ -61,7 +61,7 @@ bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
 
 void DeviceManager::createLogicalDevice()
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(engine->getPhysicalDevice(), engine->getSurface());
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;

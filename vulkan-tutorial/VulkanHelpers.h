@@ -25,13 +25,6 @@ struct QueueFamilyIndices
   }
 };
 
-struct UniformBufferObject
-{
-  glm::mat4 model;
-  glm::mat4 view;
-  glm::mat4 proj;
-};
-
 namespace VulkanHelpers
 {
   static const char *khronosValidation = "VK_LAYER_KHRONOS_validation";

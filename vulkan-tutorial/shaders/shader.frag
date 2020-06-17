@@ -11,6 +11,8 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec4 texel = texture(texSampler, fragTexCoord);
-    outColor.rgb = texel.rgb * fragColor.rgb * fragColor.a * texel.a;
-    outColor.a = texel.a * fragColor.a * fragOpacity;
+    // outColor.rgb = texel.rgb * fragColor.rgb * fragColor.a * texel.a;
+    // outColor.a = texel.a * fragColor.a * fragOpacity;
+    outColor.rgb = texel.rgb * texel.a;
+    outColor.a = texel.a;
 }

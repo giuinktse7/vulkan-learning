@@ -4,10 +4,9 @@
 #include "VulkanHelpers.h"
 #include "engine.h"
 
-
 BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   VkDevice device = engine->getDevice();
 
   VkBuffer buffer;
@@ -44,18 +43,18 @@ BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
 
 void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-  VkCommandBuffer commandBuffer = Engine::GetInstance()->beginSingleTimeCommands();
+  VkCommandBuffer commandBuffer = Engine::getInstance()->beginSingleTimeCommands();
 
   VkBufferCopy copyRegion{};
   copyRegion.size = size;
   vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-  Engine::GetInstance()->endSingleTimeCommands(commandBuffer);
+  Engine::getInstance()->endSingleTimeCommands(commandBuffer);
 }
 
 void Buffer::copyToMemory(VkDeviceMemory bufferMemory, uint8_t *data, VkDeviceSize size)
 {
-  VkDevice device = Engine::GetInstance()->getDevice();
+  VkDevice device = Engine::getInstance()->getDevice();
   void *mapped = nullptr;
   vkMapMemory(device, bufferMemory, 0, size, 0, &mapped);
   memcpy(mapped, data, size);

@@ -46,7 +46,7 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
   this->height = height;
   VkDeviceSize imageSize = width * height * 4;
 
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   VkDevice device = engine->getDevice();
 
   auto stagingBuffer = Buffer::create(imageSize,
@@ -84,8 +84,6 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
   vkDestroyBuffer(device, stagingBuffer.buffer, nullptr);
   vkFreeMemory(device, stagingBuffer.bufferMemory, nullptr);
 
-  //engine->generateMipmaps(textureImage, format, width, height, mipLevels);
-
   imageView = VulkanHelpers::createImageView(device, textureImage, format);
   sampler = createSampler();
   descriptorSet = createDescriptorSet(imageView, sampler);
@@ -101,7 +99,7 @@ void Texture::createImage(uint32_t width,
                           VkImage &image,
                           VkDeviceMemory &imageMemory)
 {
-  VkDevice device = Engine::GetInstance()->getDevice();
+  VkDevice device = Engine::getInstance()->getDevice();
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -128,7 +126,7 @@ void Texture::createImage(uint32_t width,
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = VulkanHelpers::findMemoryType(Engine::GetInstance()->getPhysicalDevice(), memRequirements.memoryTypeBits, properties);
+  allocInfo.memoryTypeIndex = VulkanHelpers::findMemoryType(Engine::getInstance()->getPhysicalDevice(), memRequirements.memoryTypeBits, properties);
 
   if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
   {
@@ -162,7 +160,7 @@ VkSampler Texture::createSampler()
   samplerInfo.maxLod = static_cast<float>(mipLevels);
 
   VkSampler sampler;
-  if (vkCreateSampler(Engine::GetInstance()->getDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
+  if (vkCreateSampler(Engine::getInstance()->getDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
   {
     throw std::runtime_error("Failed to create texture sampler!");
   }
@@ -172,7 +170,7 @@ VkSampler Texture::createSampler()
 
 VkDescriptorSet Texture::createDescriptorSet(VkImageView imageView, VkSampler sampler)
 {
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
 
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

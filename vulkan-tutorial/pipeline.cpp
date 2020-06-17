@@ -8,7 +8,7 @@
 Pipeline::Pipeline(SwapChain swapChain)
 		: swapChain(swapChain)
 {
-	Engine *engine = Engine::GetInstance();
+	Engine *engine = Engine::getInstance();
 
 	Pipeline::setupDescriptorSetLayout(engine->getDevice(), &descriptorSetLayout);
 

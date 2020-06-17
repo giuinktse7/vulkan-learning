@@ -48,9 +48,6 @@
     <ClCompile Include="texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sprite.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -101,9 +98,6 @@
     <ClInclude Include="texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sprite.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -111,6 +105,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bound-buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,16 +1,20 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#define GLM_FORCE_RADIANS
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <unordered_set>
 
 #include <mutex>
 
 #include "DeviceManager.h"
 #include "MapRenderer.h"
-#include "sprite.h"
+#include "texture.h"
 #include "resource-descriptor.h"
 #include "buffer.h"
 #include "vertex.h"
+#include "camera.h"
 
 enum BlendMode
 {
@@ -68,6 +72,14 @@ struct RenderInfo
 	}
 };
 
+struct UniformBufferObject
+{
+	glm::mat4 projection;
+	glm::vec2 translation;
+	glm::vec2 extent;
+	float zoom;
+};
+
 class Engine
 {
 protected:
@@ -79,7 +91,9 @@ public:
 	Engine();
 	~Engine();
 
-	static Engine *GetInstance();
+	Camera camera;
+
+	static Engine *getInstance();
 	static void setInstance(Engine *instance);
 
 	void init();
@@ -194,11 +208,6 @@ public:
 		currentCommandBuffer = nullptr;
 	}
 
-	void addSprite(Sprite sprite)
-	{
-		sprites.push_back(sprite);
-	}
-
 	VkPipeline &getGraphicsPipeline()
 	{
 		return graphicsPipeline;
@@ -248,12 +257,7 @@ public:
 		return renderFinishedSemaphores[index];
 	};
 
-	std::vector<Sprite> &getSprites()
-	{
-		return sprites;
-	}
-
-	std::vector<VkCommandBuffer> &getPerFrameCommandBuffer(size_t index)
+	VkCommandBuffer &getPerFrameCommandBuffer(size_t index)
 	{
 		return perFrameCommandBuffer[index];
 	}
@@ -297,13 +301,31 @@ public:
 
 	static bool isValidWindowSize();
 
+	void setKeyDown(int key)
+	{
+		keys.insert(key);
+	}
+
+	void setKeyUp(int key)
+	{
+		keys.erase(key);
+	}
+
+	bool isKeyDown(int key) const
+	{
+		return keys.find(key) != keys.end();
+	}
+
+	bool isCtrlDown() const
+	{
+		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+	}
+
 private:
 	bool isInitialized = false;
 
 	static Engine *pinstance_;
 	static std::mutex mutex_;
-
-	std::vector<Sprite> sprites;
 
 	GLFWwindow *window;
 	int width;
@@ -330,7 +352,7 @@ private:
 
 	VkCommandPool commandPool;
 	std::vector<VkCommandPool> perFrameCommandPool;
-	std::vector<std::vector<VkCommandBuffer>> perFrameCommandBuffer;
+	std::vector<VkCommandBuffer> perFrameCommandBuffer;
 
 	VkDescriptorPool descriptorPool;
 
@@ -369,6 +391,10 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline = {};
 
+	UniformBufferObject uniformBufferObject;
+
+	std::unordered_set<int> keys;
+
 	struct DrawCommand
 	{
 		DrawCommand(VkDescriptorSet descriptorSet, uint16_t baseIndex, uint16_t indexCount, int bufferIndex)
@@ -385,7 +411,7 @@ private:
 	};
 
 	std::vector<DrawCommand> drawCommands;
-	unsigned long numDrawCommands;
+	unsigned long drawCommandCount;
 
 	void initWindow();
 
@@ -418,7 +444,7 @@ private:
 
 	void startMainCommandBuffer();
 
-	void updateUniformBuffer() const;
+	void updateUniformBuffer();
 
 	bool queueDrawCommand();
 

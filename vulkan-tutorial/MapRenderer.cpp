@@ -9,13 +9,13 @@
 
 void MapRenderer::init()
 {
-  Engine::GetInstance()->createRenderPass();
+  Engine::getInstance()->createRenderPass();
 }
 
 VkRenderPass MapRenderer::createRenderPass()
 {
 
-  Engine *engine = Engine::GetInstance();
+  Engine *engine = Engine::getInstance();
   VkAttachmentDescription colorAttachment{};
   colorAttachment.format = engine->getSwapChain().getImageFormat();
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
