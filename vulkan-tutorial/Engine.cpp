@@ -90,8 +90,12 @@ void Engine::initialize(GLFWwindow *window)
 
   isInitialized = true;
 
+  int width, height;
+  glfwGetFramebufferSize(window, &width, &height);
+
   camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-  camera.setZoom(8.0f);
+
+  camera.updateZoom();
 }
 
 void Engine::init()
@@ -853,11 +857,11 @@ void Engine::updateUniformBuffer()
 {
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
-  uniformBufferObject.extent.x = width;
-  uniformBufferObject.extent.y = height;
-  uniformBufferObject.projection = camera.matrices.perspective;
-  uniformBufferObject.translation = camera.position;
-  uniformBufferObject.zoom = camera.zoomFactor;
+  // uniformBufferObject.projection = camera.matrices.perspective;
+
+  float zoom = 1 / camera.zoomFactor;
+  auto translated = glm::translate(glm::mat4(1), glm::vec3(camera.position.x, camera.position.y, 0.0f));
+  uniformBufferObject.projection = glm::ortho(0.0f, width * zoom, height * zoom, 0.0f) * translated;
 
   void *data;
   vkMapMemory(device, uniformBuffers[currentFrame].bufferMemory, 0, sizeof(UniformBufferObject), 0, &data);
@@ -894,16 +898,19 @@ bool Engine::queueDrawCommand()
 
 void Engine::drawSprite(float x, float y, float width, float height)
 {
+  float worldX = x * SPRITE_SIZE;
+  float worldY = y * SPRITE_SIZE;
+
   TextureWindow *window = &currentRenderInfo.textureWindow;
   glm::vec4 color = currentRenderInfo.color;
 
   std::array<uint16_t, 6> indices{0, 1, 3, 3, 1, 2};
 
   std::array<Vertex, 4> vertices{{
-      {{x, y}, color, {window->x0, window->y0}},
-      {{x, y + height}, color, {window->x0, window->y1}},
-      {{x + width, y + height}, color, {window->x1, window->y1}},
-      {{x + width, y}, color, {window->x1, window->y0}},
+      {{worldX, worldY}, color, {window->x0, window->y0}},
+      {{worldX, worldY + height}, color, {window->x0, window->y1}},
+      {{worldX + width, worldY + height}, color, {window->x1, window->y1}},
+      {{worldX + width, worldY}, color, {window->x1, window->y0}},
   }};
 
   drawTriangles(indices.data(), indices.size(), vertices.data(), vertices.size());

@@ -6,21 +6,22 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <algorithm>
+
 class Camera
 {
 private:
-  float fov;
-  float zNear = -1.0f;
-  float zfar = 1.0f;
+
+  int zoomSteps = 20;
 
 public:
   glm::vec2 position = glm::vec2();
   glm::vec4 viewPos = glm::vec4();
 
   float zoomFactor = 1.0f;
+  int zoomStep = 10;
 
   float movementSpeed = 1.0f;
-
   bool updated = false;
 
   struct
@@ -42,43 +43,8 @@ public:
     return keys.left || keys.right || keys.up || keys.down;
   }
 
-  float getNearClip()
-  {
-    return zNear;
-  }
 
-  float getFarClip()
-  {
-    return zfar;
-  }
-
-  void setZoom(float zoomFactor)
-  {
-    this->zoomFactor = zoomFactor;
-    matrices.perspective = glm::ortho(
-        -1.0f / zoomFactor,
-        1.0f / zoomFactor,
-        -1.0f / zoomFactor,
-        1.0f / zoomFactor,
-        zNear,
-        zfar);
-  }
-
-  void updateProjection()
-  {
-    matrices.perspective = glm::ortho(
-        -1.0f / zoomFactor,
-        1.0f / zoomFactor,
-        -1.0f / zoomFactor,
-        1.0f / zoomFactor,
-        zNear,
-        zfar);
-  };
-
-  void updateAspectRatio(float aspect)
-  {
-    matrices.perspective = glm::perspective(glm::radians(fov), aspect, zNear, zfar);
-  }
+  void updateProjection(){};
 
   void setPosition(glm::vec2 position)
   {
@@ -95,22 +61,24 @@ public:
     this->position += delta;
   }
 
+  void updateZoom();
+
   void zoomIn()
   {
-    this->zoomFactor *= 1.2;
-    updateProjection();
+    zoomStep = std::clamp(zoomStep + 1, 0, zoomSteps);
+    updateZoom();
   }
 
   void zoomOut()
   {
-    this->zoomFactor /= 1.2f;
-    updateProjection();
+    zoomStep = std::clamp(zoomStep - 1, 0, zoomSteps);
+    updateZoom();
   }
 
   void resetZoom()
   {
-    this->zoomFactor = 1.0f;
-    updateProjection();
+    zoomStep = 10;
+    updateZoom();
   }
 
   void setMovementSpeed(float movementSpeed)

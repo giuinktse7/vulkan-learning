@@ -75,9 +75,6 @@ struct RenderInfo
 struct UniformBufferObject
 {
 	glm::mat4 projection;
-	glm::vec2 translation;
-	glm::vec2 extent;
-	float zoom;
 };
 
 class Engine
@@ -91,7 +88,11 @@ public:
 	Engine();
 	~Engine();
 
+	unsigned long frames = 0;
+
 	Camera camera;
+
+	static const int SPRITE_SIZE = 32;
 
 	static Engine *getInstance();
 	static void setInstance(Engine *instance);
@@ -321,7 +322,19 @@ public:
 		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
 	}
 
+	void setMousePosition(double x, double y)
+	{
+		this->mousePosition.x = x;
+		this->mousePosition.y = y;
+	}
+
+	glm::vec2 getMousePosition() const
+	{
+		return mousePosition;
+	}
+
 private:
+	glm::vec2 mousePosition;
 	bool isInitialized = false;
 
 	static Engine *pinstance_;

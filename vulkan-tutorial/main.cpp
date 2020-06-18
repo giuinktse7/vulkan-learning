@@ -42,24 +42,41 @@ const uint32_t HEIGHT = 600;
 
 std::shared_ptr<Texture> crossbowTexture;
 std::shared_ptr<Texture> plateArmorTexture;
+std::shared_ptr<Texture> blackMarbleFloor;
+
+void drawScene()
+{
+	Engine *engine = Engine::getInstance();
+
+	if (engine->startFrame())
+	{
+		engine->setTexture(blackMarbleFloor);
+		for (int x = 0; x < 50; ++x)
+		{
+			for (int y = 0; y < 50; ++y)
+			{
+				engine->drawSprite(x, y, crossbowTexture->getWidth(), crossbowTexture->getHeight());
+			}
+		}
+
+		engine->setTexture(crossbowTexture);
+		engine->drawSprite(3, 3, crossbowTexture->getWidth(), crossbowTexture->getHeight());
+
+		engine->setTexture(plateArmorTexture);
+		engine->drawSprite(4, 3, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
+		engine->endFrame();
+	}
+}
 
 void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 {
 	Engine *engine = Engine::getInstance();
 	engine->setFrameBufferResized(true);
 
-	if (engine->startFrame())
-	{
-		engine->setTexture(crossbowTexture);
-		engine->drawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
-
-		engine->setTexture(plateArmorTexture);
-		engine->drawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
-		engine->endFrame();
-	}
+	drawScene();
 }
 
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
 	Engine *engine = Engine::getInstance();
@@ -92,7 +109,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = 8.0f / std::min(engine->camera.zoomFactor, 1.0f);
+	float step = Engine::SPRITE_SIZE * 11 / (engine->camera.zoomStep + 1);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
@@ -114,7 +131,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 	Engine::getInstance()->camera.translate(delta);
 }
 
-void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
 	Engine *engine = Engine::getInstance();
 	if (yoffset > 0)
@@ -127,6 +144,11 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 	}
 }
 
+static void cursorPositionCallback(GLFWwindow *window, double x, double y)
+{
+	Engine::getInstance()->setMousePosition(x, y);
+}
+
 GLFWwindow *initWindow()
 {
 	GLFWwindow *window;
@@ -135,8 +157,9 @@ GLFWwindow *initWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Monko's map editor", nullptr, nullptr);
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetScrollCallback(window, scrollCallback);
+	glfwSetCursorPosCallback(window, cursorPositionCallback);
 
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
@@ -162,19 +185,12 @@ int main()
 
 		crossbowTexture = engine.CreateTexture("textures/crossbow.png");
 		plateArmorTexture = engine.CreateTexture("textures/plate_armor.png");
+		blackMarbleFloor = engine.CreateTexture("textures/black_marble_floor.png");
 
-		while (!glfwWindowShouldClose(engine.getWindow()))
+		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
-			if (engine.startFrame())
-			{
-				engine.setTexture(crossbowTexture);
-				engine.drawSprite(32, 32, crossbowTexture->getWidth(), crossbowTexture->getHeight());
-
-				engine.setTexture(plateArmorTexture);
-				engine.drawSprite(64, 32, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
-				engine.endFrame();
-			}
+			drawScene();
 		}
 
 		engine.WaitUntilDeviceIdle();

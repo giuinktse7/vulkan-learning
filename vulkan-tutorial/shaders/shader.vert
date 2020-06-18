@@ -9,9 +9,6 @@ const int BM_ADDX2 = 3;
 layout (binding = 0) uniform UBO 
 {
 	mat4 projection;
-    vec2 translation;
-    vec2 extent;
-    float zoom;
 } ubo;
 
 layout(location = 0) in vec2 inPosition;
@@ -44,18 +41,10 @@ void main() {
         color *= 2.0f;
     }
 
-    float halfWidth = ubo.extent.x / 2.0f;
-    float halfHeight = ubo.extent.y / 2.0f;
+    vec4 thing = ubo.projection * vec4(inPosition.x, inPosition.y, 0.0, 1.0);
 
-    // gl_Position = ubo.projection * ubo.model * vec4(inPosition.x / halfWidth - 1.0f, inPosition.y / halfHeight - 1.0f, 0.0, 1.0);
-    // gl_Position = vec4(inPosition.x / halfWidth - 1.0f, inPosition.y / halfHeight - 1.0f, 0.0, 1.0);
-    
-    gl_Position = ubo.projection * vec4(
-        (inPosition.x + ubo.translation.x) / halfWidth - 1 / ubo.zoom,
-        (inPosition.y + ubo.translation.y) / halfHeight - 1 / ubo.zoom,
-        0.0,
-        1.0
-    );
+    // OpenGL uses inverted y axis, Vulkan does not
+     gl_Position = vec4(thing.x, -thing.y, thing.z, 1.0f);
 
 
     fragColor = color;

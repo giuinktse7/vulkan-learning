@@ -155,6 +155,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="buffer.cpp" />
+    <ClCompile Include="camera.cpp" />
     <ClCompile Include="DeviceManager.cpp" />
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="file.cpp" />
