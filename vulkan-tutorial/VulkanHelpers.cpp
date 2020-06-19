@@ -5,6 +5,8 @@
 #include <set>
 #include <stdexcept>
 
+#include "engine.h"
+
 bool VulkanHelpers::checkDeviceExtensionSupport(VkPhysicalDevice device)
 {
   uint32_t extensionCount;
@@ -112,4 +114,33 @@ uint32_t VulkanHelpers::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t
   }
 
   throw std::runtime_error("Failed to find suitable memory type!");
+}
+
+void VulkanHelpers::createCommandPool(VkCommandPool *commandPool, VkCommandPoolCreateFlags flags)
+{
+  Engine *engine = Engine::getInstance();
+  QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(engine->getPhysicalDevice(), engine->getSurface());
+
+  VkCommandPoolCreateInfo commandPoolCreateInfo = {};
+  commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  commandPoolCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+  commandPoolCreateInfo.flags = flags;
+
+  if (vkCreateCommandPool(engine->getDevice(), &commandPoolCreateInfo, nullptr, commandPool) != VK_SUCCESS)
+  {
+    throw std::runtime_error("Could not create graphics command pool");
+  }
+}
+
+void VulkanHelpers::createCommandBuffers(VkCommandBuffer *commandBuffer, uint32_t commandBufferCount, VkCommandPool &commandPool)
+{
+  Engine *engine = Engine::getInstance();
+
+  VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+  commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  commandBufferAllocateInfo.commandPool = commandPool;
+  commandBufferAllocateInfo.commandBufferCount = commandBufferCount;
+
+  vkAllocateCommandBuffers(engine->getDevice(), &commandBufferAllocateInfo, commandBuffer);
 }

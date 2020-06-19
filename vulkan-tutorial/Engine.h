@@ -4,8 +4,10 @@
 #define GLM_FORCE_RADIANS
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <unordered_set>
 
+#include <imgui_impl_vulkan.h>
+
+#include <unordered_set>
 #include <mutex>
 
 #include "DeviceManager.h"
@@ -98,8 +100,6 @@ public:
 
 	static Engine *getInstance();
 	static void setInstance(Engine *instance);
-
-	void init();
 
 	VkInstance &getVkInstance()
 	{
@@ -270,6 +270,8 @@ public:
 		return perFrameCommandPool[index];
 	}
 
+	void shutdown();
+
 	void createGraphicsPipeline();
 
 	void allocateCommandBuffers();
@@ -299,7 +301,6 @@ public:
 
 	void drawSprite(float x, float y, float width, float height);
 
-	bool startFrame();
 	void endFrame();
 
 	static bool isValidWindowSize();
@@ -350,14 +351,32 @@ public:
 		return swapChain.getMinImageCount();
 	}
 
+	uint32_t getWidth()
+	{
+		return swapChain.getExtent().width;
+	}
+	uint32_t getHeight()
+	{
+		return swapChain.getExtent().height;
+	}
+
+	void renderFrame();
+
+	bool initFrame();
+
+	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+
 private:
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
+
+	GUI gui;
 
 	static Engine *pinstance_;
 	static std::mutex mutex_;
 
 	GLFWwindow *window;
+
 	int width;
 	int height;
 
@@ -416,8 +435,6 @@ private:
 	uint32_t currentFrame;
 	uint32_t nextFrame;
 
-	glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
 	// Pipeline
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline = {};
@@ -443,8 +460,6 @@ private:
 
 	std::vector<DrawCommand> drawCommands;
 	unsigned long drawCommandCount;
-
-	void initWindow();
 
 	void createVulkanInstance();
 
@@ -501,4 +516,10 @@ private:
 	void unmapStagingBuffers();
 
 	void drawBatches();
+
+	void presentFrame();
+
+	void recreateSwapChain();
+
+	void SetupVulkanWindow();
 };

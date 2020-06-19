@@ -14,6 +14,8 @@
 #include "vertex.h"
 #include "pipeline.h"
 
+#include <imgui_impl_glfw.h>
+
 /* 
   Singleton variables
 */
@@ -97,37 +99,7 @@ void Engine::initialize(GLFWwindow *window)
 
   camera.updateZoom();
 
-  GUI gui;
-
   gui.initialize();
-}
-
-void Engine::init()
-{
-  Logger::info("Initializing engine..");
-  initWindow();
-  createVulkanInstance();
-
-  VulkanDebug::setupDebugMessenger(instance, debugMessenger);
-
-  createSurface();
-  DeviceManager::pickPhysicalDevice();
-  DeviceManager::createLogicalDevice();
-
-  swapChain = SwapChain();
-
-  swapChain.init();
-}
-
-void Engine::initWindow()
-{
-  glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-  setWindow(glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr));
-  glfwSetWindowUserPointer(window, this);
-
-  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void Engine::createVulkanInstance()
@@ -395,6 +367,81 @@ void Engine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, u
       &region);
 
   endSingleTimeCommands(commandBuffer);
+}
+
+bool Engine::initFrame()
+{
+  if (!swapChain.isValid())
+  {
+    if (!isValidWindowSize())
+    {
+      return false;
+    }
+
+    recreateSwapChain();
+  }
+
+  VkResult result = vkAcquireNextImageKHR(
+      device,
+      swapChain.get(),
+      std::numeric_limits<uint64_t>::max(),
+      imageAvailableSemaphores[currentFrame],
+      VK_NULL_HANDLE,
+      &nextFrame);
+
+  vkWaitForFences(
+      device,
+      1,
+      &inFlightFences[currentFrame],
+      VK_TRUE,
+      std::numeric_limits<uint64_t>::max());
+
+  vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+  {
+    Logger::info("StartFrame::recreate");
+
+    recreateSwapChain();
+  }
+  if (framebufferResized)
+  {
+    framebufferResized = false;
+    recreateSwapChain();
+    return initFrame();
+    // return false;
+  }
+  else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+  {
+    throw std::runtime_error("failed to acquire swap chain image");
+  }
+
+  return true;
+}
+
+void Engine::renderFrame()
+{
+
+  gui.renderFrame(currentFrame);
+
+  // Render map
+  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
+  vkFreeCommandBuffers(
+      device,
+      perFrameCommandPool[currentFrame],
+      1,
+      &commandBuffer);
+  commandBuffer = nullptr;
+
+  currentRenderInfo.descriptorSet = defaultTexture->getDescriptorSet();
+  currentRenderInfo.textureWindow = defaultTexture->getTextureWindow();
+  currentRenderInfo.color = {1.0f, 1.0f, 1.0f, 1.0f};
+
+  currentBufferIndex = 0;
+
+  startMainCommandBuffer();
+
+  updateUniformBuffer();
 }
 
 void Engine::allocateCommandBuffers()
@@ -700,83 +747,11 @@ std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
   return std::make_shared<Texture>(filename);
 }
 
-bool Engine::startFrame()
+void Engine::recreateSwapChain()
 {
-  if (!swapChain.isValid())
-  {
-    if (!isValidWindowSize())
-    {
-      return false;
-    }
+  swapChain.recreate();
 
-    swapChain.recreate();
-  }
-
-  vkWaitForFences(
-      device,
-      1,
-      &inFlightFences[currentFrame],
-      VK_TRUE,
-      std::numeric_limits<uint64_t>::max());
-
-  vkResetFences(device, 1, &inFlightFences[currentFrame]);
-
-  if (vkResetCommandPool(device, commandPool, 0) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to reset commandPool!");
-  }
-
-  VkCommandBufferBeginInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  err = vkBeginCommandBuffer(commandBuffers, &info);
-  check_vk_result(err);
-
-  VkResult result = vkAcquireNextImageKHR(
-      device,
-      swapChain.get(),
-      std::numeric_limits<uint64_t>::max(),
-      imageAvailableSemaphores[currentFrame],
-      VK_NULL_HANDLE,
-      &nextFrame);
-
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-  {
-    Logger::info("StartFrame::recreate");
-
-    swapChain.recreate();
-    return false;
-  }
-  if (framebufferResized)
-  {
-    framebufferResized = false;
-    swapChain.recreate();
-    return startFrame();
-  }
-  else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-  {
-    throw std::runtime_error("failed to acquire swap chain image");
-  }
-
-  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
-  vkFreeCommandBuffers(
-      device,
-      perFrameCommandPool[currentFrame],
-      1,
-      &commandBuffer);
-  commandBuffer = nullptr;
-
-  currentRenderInfo.descriptorSet = defaultTexture->getDescriptorSet();
-  currentRenderInfo.textureWindow = defaultTexture->getTextureWindow();
-  currentRenderInfo.color = {1.0f, 1.0f, 1.0f, 1.0f};
-
-  currentBufferIndex = 0;
-
-  startMainCommandBuffer();
-
-  updateUniformBuffer();
-
-  return true;
+  gui.recreate();
 }
 
 void Engine::endFrame()
@@ -784,31 +759,42 @@ void Engine::endFrame()
   queueCurrentBatch();
   drawBatches();
 
+  // GUI
+  gui.endFrame(currentFrame);
+
   if (vkEndCommandBuffer(currentCommandBuffer) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to record command buffer");
   }
 
-  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-  VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
-
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+  std::array<VkCommandBuffer, 2> submitCommandBuffers = {
+      currentCommandBuffer, gui.getCommandBuffer(currentFrame)};
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = waitSemaphores;
+  submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
   submitInfo.pWaitDstStageMask = waitStages;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &currentCommandBuffer;
+  submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
+  submitInfo.pCommandBuffers = submitCommandBuffers.data();
   submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = signalSemaphores;
+  submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
 
   if (vkQueueSubmit(*getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
   {
-    throw std::runtime_error("failed to submit command buffer");
+    throw std::runtime_error("failed to submit command buffer to the graphics queue");
   }
 
+  presentFrame();
+
+  currentFrame++;
+  currentFrame %= getMaxFramesInFlight();
+}
+
+void Engine::presentFrame()
+{
   currentCommandBuffer = nullptr;
 
   VkSwapchainKHR swapChains[] = {swapChain.get()};
@@ -817,7 +803,7 @@ void Engine::endFrame()
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = signalSemaphores;
+  presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = swapChains;
   presentInfo.pImageIndices = imageIndices;
@@ -828,15 +814,12 @@ void Engine::endFrame()
   {
     Logger::info("EndFrame::recreate");
     framebufferResized = false;
-    swapChain.recreate();
+    recreateSwapChain();
   }
   else if (result != VK_SUCCESS)
   {
     throw std::runtime_error("failed to present swap chain image");
   }
-
-  currentFrame++;
-  currentFrame %= getMaxFramesInFlight();
 }
 
 void Engine::startMainCommandBuffer()
@@ -1252,4 +1235,12 @@ bool Engine::isValidWindowSize()
   int width = 0, height = 0;
   glfwGetFramebufferSize(Engine::getInstance()->getWindow(), &width, &height);
   return !(width == 0 || height == 0);
+}
+
+void Engine::shutdown()
+{
+  ImGui_ImplVulkan_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+  vkDestroyDescriptorPool(device, gui.getDescriptorPool(), nullptr);
 }

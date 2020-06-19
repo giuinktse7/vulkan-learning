@@ -46,4 +46,7 @@ namespace VulkanHelpers
 
   uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
+  void createCommandPool(VkCommandPool *commandPool, VkCommandPoolCreateFlags flags);
+  void createCommandBuffers(VkCommandBuffer *commandBuffer, uint32_t commandBufferCount, VkCommandPool &commandPool);
+
 } // namespace VulkanHelpers

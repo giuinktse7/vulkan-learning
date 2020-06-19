@@ -66,9 +66,19 @@ public:
     return imageCount;
   }
 
+  uint32_t getImageViewCount()
+  {
+    return imageViews.size();
+  }
+
   uint32_t getMinImageCount()
   {
     return minImageCount;
+  }
+
+  VkImageView getImageView(uint32_t index)
+  {
+    return imageViews[index];
   }
 
 private:

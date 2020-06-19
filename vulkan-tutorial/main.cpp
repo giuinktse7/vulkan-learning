@@ -48,8 +48,10 @@ void drawScene()
 {
 	Engine *engine = Engine::getInstance();
 
-	if (engine->startFrame())
+	if (engine->initFrame())
 	{
+		engine->renderFrame();
+
 		engine->setTexture(blackMarbleFloor);
 		for (int x = 0; x < 50; ++x)
 		{
