@@ -91,7 +91,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -123,7 +123,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -142,7 +142,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -159,6 +159,13 @@
     <ClCompile Include="DeviceManager.cpp" />
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="file.cpp" />
+    <ClCompile Include="gui.cpp" />
+    <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="imgui_demo.cpp" />
+    <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_vulkan.cpp" />
+    <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapRenderer.cpp" />
     <ClCompile Include="pipeline.cpp" />
@@ -176,6 +183,7 @@
     <ClInclude Include="DeviceManager.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="file.h" />
+    <ClInclude Include="gui.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="MapRenderer.h" />
     <ClInclude Include="pipeline.h" />

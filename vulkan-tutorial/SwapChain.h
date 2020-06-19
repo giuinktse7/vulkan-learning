@@ -61,8 +61,20 @@ public:
     return validExtent;
   }
 
+  uint32_t getImageCount()
+  {
+    return imageCount;
+  }
+
+  uint32_t getMinImageCount()
+  {
+    return minImageCount;
+  }
+
 private:
   bool validExtent = true;
+  uint32_t minImageCount;
+  uint32_t imageCount;
 
   VkSwapchainKHR swapChain;
   std::vector<VkImage> images;

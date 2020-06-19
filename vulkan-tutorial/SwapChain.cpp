@@ -23,7 +23,8 @@ void SwapChain::create()
   VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
   this->extent = chooseSwapExtent(swapChainSupport.capabilities, *engine->getWindow());
 
-  uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+  minImageCount = swapChainSupport.capabilities.minImageCount;
+  imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
   {
     imageCount = swapChainSupport.capabilities.maxImageCount;

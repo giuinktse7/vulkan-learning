@@ -96,6 +96,10 @@ void Engine::initialize(GLFWwindow *window)
   camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
 
   camera.updateZoom();
+
+  GUI gui;
+
+  gui.initialize();
 }
 
 void Engine::init()
@@ -164,7 +168,7 @@ void Engine::createVulkanInstance()
     createInfo.pNext = nullptr;
   }
 
-  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+  if (vkCreateInstance(&createInfo, allocator, &instance) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create instance!");
   }
@@ -715,6 +719,19 @@ bool Engine::startFrame()
       VK_TRUE,
       std::numeric_limits<uint64_t>::max());
 
+  vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
+  if (vkResetCommandPool(device, commandPool, 0) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to reset commandPool!");
+  }
+
+  VkCommandBufferBeginInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  err = vkBeginCommandBuffer(commandBuffers, &info);
+  check_vk_result(err);
+
   VkResult result = vkAcquireNextImageKHR(
       device,
       swapChain.get(),
@@ -786,8 +803,6 @@ void Engine::endFrame()
   submitInfo.pCommandBuffers = &currentCommandBuffer;
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
-
-  vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
   if (vkQueueSubmit(*getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
   {

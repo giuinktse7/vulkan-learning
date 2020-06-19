@@ -16,6 +16,8 @@
 #include "vertex.h"
 #include "camera.h"
 
+#include "gui.h"
+
 enum BlendMode
 {
 	BM_NONE,
@@ -333,6 +335,21 @@ public:
 		return mousePosition;
 	}
 
+	VkAllocationCallbacks *getAllocator()
+	{
+		return allocator;
+	}
+
+	uint32_t getImageCount()
+	{
+		return swapChain.getImageCount();
+	}
+
+	uint32_t getMinImageCount()
+	{
+		return swapChain.getMinImageCount();
+	}
+
 private:
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
@@ -347,6 +364,7 @@ private:
 	VkSurfaceKHR surface;
 
 	VkInstance instance;
+	VkAllocationCallbacks *allocator = NULL;
 
 	SwapChain swapChain;
 
