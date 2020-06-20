@@ -14,8 +14,8 @@ void GUI::initialize()
   (void)io;
   //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
-  // ImGui::StyleColorsLight();
-  ImGui::StyleColorsDark();
+  ImGui::StyleColorsLight();
+  //ImGui::StyleColorsDark();
   initForVulkan();
 }
 

@@ -381,20 +381,20 @@ bool Engine::initFrame()
     recreateSwapChain();
   }
 
-  VkResult result = vkAcquireNextImageKHR(
-      device,
-      swapChain.get(),
-      std::numeric_limits<uint64_t>::max(),
-      imageAvailableSemaphores[currentFrame],
-      VK_NULL_HANDLE,
-      &nextFrame);
-
   vkWaitForFences(
       device,
       1,
       &inFlightFences[currentFrame],
       VK_TRUE,
       std::numeric_limits<uint64_t>::max());
+
+  VkResult result = vkAcquireNextImageKHR(
+      device,
+      swapChain.get(),
+      std::numeric_limits<uint64_t>::max(),
+      imageAvailableSemaphores[previousFrame],
+      VK_NULL_HANDLE,
+      &currentFrame);
 
   vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
@@ -463,7 +463,7 @@ void Engine::beginRenderPass()
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass = renderPass;
-  renderPassInfo.framebuffer = swapChain.getFrameBuffer(nextFrame);
+  renderPassInfo.framebuffer = swapChain.getFrameBuffer(currentFrame);
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = swapChain.getExtent();
   renderPassInfo.clearValueCount = 1;
@@ -752,6 +752,8 @@ void Engine::recreateSwapChain()
   swapChain.recreate();
 
   gui.recreate();
+
+  currentFrame = 0;
 }
 
 void Engine::endFrame()
@@ -775,7 +777,7 @@ void Engine::endFrame()
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
+  submitInfo.pWaitSemaphores = &imageAvailableSemaphores[previousFrame];
   submitInfo.pWaitDstStageMask = waitStages;
   submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
   submitInfo.pCommandBuffers = submitCommandBuffers.data();
@@ -789,8 +791,7 @@ void Engine::endFrame()
 
   presentFrame();
 
-  currentFrame++;
-  currentFrame %= getMaxFramesInFlight();
+  currentFrame = (currentFrame + 1) % getMaxFramesInFlight();
 }
 
 void Engine::presentFrame()
@@ -798,7 +799,7 @@ void Engine::presentFrame()
   currentCommandBuffer = nullptr;
 
   VkSwapchainKHR swapChains[] = {swapChain.get()};
-  uint32_t imageIndices[] = {nextFrame};
+  uint32_t imageIndices[] = {currentFrame};
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

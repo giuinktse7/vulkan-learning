@@ -432,8 +432,8 @@ private:
 
 	VkCommandBuffer currentCommandBuffer;
 
+	uint32_t previousFrame;
 	uint32_t currentFrame;
-	uint32_t nextFrame;
 
 	// Pipeline
 	VkPipelineLayout pipelineLayout;
