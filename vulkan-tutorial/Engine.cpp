@@ -70,13 +70,15 @@ void Engine::initialize(GLFWwindow *window)
   VulkanDebug::setupDebugMessenger(instance, debugMessenger);
 
   createSurface();
-  DeviceManager::pickPhysicalDevice();
-  DeviceManager::createLogicalDevice();
 
-  swapChain = SwapChain();
-  swapChain.init();
+  this->physicalDevice = DeviceManager::pickPhysicalDevice();
+  this->device = DeviceManager::createLogicalDevice();
 
-  renderPass = mapRenderer->createRenderPass();
+  this->queueFamilyIndices = DeviceManager::getQueueFamilies(this->physicalDevice);
+
+  swapChain.initialize();
+
+  this->renderPass = mapRenderer->createRenderPass();
   createDescriptorSetLayouts();
   createGraphicsPipeline();
   swapChain.createFramebuffers();
@@ -223,8 +225,6 @@ bool Engine::chronosOrStandardValidation(std::vector<VkLayerProperties> &props)
 
 void Engine::createCommandPool()
 {
-  QueueFamilyIndices queueFamilyIndices = VulkanHelpers::findQueueFamilies(physicalDevice, surface);
-
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
@@ -422,8 +422,6 @@ bool Engine::initFrame()
 void Engine::renderFrame()
 {
 
-  gui.renderFrame(currentFrame);
-
   // Render map
   auto &commandBuffer = perFrameCommandBuffer[currentFrame];
   vkFreeCommandBuffers(
@@ -442,6 +440,8 @@ void Engine::renderFrame()
   startMainCommandBuffer();
 
   updateUniformBuffer();
+
+  gui.renderFrame(currentFrame);
 }
 
 void Engine::allocateCommandBuffers()

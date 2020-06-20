@@ -25,43 +25,6 @@ bool VulkanHelpers::checkDeviceExtensionSupport(VkPhysicalDevice device)
   return requiredExtensions.empty();
 }
 
-QueueFamilyIndices VulkanHelpers::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-  QueueFamilyIndices indices;
-
-  uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-  int i = 0;
-  for (const auto &queueFamily : queueFamilies)
-  {
-    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-    {
-      indices.graphicsFamily = i;
-    }
-
-    VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-
-    if (presentSupport)
-    {
-      indices.presentFamily = i;
-    }
-
-    if (indices.isComplete())
-    {
-      break;
-    }
-
-    i++;
-  }
-
-  return indices;
-}
-
 VkImageView VulkanHelpers::createImageView(VkDevice device, VkImage image, VkFormat format)
 {
   VkImageViewCreateInfo viewInfo{};
@@ -119,7 +82,7 @@ uint32_t VulkanHelpers::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t
 void VulkanHelpers::createCommandPool(VkCommandPool *commandPool, VkCommandPoolCreateFlags flags)
 {
   Engine *engine = Engine::getInstance();
-  QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(engine->getPhysicalDevice(), engine->getSurface());
+  QueueFamilyIndices indices = engine->getQueueFamilyIndices();
 
   VkCommandPoolCreateInfo commandPoolCreateInfo = {};
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

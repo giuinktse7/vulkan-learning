@@ -141,7 +141,7 @@ public:
 		return swapChain;
 	}
 
-	VkPhysicalDevice getPhysicalDevice()
+	VkPhysicalDevice &getPhysicalDevice()
 	{
 		return physicalDevice;
 	}
@@ -280,6 +280,11 @@ public:
 
 	void WaitUntilDeviceIdle();
 
+	QueueFamilyIndices getQueueFamilyIndices()
+	{
+		return queueFamilyIndices;
+	}
+
 	VkDescriptorSetLayout &getPerTextureDescriptorSetLayout()
 	{
 		return perTextureDescriptorSetLayout;
@@ -390,6 +395,8 @@ private:
 	VkDevice device;
 	VkPhysicalDevice physicalDevice;
 
+	QueueFamilyIndices queueFamilyIndices;
+
 	VkRenderPass renderPass;
 
 	MapRenderer *mapRenderer;
@@ -480,6 +487,8 @@ private:
 		this->window = window;
 	}
 
+	void initializeQueueFamilies();
+
 	void createDescriptorSetLayouts();
 	VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code);
 	void createUniformBuffers();
@@ -520,6 +529,4 @@ private:
 	void presentFrame();
 
 	void recreateSwapChain();
-
-	void SetupVulkanWindow();
 };

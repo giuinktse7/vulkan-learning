@@ -10,7 +10,7 @@
 #include "VulkanHelpers.h"
 #include "engine.h"
 
-void DeviceManager::pickPhysicalDevice()
+VkPhysicalDevice DeviceManager::pickPhysicalDevice()
 {
   Engine *engine = Engine::getInstance();
   uint32_t deviceCount = 0;
@@ -24,25 +24,29 @@ void DeviceManager::pickPhysicalDevice()
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(engine->getVkInstance(), &deviceCount, devices.data());
 
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
   for (const auto &device : devices)
   {
     if (isDeviceSuitable(device))
     {
-      engine->setPhysicalDevice(device);
+      physicalDevice = device;
       break;
     }
   }
 
-  if (engine->getPhysicalDevice() == VK_NULL_HANDLE)
+  if (physicalDevice == VK_NULL_HANDLE)
   {
     throw std::runtime_error("failed to find a suitable GPU!");
   }
+
+  return physicalDevice;
 }
 
 bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
 {
   Engine *engine = Engine::getInstance();
-  QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(device, engine->getSurface());
+  QueueFamilyIndices indices = getQueueFamilies(device);
 
   bool extensionsSupported = VulkanHelpers::checkDeviceExtensionSupport(device);
 
@@ -59,10 +63,11 @@ bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
   return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-void DeviceManager::createLogicalDevice()
+VkDevice DeviceManager::createLogicalDevice()
 {
   Engine *engine = Engine::getInstance();
-  QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(engine->getPhysicalDevice(), engine->getSurface());
+  VkPhysicalDevice &physicalDevice = engine->getPhysicalDevice();
+  QueueFamilyIndices indices = getQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -103,11 +108,52 @@ void DeviceManager::createLogicalDevice()
     createInfo.enabledLayerCount = 0;
   }
 
-  if (vkCreateDevice(engine->getPhysicalDevice(), &createInfo, nullptr, &engine->getDevice()) != VK_SUCCESS)
+  VkDevice device;
+
+  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
   {
     throw std::runtime_error("Failed to create logical device!");
   }
 
-  vkGetDeviceQueue(engine->getDevice(), indices.graphicsFamily.value(), 0, engine->getGraphicsQueue());
-  vkGetDeviceQueue(engine->getDevice(), indices.presentFamily.value(), 0, engine->getPresentQueue());
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, engine->getGraphicsQueue());
+  vkGetDeviceQueue(device, indices.presentFamily.value(), 0, engine->getPresentQueue());
+
+  return device;
+}
+
+QueueFamilyIndices DeviceManager::getQueueFamilies(VkPhysicalDevice physicalDevice)
+{
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+
+  QueueFamilyIndices indices;
+
+  int i = 0;
+  for (const auto &queueFamily : queueFamilies)
+  {
+    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+    {
+      indices.graphicsFamily = i;
+    }
+
+    VkBool32 presentSupport = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, Engine::getInstance()->getSurface(), &presentSupport);
+
+    if (presentSupport)
+    {
+      indices.presentFamily = i;
+    }
+
+    if (indices.isComplete())
+    {
+      break;
+    }
+
+    i++;
+  }
+
+  return indices;
 }

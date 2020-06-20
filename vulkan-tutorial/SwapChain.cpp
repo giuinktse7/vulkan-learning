@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "Logger.h"
 
-void SwapChain::init()
+void SwapChain::initialize()
 {
   create();
   createImageViews();
@@ -41,7 +41,7 @@ void SwapChain::create()
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  QueueFamilyIndices indices = VulkanHelpers::findQueueFamilies(engine->getPhysicalDevice(), engine->getSurface());
+  QueueFamilyIndices indices = engine->getQueueFamilyIndices();
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
   if (indices.graphicsFamily != indices.presentFamily)

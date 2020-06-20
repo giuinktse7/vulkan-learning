@@ -14,17 +14,6 @@ struct SwapChainSupportDetails
   std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct QueueFamilyIndices
-{
-  std::optional<uint32_t> graphicsFamily;
-  std::optional<uint32_t> presentFamily;
-
-  bool isComplete()
-  {
-    return graphicsFamily.has_value() && presentFamily.has_value();
-  }
-};
-
 namespace VulkanHelpers
 {
   static const char *khronosValidation = "VK_LAYER_KHRONOS_validation";
@@ -37,8 +26,6 @@ namespace VulkanHelpers
       "VK_LAYER_KHRONOS_validation"};
 
   bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
   VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);
 

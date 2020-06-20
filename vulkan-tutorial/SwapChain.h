@@ -23,7 +23,7 @@ class SwapChain
 public:
   static SwapChainSupportDetails querySupport(const VkPhysicalDevice &device, const VkSurfaceKHR &surface);
 
-  void init();
+  void initialize();
   void create();
   void recreate();
 
