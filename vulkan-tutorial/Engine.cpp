@@ -12,7 +12,6 @@
 #include "Logger.h"
 #include "file.h"
 #include "vertex.h"
-#include "pipeline.h"
 
 #include <imgui_impl_glfw.h>
 
@@ -77,31 +76,20 @@ void Engine::initialize(GLFWwindow *window)
   this->queueFamilyIndices = DeviceManager::getQueueFamilies(this->physicalDevice);
 
   swapChain.initialize();
-
-  this->renderPass = mapRenderer->createRenderPass();
-  createDescriptorSetLayouts();
-  createGraphicsPipeline();
-  swapChain.createFramebuffers();
   createCommandPool();
-  createUniformBuffers();
-  createDescriptorPool();
-  createPerFrameDescriptorSets();
+  mapRenderer->initialize();
+  gui.initialize();
+
   createSyncObjects();
-  createIndexAndVertexBuffers();
-
-  uint8_t whitePixel[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
-
-  isInitialized = true;
 
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
 
-  camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+  mapRenderer->camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
 
-  camera.updateZoom();
+  mapRenderer->camera.updateZoom();
 
-  gui.initialize();
+  isInitialized = true;
 }
 
 void Engine::createVulkanInstance()
@@ -223,30 +211,6 @@ bool Engine::chronosOrStandardValidation(std::vector<VkLayerProperties> &props)
       });
 }
 
-void Engine::createCommandPool()
-{
-  VkCommandPoolCreateInfo poolInfo{};
-  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-  poolInfo.flags = 0; // Optional
-
-  if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create command pool!");
-  }
-
-  auto framesInFlight = getMaxFramesInFlight();
-  perFrameCommandPool.resize(framesInFlight);
-  perFrameCommandBuffer.resize(framesInFlight);
-  for (int i = 0; i < framesInFlight; ++i)
-  {
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &perFrameCommandPool[i]) != VK_SUCCESS)
-    {
-      throw std::runtime_error("failed to create graphics command pool!");
-    }
-  }
-}
-
 uint32_t Engine::getMaxFramesInFlight()
 {
   return static_cast<uint32_t>(swapChain.getImages().size());
@@ -281,10 +245,23 @@ void Engine::endSingleTimeCommands(VkCommandBuffer buffer)
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &buffer;
 
-  vkQueueSubmit(*getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(*getGraphicsQueue());
+  vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
 
   vkFreeCommandBuffers(device, commandPool, 1, &buffer);
+}
+
+void Engine::createCommandPool()
+{
+  VkCommandPoolCreateInfo poolInfo{};
+  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+  poolInfo.flags = 0; // Optional
+
+  if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to create command pool!");
+  }
 }
 
 void Engine::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -421,61 +398,8 @@ bool Engine::initFrame()
 
 void Engine::renderFrame()
 {
-
-  // Render map
-  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
-  vkFreeCommandBuffers(
-      device,
-      perFrameCommandPool[currentFrame],
-      1,
-      &commandBuffer);
-  commandBuffer = nullptr;
-
-  currentRenderInfo.descriptorSet = defaultTexture->getDescriptorSet();
-  currentRenderInfo.textureWindow = defaultTexture->getTextureWindow();
-  currentRenderInfo.color = {1.0f, 1.0f, 1.0f, 1.0f};
-
-  currentBufferIndex = 0;
-
-  startMainCommandBuffer();
-
-  updateUniformBuffer();
-
+  mapRenderer->renderFrame(currentFrame);
   gui.renderFrame(currentFrame);
-}
-
-void Engine::allocateCommandBuffers()
-{
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = commandPool;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
-
-  if (vkAllocateCommandBuffers(getDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to allocate command buffers!");
-  }
-}
-
-void Engine::beginRenderPass()
-{
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = renderPass;
-  renderPassInfo.framebuffer = swapChain.getFrameBuffer(currentFrame);
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = swapChain.getExtent();
-  renderPassInfo.clearValueCount = 1;
-  VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
-  renderPassInfo.pClearValues = &clearValue;
-
-  vkCmdBeginRenderPass(currentCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-}
-
-void Engine::endRenderPass() const
-{
-  vkCmdEndRenderPass(currentCommandBuffer);
 }
 
 void Engine::createSyncObjects()
@@ -503,173 +427,7 @@ void Engine::createSyncObjects()
   }
 }
 
-void Engine::createDescriptorSetLayouts()
-{
-  VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = 1;
-
-  VkDescriptorSetLayoutBinding pf = {};
-  pf.binding = 0;
-  pf.descriptorCount = 1;
-  pf.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  pf.pImmutableSamplers = nullptr;
-  pf.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-  layoutInfo.pBindings = &pf;
-
-  if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &perFrameDescriptorSetLayout) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create descriptor set layout");
-  }
-
-  VkDescriptorSetLayoutBinding po = {};
-  po.binding = 0;
-  po.descriptorCount = 1;
-  po.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  po.pImmutableSamplers = nullptr;
-  po.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-  layoutInfo.pBindings = &po;
-
-  if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &perTextureDescriptorSetLayout) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create descriptor set layout");
-  }
-}
-
-void Engine::createGraphicsPipeline()
-{
-  std::vector<char> vertShaderCode = File::read("shaders/vert.spv");
-  std::vector<char> fragShaderCode = File::read("shaders/frag.spv");
-
-  VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
-  VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
-
-  VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-  vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vertShaderModule;
-  vertShaderStageInfo.pName = "main";
-
-  VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-  fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = fragShaderModule;
-  fragShaderStageInfo.pName = "main";
-
-  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
-
-  VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-  vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-  auto bindingDescription = Vertex::getBindingDescription();
-  auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-  vertexInputInfo.vertexBindingDescriptionCount = 1;
-  vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-  inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-  inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-  VkViewport viewport = {};
-  viewport.x = 0.0f;
-  viewport.y = 0.0f;
-  viewport.width = (float)swapChain.getExtent().width;
-  viewport.height = (float)swapChain.getExtent().height;
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-
-  VkRect2D scissor = {};
-  scissor.offset = {0, 0};
-  scissor.extent = swapChain.getExtent();
-
-  VkPipelineViewportStateCreateInfo viewportState = {};
-  viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-  viewportState.viewportCount = 1;
-  viewportState.pViewports = &viewport;
-  viewportState.scissorCount = 1;
-  viewportState.pScissors = &scissor;
-
-  VkPipelineRasterizationStateCreateInfo rasterizer = {};
-  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-  rasterizer.depthClampEnable = VK_FALSE;
-  rasterizer.rasterizerDiscardEnable = VK_FALSE;
-  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-  rasterizer.lineWidth = 1.0f;
-  rasterizer.cullMode = VK_CULL_MODE_NONE;
-  rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-  rasterizer.depthBiasEnable = VK_FALSE;
-
-  VkPipelineMultisampleStateCreateInfo multisampling = {};
-  multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-  multisampling.sampleShadingEnable = VK_FALSE;
-  multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-  VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-  colorBlendAttachment.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-      VK_COLOR_COMPONENT_A_BIT;
-  colorBlendAttachment.blendEnable = VK_TRUE;
-  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-
-  VkPipelineColorBlendStateCreateInfo colorBlending = {};
-  colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  colorBlending.logicOpEnable = VK_FALSE;
-  colorBlending.logicOp = VK_LOGIC_OP_COPY;
-  colorBlending.attachmentCount = 1;
-  colorBlending.pAttachments = &colorBlendAttachment;
-  colorBlending.blendConstants[0] = 1.0f;
-  colorBlending.blendConstants[1] = 1.0f;
-  colorBlending.blendConstants[2] = 1.0f;
-  colorBlending.blendConstants[3] = 1.0f;
-
-  std::array<VkDescriptorSetLayout, 2> layouts = {perFrameDescriptorSetLayout, perTextureDescriptorSetLayout};
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = layouts.size();
-  pipelineLayoutInfo.pSetLayouts = layouts.data();
-
-  if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create pipeline layout!");
-  }
-
-  VkGraphicsPipelineCreateInfo pipelineInfo = {};
-  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.stageCount = 2;
-  pipelineInfo.pStages = shaderStages;
-  pipelineInfo.pVertexInputState = &vertexInputInfo;
-  pipelineInfo.pInputAssemblyState = &inputAssembly;
-  pipelineInfo.pViewportState = &viewportState;
-  pipelineInfo.pRasterizationState = &rasterizer;
-  pipelineInfo.pMultisampleState = &multisampling;
-  pipelineInfo.pColorBlendState = &colorBlending;
-  pipelineInfo.layout = pipelineLayout;
-  pipelineInfo.renderPass = renderPass;
-  pipelineInfo.subpass = 0;
-  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) !=
-      VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to create graphics pipeline!");
-  }
-
-  vkDestroyShaderModule(device, fragShaderModule, nullptr);
-  vkDestroyShaderModule(device, vertShaderModule, nullptr);
-}
-
-VkShaderModule Engine::createShaderModule(VkDevice device, const std::vector<char> &code)
+VkShaderModule Engine::createShaderModule(const std::vector<char> &code)
 {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -685,72 +443,21 @@ VkShaderModule Engine::createShaderModule(VkDevice device, const std::vector<cha
   return shaderModule;
 }
 
-void Engine::createUniformBuffers()
-{
-  VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-
-  uniformBuffers.resize(getMaxFramesInFlight());
-
-  for (size_t i = 0; i < getMaxFramesInFlight(); i++)
-  {
-    uniformBuffers[i] = (Buffer::create(bufferSize,
-                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-  }
-}
-
-void Engine::createPerFrameDescriptorSets()
-{
-  std::vector<VkDescriptorSetLayout> layouts(getMaxFramesInFlight(), perFrameDescriptorSetLayout);
-  VkDescriptorSetAllocateInfo allocInfo = {};
-  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool = descriptorPool;
-  allocInfo.descriptorSetCount = getMaxFramesInFlight();
-  allocInfo.pSetLayouts = layouts.data();
-
-  perFrameDescriptorSets.resize(getMaxFramesInFlight());
-  if (vkAllocateDescriptorSets(device, &allocInfo, &perFrameDescriptorSets[0]) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to allocate descriptor sets");
-  }
-
-  for (size_t i = 0; i < getMaxFramesInFlight(); ++i)
-  {
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = uniformBuffers[i].buffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformBufferObject);
-
-    VkWriteDescriptorSet descriptorWrites = {};
-    descriptorWrites.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites.dstSet = perFrameDescriptorSets[i];
-    descriptorWrites.dstBinding = 0;
-    descriptorWrites.dstArrayElement = 0;
-    descriptorWrites.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites.descriptorCount = 1;
-    descriptorWrites.pBufferInfo = &bufferInfo;
-
-    vkUpdateDescriptorSets(device, 1, &descriptorWrites, 0, nullptr);
-  }
-}
-
-void Engine::createIndexAndVertexBuffers()
-{
-  indexBuffers.resize(getMaxFramesInFlight());
-  indexStagingBuffers.resize(getMaxFramesInFlight());
-  vertexBuffers.resize(getMaxFramesInFlight());
-  vertexStagingBuffers.resize(getMaxFramesInFlight());
-}
-
 std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
 {
   return std::make_shared<Texture>(filename);
+}
+
+void Engine::setTexture(std::shared_ptr<Texture> texture)
+{
+  mapRenderer->setTexture(texture);
 }
 
 void Engine::recreateSwapChain()
 {
   swapChain.recreate();
 
+  mapRenderer->recreate();
   gui.recreate();
 
   currentFrame = 0;
@@ -758,21 +465,14 @@ void Engine::recreateSwapChain()
 
 void Engine::endFrame()
 {
-  queueCurrentBatch();
-  drawBatches();
-
-  // GUI
+  mapRenderer->endFrame();
   gui.endFrame(currentFrame);
-
-  if (vkEndCommandBuffer(currentCommandBuffer) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to record command buffer");
-  }
 
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
   std::array<VkCommandBuffer, 2> submitCommandBuffers = {
-      currentCommandBuffer, gui.getCommandBuffer(currentFrame)};
+      mapRenderer->getCommandBuffer(),
+      gui.getCommandBuffer(currentFrame)};
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -784,7 +484,7 @@ void Engine::endFrame()
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
 
-  if (vkQueueSubmit(*getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to submit command buffer to the graphics queue");
   }
@@ -796,8 +496,6 @@ void Engine::endFrame()
 
 void Engine::presentFrame()
 {
-  currentCommandBuffer = nullptr;
-
   VkSwapchainKHR swapChains[] = {swapChain.get()};
   uint32_t imageIndices[] = {currentFrame};
 
@@ -821,399 +519,6 @@ void Engine::presentFrame()
   {
     throw std::runtime_error("failed to present swap chain image");
   }
-}
-
-void Engine::startMainCommandBuffer()
-{
-  auto &commandBuffer = perFrameCommandBuffer[currentFrame];
-
-  VkCommandBufferAllocateInfo allocInfo = {};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = perFrameCommandPool[currentFrame];
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = 1;
-
-  if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to allocate command buffer");
-  }
-
-  currentCommandBuffer = commandBuffer;
-
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-  if (vkBeginCommandBuffer(currentCommandBuffer, &beginInfo) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to begin recording command buffer");
-  }
-
-  vkCmdBindPipeline(currentCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-}
-
-void Engine::updateUniformBuffer()
-{
-  int width, height;
-  glfwGetFramebufferSize(window, &width, &height);
-  // uniformBufferObject.projection = camera.matrices.perspective;
-
-  float zoom = 1 / camera.zoomFactor;
-  auto translated = glm::translate(glm::mat4(1), glm::vec3(camera.position.x, camera.position.y, 0.0f));
-  uniformBufferObject.projection = glm::ortho(0.0f, width * zoom, height * zoom, 0.0f) * translated;
-
-  void *data;
-  vkMapMemory(device, uniformBuffers[currentFrame].bufferMemory, 0, sizeof(UniformBufferObject), 0, &data);
-  memcpy(data, &uniformBufferObject, sizeof(UniformBufferObject));
-  vkUnmapMemory(device, uniformBuffers[currentFrame].bufferMemory);
-}
-
-void Engine::setTexture(std::shared_ptr<Texture> texture)
-{
-  if (!texture)
-  {
-    texture = defaultTexture;
-  }
-
-  if (texture->getDescriptorSet() != currentRenderInfo.descriptorSet)
-  {
-    queueDrawCommand();
-    currentRenderInfo.descriptorSet = texture->getDescriptorSet();
-  }
-  currentRenderInfo.textureWindow = texture->getTextureWindow();
-}
-
-bool Engine::queueDrawCommand()
-{
-  if (!currentRenderInfo.isStaged())
-  {
-    return false;
-  }
-
-  drawCommands.emplace_back(currentRenderInfo.descriptorSet, currentRenderInfo.indexOffset, currentRenderInfo.indexCount, currentBufferIndex);
-  currentRenderInfo.offset();
-  return true;
-}
-
-void Engine::drawSprite(float x, float y, float width, float height)
-{
-  float worldX = x * SPRITE_SIZE;
-  float worldY = y * SPRITE_SIZE;
-
-  TextureWindow *window = &currentRenderInfo.textureWindow;
-  glm::vec4 color = currentRenderInfo.color;
-
-  std::array<uint16_t, 6> indices{0, 1, 3, 3, 1, 2};
-
-  std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, color, {window->x0, window->y0}},
-      {{worldX, worldY + height}, color, {window->x0, window->y1}},
-      {{worldX + width, worldY + height}, color, {window->x1, window->y1}},
-      {{worldX + width, worldY}, color, {window->x1, window->y0}},
-  }};
-
-  drawTriangles(indices.data(), indices.size(), vertices.data(), vertices.size());
-}
-
-void Engine::drawTriangles(const uint16_t *indices, size_t indexCount, const Vertex *vertices, size_t vertexCount)
-{
-  auto &indexWrite = currentRenderInfo.indexWrite;
-  auto &vertexWrite = currentRenderInfo.vertexWrite;
-  if (!currentCommandBuffer)
-  {
-    throw std::runtime_error("no command buffer");
-  }
-
-  if (!indexWrite.cursor || !vertexWrite.cursor)
-  {
-    mapStagingBufferMemory();
-  }
-
-  auto vbFull = vertexWrite.cursor + vertexCount >= vertexWrite.end;
-  auto ibFull = indexWrite.cursor + indexCount >= indexWrite.end;
-  if (vbFull || ibFull)
-  {
-    queueCurrentBatch();
-    mapStagingBufferMemory();
-  }
-
-  if (!indexWrite.cursor || !vertexWrite.cursor)
-  {
-    throw std::runtime_error("write destination is null");
-  }
-
-  auto base = static_cast<uint16_t>(vertexWrite.cursor - vertexWrite.start);
-
-  // Both indices and vertices need adjustment while being copied to
-  // the index/vertex buffers. The indices need the base added,
-  // and the vertices need to be colored, for example.
-  auto vertexRead = vertices;
-  for (int i = 0; i < vertexCount; ++i)
-  {
-    vertexWrite.cursor->pos = vertexRead->pos;
-    vertexWrite.cursor->color = vertexRead->color * currentRenderInfo.color;
-    vertexWrite.cursor->texCoord = vertexRead->texCoord;
-    vertexWrite.cursor->blendMode = currentRenderInfo.blendMode;
-
-    vertexWrite.cursor++;
-    vertexRead++;
-  }
-
-  auto indexRead = indices;
-  for (int i = 0; i < indexCount; ++i)
-  {
-    *indexWrite.cursor = *indexRead + base;
-    indexWrite.cursor++;
-    indexRead++;
-  }
-
-  currentRenderInfo.indexCount += indexCount;
-  currentRenderInfo.vertexCount += vertexCount;
-}
-
-void Engine::mapStagingBufferMemory()
-{
-  auto &indexWrite = currentRenderInfo.indexWrite;
-  auto &vertexWrite = currentRenderInfo.vertexWrite;
-
-  void *data;
-
-  auto indexStagingBuffer = getIndexStagingBuffer();
-  vkMapMemory(device, indexStagingBuffer.bufferMemory, 0, getIndexBufferSize(), 0, &data);
-  indexWrite.start = reinterpret_cast<uint16_t *>(data);
-  indexWrite.cursor = indexWrite.start;
-  indexWrite.end = indexWrite.start + getMaxNumIndices();
-
-  auto vertexStagingBuffer = getVertexStagingBuffer();
-  vkMapMemory(device, vertexStagingBuffer.bufferMemory, 0, getVertexBufferSize(), 0, &data);
-  vertexWrite.start = reinterpret_cast<Vertex *>(data);
-  vertexWrite.cursor = vertexWrite.start;
-  vertexWrite.end = vertexWrite.start + getMaxNumVertices();
-
-  currentRenderInfo.resetOffset();
-}
-
-BoundBuffer &Engine::getVertexStagingBuffer()
-{
-  auto &buffers = vertexStagingBuffers[currentFrame];
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating vertex staging buffer");
-
-    auto buffer = Buffer::create(
-        getVertexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range");
-  }
-
-  auto &vsb = buffers[currentBufferIndex];
-  return vsb;
-}
-
-BoundBuffer &Engine::getIndexStagingBuffer()
-{
-  auto &buffers = indexStagingBuffers[currentFrame];
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating index staging buffer");
-
-    auto buffer = Buffer::create(
-        getIndexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range");
-  }
-
-  auto &isb = buffers[currentBufferIndex];
-  return isb;
-}
-
-void Engine::queueCurrentBatch()
-{
-  queueDrawCommand();
-  copyStagingBuffersToDevice(currentCommandBuffer);
-  unmapStagingBuffers();
-
-  currentBufferIndex++;
-}
-
-void Engine::copyStagingBuffersToDevice(VkCommandBuffer commandBuffer)
-{
-  auto &indexWrite = currentRenderInfo.indexWrite;
-  auto &vertexWrite = currentRenderInfo.vertexWrite;
-
-  VkDeviceSize indexSize = (indexWrite.cursor - indexWrite.start) * sizeof(uint16_t);
-  if (indexSize > 0)
-  {
-    auto indexBuffer = getIndexBuffer();
-    auto indexStagingBuffer = getIndexStagingBuffer();
-
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = indexSize;
-    vkCmdCopyBuffer(commandBuffer, indexStagingBuffer.buffer, indexBuffer.buffer, 1, &copyRegion);
-  }
-
-  VkDeviceSize vertexSize = (vertexWrite.cursor - vertexWrite.start) * sizeof(Vertex);
-  if (vertexSize > 0)
-  {
-    auto vertexBuffer = getVertexBuffer();
-    auto vertexStagingBuffer = getVertexStagingBuffer();
-
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = vertexSize;
-    vkCmdCopyBuffer(commandBuffer, vertexStagingBuffer.buffer, vertexBuffer.buffer, 1, &copyRegion);
-  }
-}
-
-BoundBuffer &Engine::getVertexBuffer()
-{
-  auto &buffers = vertexBuffers[currentFrame];
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating vertex buffer");
-
-    auto buffer = Buffer::create(
-        getVertexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range");
-  }
-
-  auto &vb = buffers[currentBufferIndex];
-  return vb;
-}
-
-BoundBuffer &Engine::getIndexBuffer()
-{
-  auto &buffers = indexBuffers[currentFrame];
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating index buffer");
-
-    auto buffer = Buffer::create(
-        getIndexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range");
-  }
-
-  auto &ib = buffers[currentBufferIndex];
-  return ib;
-}
-
-void Engine::unmapStagingBuffers()
-{
-  auto &indexWrite = currentRenderInfo.indexWrite;
-  auto &vertexWrite = currentRenderInfo.vertexWrite;
-
-  if (!indexWrite.start && !vertexWrite.start)
-  {
-    return;
-  }
-
-  auto isb = getIndexStagingBuffer();
-  vkUnmapMemory(device, isb.bufferMemory);
-  indexWrite.start = nullptr;
-  indexWrite.cursor = nullptr;
-  indexWrite.end = nullptr;
-
-  auto vsb = getVertexStagingBuffer();
-  vkUnmapMemory(device, vsb.bufferMemory);
-  vertexWrite.start = nullptr;
-  vertexWrite.cursor = nullptr;
-  vertexWrite.end = nullptr;
-}
-
-VkDeviceSize Engine::getVertexBufferSize()
-{
-  return getMaxNumVertices() * sizeof(Vertex);
-}
-
-VkDeviceSize Engine::getIndexBufferSize()
-{
-  return getMaxNumIndices() * sizeof(uint16_t);
-}
-
-VkDeviceSize Engine::getMaxNumIndices()
-{
-  return 64 * 1024;
-}
-
-VkDeviceSize Engine::getMaxNumVertices()
-{
-  return 64 * 1024;
-}
-
-void Engine::drawBatches()
-{
-  beginRenderPass();
-
-  if (!drawCommands.empty())
-  {
-    int curBuffer = -1;
-
-    for (auto &cmd : drawCommands)
-    {
-      if (cmd.bufferIndex != curBuffer)
-      {
-        curBuffer = cmd.bufferIndex;
-
-        VkBuffer vertexBuffers[] = {this->vertexBuffers[currentFrame][curBuffer].buffer};
-        VkDeviceSize offsets[] = {0};
-
-        vkCmdBindVertexBuffers(
-            currentCommandBuffer,
-            0,
-            1,
-            vertexBuffers,
-            offsets);
-
-        vkCmdBindIndexBuffer(
-            currentCommandBuffer,
-            indexBuffers[currentFrame][curBuffer].buffer,
-            0,
-            VK_INDEX_TYPE_UINT16);
-      }
-
-      std::array<VkDescriptorSet, 2> descriptorSets = {
-          perFrameDescriptorSets[currentFrame],
-          cmd.descriptorSet};
-      vkCmdBindDescriptorSets(currentCommandBuffer,
-                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              pipelineLayout,
-                              0,
-                              descriptorSets.size(),
-                              descriptorSets.data(),
-                              0, nullptr);
-
-      vkCmdDrawIndexed(currentCommandBuffer, cmd.numIndices, 1, cmd.baseIndex, 0, 0);
-    }
-  }
-  endRenderPass();
-
-  drawCommandCount = drawCommands.size();
-  drawCommands.clear();
 }
 
 void Engine::WaitUntilDeviceIdle()

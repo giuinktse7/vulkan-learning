@@ -20,67 +20,6 @@
 
 #include "gui.h"
 
-enum BlendMode
-{
-	BM_NONE,
-	BM_BLEND,
-	BM_ADD,
-	BM_ADDX2,
-
-	NUM_BLENDMODES
-};
-
-template <typename T>
-struct WriteRange
-{
-	T *start;
-	T *cursor;
-	T *end;
-};
-
-struct RenderInfo
-{
-	uint16_t indexCount = 0;
-	uint16_t indexOffset = 0;
-	uint16_t vertexCount = 0;
-	uint16_t vertexOffset = 0;
-
-	VkDescriptorSet descriptorSet;
-	TextureWindow textureWindow;
-
-	glm::vec4 color;
-	BlendMode blendMode;
-
-	WriteRange<uint16_t> indexWrite;
-	WriteRange<Vertex> vertexWrite;
-
-	bool isStaged() const
-	{
-		return indexCount > 0;
-	}
-
-	void resetOffset()
-	{
-		indexCount = 0;
-		indexOffset = 0;
-		vertexCount = 0;
-		vertexOffset = 0;
-	}
-
-	void offset()
-	{
-		indexOffset += indexCount;
-		indexCount = 0;
-		vertexOffset += vertexCount;
-		vertexCount = 0;
-	}
-};
-
-struct UniformBufferObject
-{
-	glm::mat4 projection;
-};
-
 class Engine
 {
 protected:
@@ -93,8 +32,6 @@ public:
 	~Engine();
 
 	unsigned long frames = 0;
-
-	Camera camera;
 
 	static const int SPRITE_SIZE = 32;
 
@@ -109,11 +46,6 @@ public:
 	void setPhysicalDevice(VkPhysicalDevice physicalDevice)
 	{
 		this->physicalDevice = physicalDevice;
-	}
-
-	std::vector<VkCommandBuffer> &getCommandBuffers()
-	{
-		return commandBuffers;
 	}
 
 	GLFWwindow *getWindow()
@@ -148,17 +80,12 @@ public:
 
 	VkQueue *getGraphicsQueue()
 	{
-		return mapRenderer->getGraphicsQueue();
+		return &graphicsQueue;
 	}
 
 	VkQueue *getPresentQueue()
 	{
-		return mapRenderer->getPresentQueue();
-	}
-
-	VkCommandBuffer &getCommandBuffer(uint32_t index)
-	{
-		return commandBuffers[index];
+		return &presentQueue;
 	}
 
 	void setFrameBufferResized(bool value)
@@ -176,31 +103,6 @@ public:
 		return device;
 	}
 
-	VkRenderPass getRenderPass() const
-	{
-		return renderPass;
-	}
-
-	void createRenderPass()
-	{
-		renderPass = mapRenderer->createRenderPass();
-	}
-
-	void createDescriptorPool()
-	{
-		descriptorPool = ResourceDescriptor::createPool();
-	}
-
-	void setRenderPass(VkRenderPass renderPass)
-	{
-		this->renderPass = renderPass;
-	}
-
-	VkDescriptorPool &getDescriptorPool()
-	{
-		return descriptorPool;
-	}
-
 	VkCommandPool getCommandPool()
 	{
 		return commandPool;
@@ -209,16 +111,6 @@ public:
 	void clearCurrentCommandBuffer()
 	{
 		currentCommandBuffer = nullptr;
-	}
-
-	VkPipeline &getGraphicsPipeline()
-	{
-		return graphicsPipeline;
-	}
-
-	VkPipelineLayout &getPipelineLayout()
-	{
-		return pipelineLayout;
 	}
 
 	void createCommandPool();
@@ -260,23 +152,7 @@ public:
 		return renderFinishedSemaphores[index];
 	};
 
-	VkCommandBuffer &getPerFrameCommandBuffer(size_t index)
-	{
-		return perFrameCommandBuffer[index];
-	}
-
-	VkCommandPool getPerFrameCommandPool(size_t index)
-	{
-		return perFrameCommandPool[index];
-	}
-
 	void shutdown();
-
-	void createGraphicsPipeline();
-
-	void allocateCommandBuffers();
-	void beginRenderPass();
-	void endRenderPass() const;
 
 	void WaitUntilDeviceIdle();
 
@@ -304,7 +180,10 @@ public:
 
 	void setTexture(std::shared_ptr<Texture> texture);
 
-	void drawSprite(float x, float y, float width, float height);
+	void drawSprite(float x, float y, float width, float height)
+	{
+		mapRenderer->drawSprite(x, y, width, height);
+	}
 
 	void endFrame();
 
@@ -369,6 +248,43 @@ public:
 
 	bool initFrame();
 
+	VkShaderModule createShaderModule(const std::vector<char> &code);
+
+	void resetZoom()
+	{
+		mapRenderer->camera.resetZoom();
+	}
+
+	void zoomIn()
+	{
+		mapRenderer->camera.zoomIn();
+	}
+
+	void zoomOut()
+	{
+		mapRenderer->camera.zoomOut();
+	}
+
+	int getCameraZoomStep()
+	{
+		return mapRenderer->camera.zoomStep;
+	}
+
+	void translateCamera(glm::vec2 delta)
+	{
+		return mapRenderer->camera.translate(delta);
+	}
+
+	VkDescriptorPool &getMapDescriptorPool()
+	{
+		return mapRenderer->getDescriptorPool();
+	}
+
+	VkDescriptorSetLayout &getTextureDescriptorSetLayout()
+	{
+		return mapRenderer->getTextureDescriptorSetLayout();
+	}
+
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 private:
@@ -397,21 +313,16 @@ private:
 
 	QueueFamilyIndices queueFamilyIndices;
 
-	VkRenderPass renderPass;
+	VkQueue graphicsQueue;
+	VkQueue presentQueue;
 
 	MapRenderer *mapRenderer;
 
 	VkDebugUtilsMessengerEXT debugMessenger;
 
-	std::vector<VkCommandBuffer> commandBuffers;
-
 	bool framebufferResized = false;
 
 	VkCommandPool commandPool;
-	std::vector<VkCommandPool> perFrameCommandPool;
-	std::vector<VkCommandBuffer> perFrameCommandBuffer;
-
-	VkDescriptorPool descriptorPool;
 
 	std::vector<BoundBuffer> uniformBuffers;
 
@@ -424,29 +335,12 @@ private:
 	VkDescriptorSetLayout perTextureDescriptorSetLayout;
 	VkDescriptorSetLayout perFrameDescriptorSetLayout;
 
-	std::vector<VkDescriptorSet> perFrameDescriptorSets;
-
-	std::vector<std::vector<BoundBuffer>> indexBuffers;
-	std::vector<std::vector<BoundBuffer>> indexStagingBuffers;
-	std::vector<std::vector<BoundBuffer>> vertexBuffers;
-	std::vector<std::vector<BoundBuffer>> vertexStagingBuffers;
-
-	RenderInfo currentRenderInfo;
-
-	std::shared_ptr<Texture> defaultTexture;
-
 	int currentBufferIndex = 0;
 
 	VkCommandBuffer currentCommandBuffer;
 
 	uint32_t previousFrame;
 	uint32_t currentFrame;
-
-	// Pipeline
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline = {};
-
-	UniformBufferObject uniformBufferObject;
 
 	std::unordered_set<int> keys;
 
@@ -490,7 +384,6 @@ private:
 	void initializeQueueFamilies();
 
 	void createDescriptorSetLayouts();
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char> &code);
 	void createUniformBuffers();
 
 	void createPerFrameDescriptorSets();

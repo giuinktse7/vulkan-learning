@@ -174,9 +174,9 @@ VkDescriptorSet Texture::createDescriptorSet(VkImageView imageView, VkSampler sa
 
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool = engine->getDescriptorPool();
+  allocInfo.descriptorPool = engine->getMapDescriptorPool();
   allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts = &engine->getPerTextureDescriptorSetLayout();
+  allocInfo.pSetLayouts = &engine->getTextureDescriptorSetLayout();
 
   VkDescriptorSet descriptorSet;
   if (vkAllocateDescriptorSets(engine->getDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS)

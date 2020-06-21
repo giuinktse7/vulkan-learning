@@ -7,8 +7,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "pipeline.h"
-
 #include <chrono>
 
 #include <iostream>
@@ -107,11 +105,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
 	if (ctrlDown && key == GLFW_KEY_0)
 	{
-		engine->camera.resetZoom();
+		engine->resetZoom();
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = Engine::SPRITE_SIZE * 11 / (engine->camera.zoomStep + 1);
+	float step = Engine::SPRITE_SIZE * 11 / (engine->getCameraZoomStep() + 1);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
@@ -130,7 +128,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 		delta.y = -step;
 	}
 
-	Engine::getInstance()->camera.translate(delta);
+	Engine::getInstance()->translateCamera(delta);
 }
 
 void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
@@ -138,11 +136,11 @@ void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 	Engine *engine = Engine::getInstance();
 	if (yoffset > 0)
 	{
-		engine->camera.zoomIn();
+		engine->zoomIn();
 	}
 	else
 	{
-		engine->camera.zoomOut();
+		engine->zoomOut();
 	}
 }
 

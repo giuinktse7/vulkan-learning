@@ -92,11 +92,6 @@ void SwapChain::recreate()
 
   createImageViews();
 
-  engine->createRenderPass();
-  engine->createGraphicsPipeline();
-
-  createFramebuffers();
-
   engine->cleanupSyncObjects();
   engine->createSyncObjects();
   this->validExtent = true;
@@ -198,65 +193,12 @@ void SwapChain::createImageViews()
   }
 }
 
-void SwapChain::createFramebuffers()
-{
-  Engine *engine = Engine::getInstance();
-  framebuffers.resize(imageViews.size());
-  engine->getCommandBuffers().resize(imageViews.size());
-
-  for (size_t i = 0; i < imageViews.size(); ++i)
-  {
-    VkImageView attachments[] = {
-        imageViews[i]};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = engine->getRenderPass();
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = attachments;
-    framebufferInfo.width = engine->getSwapChain().extent.width;
-    framebufferInfo.height = engine->getSwapChain().extent.height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(engine->getDevice(), &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS)
-    {
-      throw std::runtime_error("failed to create framebuffer!");
-    }
-  }
-}
-
 void SwapChain::cleanup()
 {
   Engine *engine = Engine::getInstance();
   VkDevice device = engine->getDevice();
-  std::vector<VkCommandBuffer> commandBuffers = engine->getCommandBuffers();
 
-  for (auto framebuffer : framebuffers)
-  {
-    vkDestroyFramebuffer(device, framebuffer, nullptr);
-  }
-
-  for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
-  {
-    auto &commandBuffer = engine->getPerFrameCommandBuffer(i);
-    if (commandBuffer)
-    {
-      vkFreeCommandBuffers(
-          device,
-          engine->getPerFrameCommandPool(i),
-          1,
-          &commandBuffer);
-
-      commandBuffer = nullptr;
-    }
-  }
-
-  engine->clearCurrentCommandBuffer();
-  vkDestroyPipeline(device, engine->getGraphicsPipeline(), nullptr);
-  vkDestroyPipelineLayout(device, engine->getPipelineLayout(), nullptr);
-  vkDestroyRenderPass(device, engine->getRenderPass(), nullptr);
-
-  for (auto imageView : imageViews)
+    for (auto imageView : imageViews)
   {
     vkDestroyImageView(device, imageView, nullptr);
   }

@@ -46,16 +46,6 @@ public:
     return extent;
   }
 
-  std::vector<VkFramebuffer> &getFramebuffers()
-  {
-    return framebuffers;
-  }
-
-  VkFramebuffer &getFrameBuffer(size_t index)
-  {
-    return framebuffers[index];
-  }
-
   bool isValid() const
   {
     return validExtent;
@@ -90,8 +80,6 @@ private:
   std::vector<VkImage> images;
 
   std::vector<VkImageView> imageViews;
-
-  std::vector<VkFramebuffer> framebuffers;
 
   VkFormat imageFormat;
   VkExtent2D extent;

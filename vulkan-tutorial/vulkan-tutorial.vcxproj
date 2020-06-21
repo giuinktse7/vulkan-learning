@@ -168,7 +168,6 @@
     <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapRenderer.cpp" />
-    <ClCompile Include="pipeline.cpp" />
     <ClCompile Include="swapchain.cpp" />
     <ClCompile Include="texture.cpp" />
     <ClCompile Include="util.cpp" />
@@ -186,7 +185,6 @@
     <ClInclude Include="gui.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="MapRenderer.h" />
-    <ClInclude Include="pipeline.h" />
     <ClInclude Include="swapchain.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="util.h" />
