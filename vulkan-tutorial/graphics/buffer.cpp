@@ -1,7 +1,7 @@
 #include "buffer.h"
 
 #include <stdexcept>
-#include "VulkanHelpers.h"
+#include "vulkan_helpers.h"
 #include "engine.h"
 
 BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -52,11 +52,18 @@ void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
   Engine::getInstance()->endSingleTimeCommands(commandBuffer);
 }
 
+/*
+  Copies the data to GPU memory.
+*/
 void Buffer::copyToMemory(VkDeviceMemory bufferMemory, uint8_t *data, VkDeviceSize size)
 {
   VkDevice device = Engine::getInstance()->getDevice();
   void *mapped = nullptr;
+  // vkMapMemory allows us to access the memory at the VkDeviceMemory.
   vkMapMemory(device, bufferMemory, 0, size, 0, &mapped);
+
   memcpy(mapped, data, size);
+
+  // After copying the data to the mapped memory, we unmap it again.
   vkUnmapMemory(device, bufferMemory);
 }

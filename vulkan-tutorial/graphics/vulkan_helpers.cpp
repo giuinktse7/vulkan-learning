@@ -1,4 +1,4 @@
-#include "VulkanHelpers.h"
+#include "vulkan_helpers.h"
 
 #include <vector>
 #include <string>

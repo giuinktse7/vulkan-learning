@@ -1,4 +1,4 @@
-#include "VulkanDebug.h"
+#include "vulkan_debug.h"
 
 #include "validation.h"
 #include <iostream>

@@ -3,8 +3,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <string>
+#include <vector>
 
-#include "DeviceManager.h"
+#include "device_manager.h"
 
 struct TextureWindow
 {
@@ -19,6 +20,7 @@ class Texture
 public:
   Texture(const std::string &filename);
   Texture(uint32_t width, uint32_t height, uint8_t *pixels);
+  Texture(uint32_t width, uint32_t height, std::vector<uint8_t> pixels);
 
   VkDescriptorSet getDescriptorSet();
   TextureWindow getTextureWindow();

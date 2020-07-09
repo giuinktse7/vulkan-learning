@@ -1,4 +1,4 @@
-#include "DeviceManager.h"
+#include "device_manager.h"
 
 #include <vector>
 #include <stdexcept>
@@ -7,7 +7,7 @@
 #include "swapchain.h"
 
 #include "validation.h"
-#include "VulkanHelpers.h"
+#include "vulkan_helpers.h"
 #include "engine.h"
 
 VkPhysicalDevice DeviceManager::pickPhysicalDevice()

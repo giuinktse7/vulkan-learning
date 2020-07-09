@@ -8,9 +8,14 @@
 #include <stdexcept>
 
 #include "engine.h"
-#include "VulkanHelpers.h"
+#include "vulkan_helpers.h"
 
 #include "buffer.h"
+
+Texture::Texture(uint32_t width, uint32_t height, std::vector<uint8_t> pixels)
+{
+  init(width, height, pixels.data());
+}
 
 Texture::Texture(const std::string &filename)
 {
@@ -55,7 +60,6 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 
   Buffer::copyToMemory(stagingBuffer.bufferMemory, pixels, imageSize);
 
-  // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
   VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
   createImage(width,

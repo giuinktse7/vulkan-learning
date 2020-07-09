@@ -7,10 +7,10 @@
 #include <algorithm>
 
 #include "validation.h"
-#include "VulkanHelpers.h"
-#include "VulkanDebug.h"
-#include "Logger.h"
-#include "file.h"
+#include "vulkan_helpers.h"
+#include "vulkan_debug.h"
+#include "../logger.h"
+#include "../file.h"
 #include "vertex.h"
 
 #include <imgui_impl_glfw.h>

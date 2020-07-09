@@ -72,18 +72,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>D:\Programs\VulkanSDK\1.2.141.0\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Programs\VulkanSDK\1.2.141.0\Lib32;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>D:\Programs\VulkanSDK\1.2.141.0\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Programs\VulkanSDK\1.2.141.0\Lib32;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>D:\Programs\VulkanSDK\1.2.141.0\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Programs\VulkanSDK\1.2.141.0\Lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>D:\Programs\VulkanSDK\1.2.141.0\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Programs\VulkanSDK\1.2.141.0\Lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -154,46 +158,44 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="buffer.cpp" />
+    <ClCompile Include="graphics\buffer.cpp" />
     <ClCompile Include="camera.cpp" />
-    <ClCompile Include="DeviceManager.cpp" />
-    <ClCompile Include="engine.cpp" />
+    <ClCompile Include="graphics\device_manager.cpp" />
+    <ClCompile Include="graphics\engine.cpp" />
     <ClCompile Include="file.cpp" />
-    <ClCompile Include="gui.cpp" />
-    <ClCompile Include="imgui.cpp" />
-    <ClCompile Include="imgui_demo.cpp" />
-    <ClCompile Include="imgui_draw.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_vulkan.cpp" />
-    <ClCompile Include="imgui_widgets.cpp" />
+    <ClCompile Include="gui\gui.cpp" />
+    <ClCompile Include="gui\imgui.cpp" />
+    <ClCompile Include="gui\imgui_demo.cpp" />
+    <ClCompile Include="gui\imgui_draw.cpp" />
+    <ClCompile Include="gui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="gui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="gui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MapRenderer.cpp" />
-    <ClCompile Include="swapchain.cpp" />
-    <ClCompile Include="texture.cpp" />
+    <ClCompile Include="map_renderer.cpp" />
+    <ClCompile Include="graphics\swapchain.cpp" />
+    <ClCompile Include="graphics\texture.cpp" />
     <ClCompile Include="util.cpp" />
-    <ClCompile Include="resource-descriptor.cpp" />
-    <ClCompile Include="VulkanDebug.cpp" />
-    <ClCompile Include="VulkanHelpers.cpp" />
+    <ClCompile Include="graphics\resource-descriptor.cpp" />
+    <ClCompile Include="graphics\vulkan_debug.cpp" />
+    <ClCompile Include="graphics\vulkan_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="buffer.h" />
-    <ClInclude Include="bound-buffer.h" />
+    <ClInclude Include="graphics\buffer.h" />
     <ClInclude Include="camera.h" />
-    <ClInclude Include="DeviceManager.h" />
-    <ClInclude Include="engine.h" />
+    <ClInclude Include="graphics\device_manager.h" />
+    <ClInclude Include="graphics\engine.h" />
     <ClInclude Include="file.h" />
-    <ClInclude Include="gui.h" />
-    <ClInclude Include="Logger.h" />
-    <ClInclude Include="MapRenderer.h" />
-    <ClInclude Include="swapchain.h" />
-    <ClInclude Include="texture.h" />
+    <ClInclude Include="gui\gui.h" />
+    <ClInclude Include="logger.h" />
+    <ClInclude Include="map_renderer.h" />
+    <ClInclude Include="graphics\swapchain.h" />
+    <ClInclude Include="graphics\texture.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="validation.h" />
-    <ClInclude Include="vertex.h" />
-    <ClInclude Include="vulkan-context.h" />
-    <ClInclude Include="resource-descriptor.h" />
-    <ClInclude Include="VulkanDebug.h" />
-    <ClInclude Include="VulkanHelpers.h" />
+    <ClInclude Include="graphics\validation.h" />
+    <ClInclude Include="graphics\vertex.h" />
+    <ClInclude Include="graphics\resource-descriptor.h" />
+    <ClInclude Include="graphics\vulkan_debug.h" />
+    <ClInclude Include="graphics\vulkan_helpers.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.frag" />

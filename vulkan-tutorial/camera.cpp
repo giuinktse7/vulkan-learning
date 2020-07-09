@@ -1,6 +1,6 @@
 #include "camera.h"
 
-#include "engine.h"
+#include "graphics/engine.h"
 #include "Logger.h"
 
 void Camera::updateZoom()

@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "VulkanHelpers.h"
+#include "vulkan_helpers.h"
 #include "engine.h"
-#include "Logger.h"
+#include "../logger.h"
 
 void SwapChain::initialize()
 {

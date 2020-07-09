@@ -1,17 +1,14 @@
-#include "MapRenderer.h"
+#include "map_renderer.h"
 
 #include <stdexcept>
 #include <chrono>
 #include "file.h"
-#include "resource-descriptor.h"
-#include "vertex.h"
-#include "engine.h"
-
-#include "file.h"
+#include "graphics/resource-descriptor.h"
+#include "graphics/engine.h"
+#include "graphics/resource-descriptor.h"
 
 #include "Logger.h"
 
-#include "resource-descriptor.h"
 
 void MapRenderer::initialize()
 {
@@ -425,7 +422,7 @@ void MapRenderer::drawBatches()
 void MapRenderer::queueCurrentBatch()
 {
   queueDrawCommand();
-  copyStagingBuffersToDevice(getCommandBuffer());
+  copyStagingBuffersToDevice();
   unmapStagingBuffers();
 
   currentBufferIndex++;
@@ -446,8 +443,9 @@ void MapRenderer::queueDrawCommand()
   renderData.info.offset();
 }
 
-void MapRenderer::copyStagingBuffersToDevice(VkCommandBuffer commandBuffer)
+void MapRenderer::copyStagingBuffersToDevice()
 {
+  VkCommandBuffer commandBuffer = getCommandBuffer();
   auto &indexWrite = renderData.info.indexWrite;
   auto &vertexWrite = renderData.info.vertexWrite;
 
@@ -636,7 +634,6 @@ void MapRenderer::drawTriangles(const uint16_t *indices, size_t indexCount, cons
 {
   auto &indexWrite = renderData.info.indexWrite;
   auto &vertexWrite = renderData.info.vertexWrite;
-  auto x = getCommandBuffer();
   if (!getCommandBuffer())
   {
     throw std::runtime_error("no command buffer");
@@ -706,8 +703,8 @@ void MapRenderer::setTexture(std::shared_ptr<Texture> texture)
 
 void MapRenderer::drawSprite(float x, float y, float width, float height)
 {
-  float worldX = x * SPRITE_SIZE;
-  float worldY = y * SPRITE_SIZE;
+  float worldX = x * TILE_SIZE;
+  float worldY = y * TILE_SIZE;
 
   TextureWindow *window = &renderData.info.textureWindow;
   glm::vec4 color = renderData.info.color;

@@ -10,15 +10,15 @@
 #include <unordered_set>
 #include <mutex>
 
-#include "DeviceManager.h"
-#include "MapRenderer.h"
+#include "device_manager.h"
+#include "../map_renderer.h"
 #include "texture.h"
 #include "resource-descriptor.h"
 #include "buffer.h"
 #include "vertex.h"
-#include "camera.h"
+#include "../camera.h"
 
-#include "gui.h"
+#include "../gui/gui.h"
 
 class Engine
 {
@@ -33,7 +33,7 @@ public:
 
 	unsigned long frames = 0;
 
-	static const int SPRITE_SIZE = 32;
+	static const int TILE_SIZE = 32;
 
 	static Engine *getInstance();
 	static void setInstance(Engine *instance);

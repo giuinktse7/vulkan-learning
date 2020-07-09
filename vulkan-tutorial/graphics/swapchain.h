@@ -15,8 +15,8 @@ synchronize the presentation of images with the refresh rate of the screen.
 #include <vector>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "DeviceManager.h"
-#include "VulkanHelpers.h"
+#include "device_manager.h"
+#include "vulkan_helpers.h"
 
 class SwapChain
 {

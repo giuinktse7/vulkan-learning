@@ -9,12 +9,12 @@
 #include <vector>
 #include <memory>
 
-#include "buffer.h"
-#include "vertex.h"
-#include "texture.h"
+#include "graphics/buffer.h"
+#include "graphics/vertex.h"
+#include "graphics/texture.h"
 #include "camera.h"
 
-#include "swapchain.h"
+#include "graphics/swapchain.h"
 
 struct ItemUniformBufferObject
 {
@@ -154,14 +154,13 @@ class MapRenderer
 public:
 	static const int MAX_NUM_TEXTURES = 256;
 
-	static const int SPRITE_SIZE = 32;
+	static const int TILE_SIZE = 32;
 	static const uint32_t MAX_VERTICES = 64 * 1024;
 
 	Camera camera;
 
 	void initialize();
 	void recreate();
-
 
 	void renderFrame(uint32_t currentFrame);
 	void endFrame();
@@ -265,7 +264,7 @@ private:
 
 	void queueCurrentBatch();
 	void queueDrawCommand();
-	void copyStagingBuffersToDevice(VkCommandBuffer commandBuffer);
+	void copyStagingBuffersToDevice();
 	void unmapStagingBuffers();
 
 	void drawBatches();

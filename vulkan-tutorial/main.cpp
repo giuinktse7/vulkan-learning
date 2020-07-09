@@ -24,16 +24,14 @@
 #include "util.h"
 #include "file.h"
 
-#include "engine.h"
+#include "graphics/engine.h"
 
 #include "Logger.h"
 
-#include "VulkanHelpers.h"
+#include "graphics/vulkan_helpers.h"
+#include "graphics/resource-descriptor.h"
 
-#include "resource-descriptor.h"
-
-#include "vertex.h"
-#include "texture.h"
+#include "graphics/texture.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -109,7 +107,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = Engine::SPRITE_SIZE * 11 / (engine->getCameraZoomStep() + 1);
+	float step = Engine::TILE_SIZE * 11 / (engine->getCameraZoomStep() + 1);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
