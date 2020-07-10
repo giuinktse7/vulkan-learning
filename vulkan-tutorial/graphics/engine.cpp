@@ -396,6 +396,25 @@ bool Engine::initFrame()
   return true;
 }
 
+void Engine::nextFrame()
+{
+  if (initFrame())
+  {
+    renderFrame();
+
+    for (int x = -25; x < 25; ++x)
+    {
+      for (int y = -25; y < 25; ++y)
+      {
+        drawItem(*map.items.at(2554), Position{x, y, 1});
+      }
+    }
+
+    drawItem(*map.items.at(4608), Position{5, 5, 1});
+    endFrame();
+  }
+}
+
 void Engine::renderFrame()
 {
   mapRenderer->renderFrame(currentFrame);
@@ -427,7 +446,7 @@ void Engine::createSyncObjects()
   }
 }
 
-VkShaderModule Engine::createShaderModule(const std::vector<char> &code)
+VkShaderModule Engine::createShaderModule(const std::vector<uint8_t> &code)
 {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

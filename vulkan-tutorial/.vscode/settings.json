@@ -83,6 +83,10 @@
     "xutility": "cpp",
     "*.ipp": "cpp",
     "resumable": "cpp",
-    "*.rh": "cpp"
+    "*.rh": "cpp",
+    "filesystem": "cpp",
+    "forward_list": "cpp",
+    "stack": "cpp",
+    "valarray": "cpp"
   }
 }

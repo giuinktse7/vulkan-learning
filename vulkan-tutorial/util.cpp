@@ -2,7 +2,7 @@
 
 #include "util.h"
 #include <GLFW/glfw3.h>
-#include "validation.h"
+#include "graphics/validation.h"
 
 std::vector<const char *> getRequiredExtensions()
 {
@@ -19,4 +19,20 @@ std::vector<const char *> getRequiredExtensions()
   }
 
   return extensions;
+}
+
+void to_lower_str(std::string& source)
+{
+	std::transform(source.begin(), source.end(), source.begin(), tolower);
+}
+
+void to_upper_str(std::string& source)
+{
+	std::transform(source.begin(), source.end(), source.begin(), toupper);
+}
+
+std::string as_lower_str(std::string s)
+{
+	to_lower_str(s);
+	return s;
 }

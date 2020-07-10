@@ -9,12 +9,21 @@
 #include <vector>
 #include <memory>
 
+#include <unordered_map>
+
 #include "graphics/buffer.h"
 #include "graphics/vertex.h"
 #include "graphics/texture.h"
 #include "camera.h"
 
+#include "position.h"
+
+#include "item.h"
+#include "items.h"
+
 #include "graphics/swapchain.h"
+
+#include "graphics/texture_atlas.h"
 
 struct ItemUniformBufferObject
 {
@@ -50,7 +59,7 @@ struct RenderInfo
 	TextureWindow textureWindow;
 
 	glm::vec4 color;
-	BlendMode blendMode;
+	BlendMode blendMode = BlendMode::BM_NONE;
 
 	WriteRange<uint16_t> indexWrite;
 	WriteRange<Vertex> vertexWrite;
@@ -152,7 +161,7 @@ struct RenderData
 class MapRenderer
 {
 public:
-	static const int MAX_NUM_TEXTURES = 256;
+	static const int MAX_NUM_TEXTURES = 256 * 256;
 
 	static const int TILE_SIZE = 32;
 	static const uint32_t MAX_VERTICES = 64 * 1024;
@@ -166,6 +175,8 @@ public:
 	void endFrame();
 
 	void setTexture(std::shared_ptr<Texture> texture);
+
+	void addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas);
 
 	VkCommandBuffer &getCommandBuffer()
 	{
@@ -188,7 +199,14 @@ public:
 		return textureDescriptorSetLayout;
 	}
 
+	void loadTextureAtlases();
+
 	void drawSprite(float x, float y, float width, float height);
+
+	void drawItem(Item item, Position position);
+
+	TextureAtlas &getTextureAtlas(const uint32_t spriteId);
+	TextureAtlas &getTextureAtlas(ItemType &itemType);
 
 private:
 	VkRenderPass renderPass;
@@ -206,6 +224,14 @@ private:
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 	std::shared_ptr<Texture> defaultTexture;
+
+	std::unordered_map<uint32_t, std::unique_ptr<TextureAtlas>> textureAtlases;
+
+	/* 
+		Used for quick retrieval of a texture atlas given a sprite ID.
+		It stores the upper bound of the sprite ids in the sprite sheet.
+	*/
+	std::set<uint32_t> textureAtlasIds;
 
 	struct DrawCommand
 	{

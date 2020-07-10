@@ -3,5 +3,5 @@
 
 namespace File
 {
-	std::vector<char> read(const std::string &filename);
+	std::vector<uint8_t> read(const std::string &filename);
 }

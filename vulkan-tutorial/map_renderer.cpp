@@ -2,13 +2,16 @@
 
 #include <stdexcept>
 #include <chrono>
+
 #include "file.h"
 #include "graphics/resource-descriptor.h"
 #include "graphics/engine.h"
 #include "graphics/resource-descriptor.h"
+#include "graphics/appearances.h"
 
-#include "Logger.h"
+#include "util.h"
 
+#include "logger.h"
 
 void MapRenderer::initialize()
 {
@@ -35,6 +38,27 @@ void MapRenderer::initialize()
 
   uint8_t whitePixel[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
+}
+
+void MapRenderer::addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas)
+{
+  textureAtlasIds.insert(atlas->lastSpriteId);
+  textureAtlases[atlas->id] = std::move(atlas);
+}
+
+void MapRenderer::loadTextureAtlases()
+{
+  auto engine = Engine::getInstance();
+
+  auto start = std::chrono::high_resolution_clock::now();
+  for (const auto &pair : Appearances::catalogInfo)
+  {
+    std::unique_ptr<TextureAtlas> atlas = TextureAtlas::fromCatalogInfo(pair.second);
+    this->addTextureAtlas(atlas);
+  }
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+  std::cout << "Loaded compressed sprites in " << duration << " milliseconds." << std::endl;
 }
 
 VkRenderPass MapRenderer::createRenderPass()
@@ -95,8 +119,8 @@ void MapRenderer::createGraphicsPipeline()
 {
   Engine *engine = Engine::getInstance();
 
-  std::vector<char> vertShaderCode = File::read("shaders/vert.spv");
-  std::vector<char> fragShaderCode = File::read("shaders/frag.spv");
+  std::vector<uint8_t> vertShaderCode = File::read("shaders/vert.spv");
+  std::vector<uint8_t> fragShaderCode = File::read("shaders/frag.spv");
 
   VkShaderModule vertShaderModule = engine->createShaderModule(vertShaderCode);
   VkShaderModule fragShaderModule = engine->createShaderModule(fragShaderCode);
@@ -686,6 +710,49 @@ void MapRenderer::drawTriangles(const uint16_t *indices, size_t indexCount, cons
   renderData.info.vertexCount += vertexCount;
 }
 
+TextureAtlas &MapRenderer::getTextureAtlas(const uint32_t spriteId)
+{
+  std::cout << spriteId << std::endl;
+  auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
+  if (found == textureAtlasIds.end())
+  {
+    std::cout << "Could not find a sprite sheet for sprite ID " << spriteId << "." << std::endl;
+    exit(1);
+  }
+
+  uint32_t lastSpriteId = *found;
+
+  return *textureAtlases.at(lastSpriteId);
+}
+
+TextureAtlas &MapRenderer::getTextureAtlas(ItemType &itemType)
+{
+  if (itemType.textureAtlas == nullptr)
+  {
+    auto appearance = Appearances::getById(itemType.clientId);
+    auto fg = appearance.frame_group().at(0);
+    auto firstSpriteId = fg.sprite_info().sprite_id().at(0);
+    itemType.textureAtlas = &getTextureAtlas(firstSpriteId);
+  }
+
+  return *itemType.textureAtlas;
+}
+
+void MapRenderer::drawItem(Item item, Position position)
+{
+  const auto y = item.getWeight();
+  auto &atlas = getTextureAtlas(*item.itemType);
+  if (atlas.getDescriptorSet() != renderData.info.descriptorSet)
+  {
+    queueDrawCommand();
+    renderData.info.descriptorSet = atlas.getDescriptorSet();
+  }
+
+  renderData.info.textureWindow = item.getTextureWindow();
+
+  drawSprite(position.x, position.y, 32, 32);
+}
+
 void MapRenderer::setTexture(std::shared_ptr<Texture> texture)
 {
   if (!texture)
@@ -706,16 +773,16 @@ void MapRenderer::drawSprite(float x, float y, float width, float height)
   float worldX = x * TILE_SIZE;
   float worldY = y * TILE_SIZE;
 
-  TextureWindow *window = &renderData.info.textureWindow;
+  TextureWindow &window = renderData.info.textureWindow;
   glm::vec4 color = renderData.info.color;
 
   std::array<uint16_t, 6> indices{0, 1, 3, 3, 1, 2};
 
   std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, color, {window->x0, window->y0}},
-      {{worldX, worldY + height}, color, {window->x0, window->y1}},
-      {{worldX + width, worldY + height}, color, {window->x1, window->y1}},
-      {{worldX + width, worldY}, color, {window->x1, window->y0}},
+      {{worldX, worldY}, color, {window.x0, window.y0}},
+      {{worldX, worldY + height}, color, {window.x0, window.y1}},
+      {{worldX + width, worldY + height}, color, {window.x1, window.y1}},
+      {{worldX + width, worldY}, color, {window.x1, window.y0}},
   }};
 
   drawTriangles(indices.data(), indices.size(), vertices.data(), vertices.size());
@@ -824,7 +891,7 @@ void MapRenderer::createDescriptorPool()
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = descriptorCount + MAX_NUM_TEXTURES;
 
-  if (vkCreateDescriptorPool(engine->getDevice(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+  if (vkCreateDescriptorPool(engine->getDevice(), &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor pool!");
   }

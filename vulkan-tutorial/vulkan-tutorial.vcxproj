@@ -97,6 +97,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -112,6 +113,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,6 +131,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,6 +151,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Programs\cpp\libraries\imgui\include;D:\Programs\stb\include;D:\Programs\glm-0.9.9.8\glm;D:\Programs\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -158,11 +162,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\appearances.cpp" />
     <ClCompile Include="graphics\buffer.cpp" />
     <ClCompile Include="camera.cpp" />
+    <ClCompile Include="graphics\compression.cpp" />
     <ClCompile Include="graphics\device_manager.cpp" />
     <ClCompile Include="graphics\engine.cpp" />
     <ClCompile Include="file.cpp" />
+    <ClCompile Include="graphics\texture_atlas.cpp" />
+    <ClCompile Include="item.cpp" />
+    <ClCompile Include="graphics\protobuf\appearances.pb.cc" />
+    <ClCompile Include="graphics\protobuf\map.pb.cc" />
+    <ClCompile Include="graphics\protobuf\shared.pb.cc" />
     <ClCompile Include="gui\gui.cpp" />
     <ClCompile Include="gui\imgui.cpp" />
     <ClCompile Include="gui\imgui_demo.cpp" />
@@ -170,26 +181,40 @@
     <ClCompile Include="gui\imgui_impl_glfw.cpp" />
     <ClCompile Include="gui\imgui_impl_vulkan.cpp" />
     <ClCompile Include="gui\imgui_widgets.cpp" />
+    <ClCompile Include="items.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="map_renderer.cpp" />
     <ClCompile Include="graphics\swapchain.cpp" />
     <ClCompile Include="graphics\texture.cpp" />
+    <ClCompile Include="otb.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="graphics\resource-descriptor.cpp" />
     <ClCompile Include="graphics\vulkan_debug.cpp" />
     <ClCompile Include="graphics\vulkan_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="graphics\appearances.h" />
     <ClInclude Include="graphics\buffer.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="graphics\compression.h" />
+    <ClInclude Include="const.h" />
     <ClInclude Include="graphics\device_manager.h" />
     <ClInclude Include="graphics\engine.h" />
     <ClInclude Include="file.h" />
+    <ClInclude Include="graphics\texture_atlas.h" />
+    <ClInclude Include="item.h" />
+    <ClInclude Include="graphics\protobuf\appearances.pb.h" />
+    <ClInclude Include="graphics\protobuf\map.pb.h" />
+    <ClInclude Include="graphics\protobuf\shared.pb.h" />
     <ClInclude Include="gui\gui.h" />
+    <ClInclude Include="items.h" />
     <ClInclude Include="logger.h" />
+    <ClInclude Include="map.h" />
     <ClInclude Include="map_renderer.h" />
     <ClInclude Include="graphics\swapchain.h" />
     <ClInclude Include="graphics\texture.h" />
+    <ClInclude Include="otb.h" />
+    <ClInclude Include="position.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="graphics\validation.h" />
     <ClInclude Include="graphics\vertex.h" />

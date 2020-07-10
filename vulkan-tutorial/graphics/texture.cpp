@@ -17,6 +17,11 @@ Texture::Texture(uint32_t width, uint32_t height, std::vector<uint8_t> pixels)
   init(width, height, pixels.data());
 }
 
+Texture::Texture(uint32_t width, uint32_t height, uint8_t *pixels)
+{
+  init(width, height, pixels);
+}
+
 Texture::Texture(const std::string &filename)
 {
 
@@ -40,11 +45,6 @@ Texture::Texture(const std::string &filename)
   stbi_image_free(pixels);
 }
 
-Texture::Texture(uint32_t width, uint32_t height, uint8_t *pixels)
-{
-  init(width, height, pixels);
-}
-
 void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 {
   this->width = width;
@@ -60,7 +60,8 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 
   Buffer::copyToMemory(stagingBuffer.bufferMemory, pixels, imageSize);
 
-  VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+  // VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+  VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 
   createImage(width,
               height,
@@ -147,14 +148,11 @@ VkSampler Texture::createSampler()
   samplerInfo.magFilter = VK_FILTER_LINEAR;
   samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-  samplerInfo.anisotropyEnable = VK_TRUE;
-  samplerInfo.maxAnisotropy = 16.0f;
-
-  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  samplerInfo.anisotropyEnable = VK_FALSE;
+  // samplerInfo.maxAnisotropy = 16.0f;
 
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
 

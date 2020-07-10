@@ -20,7 +20,6 @@
 #include <fstream>
 #include <array>
 
-#include "validation.h"
 #include "util.h"
 #include "file.h"
 
@@ -33,45 +32,18 @@
 
 #include "graphics/texture.h"
 
+#include "graphics/appearances.h"
+#include "map.h"
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-
-std::shared_ptr<Texture> crossbowTexture;
-std::shared_ptr<Texture> plateArmorTexture;
-std::shared_ptr<Texture> blackMarbleFloor;
-
-void drawScene()
-{
-	Engine *engine = Engine::getInstance();
-
-	if (engine->initFrame())
-	{
-		engine->renderFrame();
-
-		engine->setTexture(blackMarbleFloor);
-		for (int x = 0; x < 50; ++x)
-		{
-			for (int y = 0; y < 50; ++y)
-			{
-				engine->drawSprite(x, y, crossbowTexture->getWidth(), crossbowTexture->getHeight());
-			}
-		}
-
-		engine->setTexture(crossbowTexture);
-		engine->drawSprite(3, 3, crossbowTexture->getWidth(), crossbowTexture->getHeight());
-
-		engine->setTexture(plateArmorTexture);
-		engine->drawSprite(4, 3, plateArmorTexture->getWidth(), plateArmorTexture->getHeight());
-		engine->endFrame();
-	}
-}
 
 void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 {
 	Engine *engine = Engine::getInstance();
 	engine->setFrameBufferResized(true);
 
-	drawScene();
+	engine->nextFrame();
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -166,29 +138,39 @@ GLFWwindow *initWindow()
 
 int main()
 {
+
 	MapRenderer *mapRenderer;
 
 	Engine engine;
 
 	try
 	{
+
+		Appearances::loadFromFile("data/appearances.dat");
+		std::cout << "Loaded appearances.dat." << std::endl;
+		Appearances::loadCatalog("data/catalog-content.json");
+		std::cout << "Loaded catalog-content.json." << std::endl;
+
+		Items::loadFromOtb("data/items.otb");
+		Items::loadFromXml("data/items.xml");
+
 		Engine::setInstance(&engine);
 
 		mapRenderer = new MapRenderer();
 		engine.setMapRenderer(mapRenderer);
 
 		GLFWwindow *window = initWindow();
-
 		engine.initialize(window);
 
-		crossbowTexture = engine.CreateTexture("textures/crossbow.png");
-		plateArmorTexture = engine.CreateTexture("textures/plate_armor.png");
-		blackMarbleFloor = engine.CreateTexture("textures/black_marble_floor.png");
+		engine.getMapRenderer()->loadTextureAtlases();
+
+		engine.map.addItem(2554);
+		engine.map.addItem(4608);
 
 		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
-			drawScene();
+			engine.nextFrame();
 		}
 
 		engine.WaitUntilDeviceIdle();

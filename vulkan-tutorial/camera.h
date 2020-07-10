@@ -11,7 +11,6 @@
 class Camera
 {
 private:
-
   int zoomSteps = 20;
 
 public:
@@ -19,7 +18,7 @@ public:
   glm::vec4 viewPos = glm::vec4();
 
   float zoomFactor = 1.0f;
-  int zoomStep = 10;
+  int zoomStep = 15;
 
   float movementSpeed = 1.0f;
   bool updated = false;
@@ -42,7 +41,6 @@ public:
   {
     return keys.left || keys.right || keys.up || keys.down;
   }
-
 
   void updateProjection(){};
 

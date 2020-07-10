@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <mutex>
 
+#include "../position.h"
+
 #include "device_manager.h"
 #include "../map_renderer.h"
 #include "texture.h"
@@ -17,6 +19,8 @@
 #include "buffer.h"
 #include "vertex.h"
 #include "../camera.h"
+
+#include "../map.h"
 
 #include "../gui/gui.h"
 
@@ -30,6 +34,8 @@ protected:
 public:
 	Engine();
 	~Engine();
+
+	Map map;
 
 	unsigned long frames = 0;
 
@@ -185,6 +191,11 @@ public:
 		mapRenderer->drawSprite(x, y, width, height);
 	}
 
+	void drawItem(Item &item, Position position)
+	{
+		mapRenderer->drawItem(item, position);
+	}
+
 	void endFrame();
 
 	static bool isValidWindowSize();
@@ -244,11 +255,13 @@ public:
 		return swapChain.getExtent().height;
 	}
 
+	void nextFrame();
+
 	void renderFrame();
 
 	bool initFrame();
 
-	VkShaderModule createShaderModule(const std::vector<char> &code);
+	VkShaderModule createShaderModule(const std::vector<uint8_t> &code);
 
 	void resetZoom()
 	{
@@ -283,6 +296,11 @@ public:
 	VkDescriptorSetLayout &getTextureDescriptorSetLayout()
 	{
 		return mapRenderer->getTextureDescriptorSetLayout();
+	}
+
+	MapRenderer *getMapRenderer()
+	{
+		return mapRenderer;
 	}
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};

@@ -2,22 +2,26 @@
 #include <stdexcept>
 #include <fstream>
 
-std::vector<char> File::read(const std::string &filename)
+std::vector<uint8_t> File::read(const std::string &filepath)
 {
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+	std::ifstream ifs(filepath, std::ios::binary | std::ios::ate);
 
-	if (!file.is_open())
-	{
-		throw std::runtime_error(std::string("Failed to open file ") + filename);
-	}
+	if (!ifs)
+		throw std::runtime_error("Could not find file: " + filepath);
 
-	size_t fileSize = (size_t)file.tellg();
-	std::vector<char> buffer(fileSize);
+	auto end = ifs.tellg();
+	ifs.seekg(0, std::ios::beg);
 
-	file.seekg(0);
-	file.read(buffer.data(), fileSize);
+	auto size = std::size_t(end - ifs.tellg());
 
-	file.close();
+	if (size == 0) // avoid undefined behavior
+		return {};
+
+	std::vector<uint8_t> buffer(size);
+	uint32_t offset = 0;
+
+	if (!ifs.read((char *)buffer.data(), buffer.size()))
+		throw std::runtime_error("Could not read file: " + filepath);
 
 	return buffer;
 }
