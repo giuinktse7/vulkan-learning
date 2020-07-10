@@ -10,9 +10,12 @@ layout(location = 2) in float fragOpacity;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec4 texel = texture(texSampler, fragTexCoord);
+    // vec4 texel = texture(texSampler, fragTexCoord);
     // outColor.rgb = texel.rgb * fragColor.rgb * fragColor.a * texel.a;
     // outColor.a = texel.a * fragColor.a * fragOpacity;
-    outColor.rgb = texel.rgb * texel.a;
-    outColor.a = texel.a;
+    outColor = texture(texSampler, fragTexCoord);
+    // outColor.rgb = texel.rgb;
+    // outColor.a = texel.a;
+    // outColor.rgb = vec3(1.0, 0.0, 1.0) * texel.a;
+    // outColor.a = texel.a;
 }

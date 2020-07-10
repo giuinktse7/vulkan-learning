@@ -164,8 +164,9 @@ int main()
 
 		engine.getMapRenderer()->loadTextureAtlases();
 
-		engine.map.addItem(2554);
-		engine.map.addItem(4608);
+		engine.map.addItem(2554); // shovel
+		engine.map.addItem(4526); // grass
+		engine.map.addItem(2274); // avalanche rune
 
 		while (!glfwWindowShouldClose(window))
 		{

@@ -329,6 +329,11 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 
 tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 {
+	if (!Appearances::isLoaded)
+	{
+		throw std::runtime_error("Appearances must be loaded before loading items.otb.");
+	}
+
 	// OTB::Loader loader{file, OTBI};
 	std::unique_ptr<OTB::Loader> loader = std::make_unique<OTB::Loader>(file, OTBI);
 
@@ -608,6 +613,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		if (Appearances::contains(clientId))
 		{
 			iType.name = Appearances::getById(clientId).name();
+			iType.appearance = &Appearances::getById(clientId);
 		}
 	}
 

@@ -152,14 +152,14 @@ VkSampler Texture::createSampler()
   samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
   samplerInfo.anisotropyEnable = VK_FALSE;
-  // samplerInfo.maxAnisotropy = 16.0f;
+  samplerInfo.maxAnisotropy = 16.0f;
 
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
   samplerInfo.compareEnable = VK_FALSE;
-  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerInfo.maxLod = static_cast<float>(mipLevels);
+  // samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+  // samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  // samplerInfo.maxLod = static_cast<float>(mipLevels);
 
   VkSampler sampler;
   if (vkCreateSampler(Engine::getInstance()->getDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS)

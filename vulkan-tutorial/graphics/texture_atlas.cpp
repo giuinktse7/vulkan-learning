@@ -6,6 +6,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#include <algorithm>
 #include <iostream>
 
 constexpr uint32_t SPRITE_SIZE = 32;
@@ -96,7 +97,7 @@ void nextN(std::vector<uint8_t> &buffer, uint32_t offset, uint32_t n)
   std::cout << "---" << std::endl;
 }
 
-uint32_t readU32(std::vector<uint8_t> buffer, uint32_t offset)
+uint32_t readU32(std::vector<uint8_t> &buffer, uint32_t offset)
 {
   uint32_t value;
   std::memcpy(&value, buffer.data() + offset, sizeof(uint32_t));
@@ -124,17 +125,36 @@ void TextureAtlas::validateBmp(std::vector<uint8_t> decompressed)
   }
 }
 
+void fixMagenta(std::vector<uint8_t> &buffer, uint32_t offset)
+{
+  for (auto cursor = 0; cursor < buffer.size() - 4 - offset; cursor += 4)
+  {
+
+    if (readU32(buffer, offset + cursor) == 0xFF00FF)
+    {
+      std::fill(buffer.begin() + offset + cursor, buffer.begin() + offset + cursor + 4, 0);
+    }
+  }
+}
+
 Texture &TextureAtlas::getTexture()
 {
   // std::cout << this->sourceFile << std::endl;
   if (std::holds_alternative<CompressedBytes>(texture))
   {
+    std::cout << "[" << this->sourceFile << "]" << std::endl;
+
     std::vector<uint8_t> decompressed = LZMA::decompress(std::get<CompressedBytes>(this->texture));
 
     validateBmp(decompressed);
 
     uint32_t offset;
     std::memcpy(&offset, decompressed.data() + OFFSET_OF_BMP_START_OFFSET, sizeof(uint32_t));
+
+    fixMagenta(decompressed, offset);
+
+    // nextN(decompressed, offset, 4);
+    // std::cout << unsigned(readU32(decompressed, offset)) << std::endl;
 
     texture = Texture(this->width, this->height, std::vector<uint8_t>(decompressed.begin() + offset, decompressed.end()));
   }

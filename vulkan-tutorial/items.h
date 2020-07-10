@@ -12,6 +12,9 @@
 
 #include "position.h"
 #include "graphics/texture_atlas.h"
+#include "graphics/protobuf/appearances.pb.h"
+
+class Appearances;
 
 enum FloorChange
 {
@@ -360,6 +363,7 @@ public:
   bool showCount = true;
 
   TextureAtlas *textureAtlas = nullptr;
+  tibia::protobuf::appearances::Appearance *appearance = nullptr;
 
 private:
 };

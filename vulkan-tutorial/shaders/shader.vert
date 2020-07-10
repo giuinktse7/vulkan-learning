@@ -29,17 +29,17 @@ void main() {
     float opacity = 0.0f;
     vec4 color = inColor;
 
-    if(blendMode == BM_NONE) {
-        opacity = 1.0f;
-        color.a = 1.0f;
-    } else if(blendMode == BM_BLEND) {
-        opacity = color.a;
-    } else if(blendMode == BM_ADD) {
-        opacity = 0.0f;
-    } else if(blendMode == BM_ADDX2) {
-        opacity = 0.0f;
-        color *= 2.0f;
-    }
+    // if(blendMode == BM_NONE) {
+    //     opacity = 1.0f;
+    //     color.a = 1.0f;
+    // } else if(blendMode == BM_BLEND) {
+    //     opacity = color.a;
+    // } else if(blendMode == BM_ADD) {
+    //     opacity = 0.0f;
+    // } else if(blendMode == BM_ADDX2) {
+    //     opacity = 0.0f;
+    //     color *= 2.0f;
+    // }
 
     vec4 thing = ubo.projection * vec4(inPosition.x, inPosition.y, 0.0, 1.0);
 

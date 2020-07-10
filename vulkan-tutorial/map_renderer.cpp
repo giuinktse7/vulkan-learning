@@ -305,7 +305,6 @@ void MapRenderer::renderFrame(uint32_t frameIndex)
 
   setCurrentFrame(frameIndex);
 
-  // Render map
   auto &commandBuffer = getCommandBuffer();
   vkFreeCommandBuffers(
       engine->getDevice(),
@@ -690,20 +689,20 @@ void MapRenderer::drawTriangles(const uint16_t *indices, size_t indexCount, cons
   for (int i = 0; i < vertexCount; ++i)
   {
     vertexWrite.cursor->pos = vertexRead->pos;
-    vertexWrite.cursor->color = vertexRead->color * renderData.info.color;
+    // vertexWrite.cursor->color = vertexRead->color * renderData.info.color;
     vertexWrite.cursor->texCoord = vertexRead->texCoord;
     vertexWrite.cursor->blendMode = renderData.info.blendMode;
 
-    vertexWrite.cursor++;
-    vertexRead++;
+    ++vertexWrite.cursor;
+    ++vertexRead;
   }
 
   auto indexRead = indices;
   for (int i = 0; i < indexCount; ++i)
   {
     *indexWrite.cursor = *indexRead + base;
-    indexWrite.cursor++;
-    indexRead++;
+    ++indexWrite.cursor;
+    ++indexRead;
   }
 
   renderData.info.indexCount += indexCount;

@@ -19,6 +19,8 @@ std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearanc
 std::set<uint32_t> Appearances::catalogIndex;
 std::unordered_map<uint32_t, CatalogInfo> Appearances::catalogInfo;
 
+bool Appearances::isLoaded;
+
 void Appearances::loadFromFile(const std::filesystem::path path)
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -44,6 +46,8 @@ void Appearances::loadFromFile(const std::filesystem::path path)
         const appearances::Appearance &object = parsed.object(i);
         Appearances::appearances[object.id()] = object;
     }
+
+    Appearances::isLoaded = true;
 }
 
 void Appearances::addSpriteSheetInfo(CatalogInfo &info)

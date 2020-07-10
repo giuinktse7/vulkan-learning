@@ -59,7 +59,7 @@ struct RenderInfo
 	TextureWindow textureWindow;
 
 	glm::vec4 color;
-	BlendMode blendMode = BlendMode::BM_NONE;
+	BlendMode blendMode = BlendMode::BM_ADD;
 
 	WriteRange<uint16_t> indexWrite;
 	WriteRange<Vertex> vertexWrite;

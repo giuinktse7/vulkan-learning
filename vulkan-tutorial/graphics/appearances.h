@@ -44,6 +44,8 @@ public:
   // Maps the upper sprite id bound to info about the sprite sheet
   static std::unordered_map<uint32_t, CatalogInfo> catalogInfo;
 
+  static bool isLoaded;
+
 private:
   static void addSpriteSheetInfo(CatalogInfo &info);
 

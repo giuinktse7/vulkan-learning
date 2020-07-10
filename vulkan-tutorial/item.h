@@ -36,14 +36,7 @@ public:
 		return itemType->weight;
 	}
 
-	const TextureWindow getTextureWindow() const
-	{
-		auto appearance = Appearances::getById(getClientId());
-		uint32_t spriteId = appearance.frame_group().at(0).sprite_info().sprite_id(0);
-		uint32_t baseOffset = spriteId - itemType->textureAtlas->firstSpriteId;
-
-		return itemType->textureAtlas->getTextureWindow(baseOffset);
-	}
+	const TextureWindow getTextureWindow() const;
 
 	ItemType *itemType;
 
