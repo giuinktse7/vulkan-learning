@@ -162,6 +162,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="chunk.cpp" />
     <ClCompile Include="graphics\appearances.cpp" />
     <ClCompile Include="graphics\buffer.cpp" />
     <ClCompile Include="camera.cpp" />
@@ -183,16 +184,22 @@
     <ClCompile Include="gui\imgui_widgets.cpp" />
     <ClCompile Include="items.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="map.cpp" />
     <ClCompile Include="map_renderer.cpp" />
     <ClCompile Include="graphics\swapchain.cpp" />
     <ClCompile Include="graphics\texture.cpp" />
     <ClCompile Include="otb.cpp" />
+    <ClCompile Include="quad_tree.cpp" />
+    <ClCompile Include="tile.cpp" />
+    <ClCompile Include="tile_location.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="graphics\resource-descriptor.cpp" />
     <ClCompile Include="graphics\vulkan_debug.cpp" />
     <ClCompile Include="graphics\vulkan_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="chunk.h" />
+    <ClInclude Include="debug.h" />
     <ClInclude Include="graphics\appearances.h" />
     <ClInclude Include="graphics\buffer.h" />
     <ClInclude Include="camera.h" />
@@ -215,6 +222,9 @@
     <ClInclude Include="graphics\texture.h" />
     <ClInclude Include="otb.h" />
     <ClInclude Include="position.h" />
+    <ClInclude Include="quad_tree.h" />
+    <ClInclude Include="tile.h" />
+    <ClInclude Include="tile_location.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="graphics\validation.h" />
     <ClInclude Include="graphics\vertex.h" />

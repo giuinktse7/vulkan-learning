@@ -8,8 +8,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <chrono>
-
-#include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
@@ -19,6 +17,12 @@
 #include <set>
 #include <fstream>
 #include <array>
+#include <cassert>
+
+#include "quad_tree.h"
+#include "tile_location.h"
+
+#include "debug.h"
 
 #include "util.h"
 #include "file.h"
@@ -79,7 +83,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = Engine::TILE_SIZE * 11 / (engine->getCameraZoomStep() + 1);
+	float step = static_cast<float>(Engine::TILE_SIZE) * 11 / (engine->getCameraZoomStep() + 1);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
@@ -136,8 +140,32 @@ GLFWwindow *initWindow()
 	return window;
 }
 
+class TestX
+{
+public:
+	TestX()
+	{
+		std::cout << "Constructed." << std::endl;
+	}
+	~TestX()
+	{
+		std::cout << "Destroyed." << std::endl;
+	}
+
+private:
+	uint16_t x = 0;
+};
+
+void test()
+{
+	Map map;
+	map.createTile(2, 2, 7);
+}
+
 int main()
 {
+	test();
+	return 0;
 
 	MapRenderer *mapRenderer;
 
