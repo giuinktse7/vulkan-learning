@@ -41,4 +41,6 @@ public:
 	ItemType *itemType;
 
 private:
+	// Subtype is either fluid type, count, subtype, or charges.
+	uint16_t subtype;
 };
