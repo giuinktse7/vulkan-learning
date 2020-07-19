@@ -15,14 +15,17 @@ public:
 	TileLocation(const TileLocation &) = delete;
 	TileLocation &operator=(const TileLocation &) = delete;
 
-	Tile *get()
-	{
-		return tile ? tile.get() : nullptr;
-	}
+	Tile *getTile() const;
 
 	friend class Floor;
+	friend class Tile;
 
 	void setTile(std::unique_ptr<Tile> tile);
+
+	const Position &getPosition() const
+	{
+		return position;
+	}
 
 protected:
 	std::unique_ptr<Tile> tile{};

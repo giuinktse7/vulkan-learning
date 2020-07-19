@@ -737,7 +737,7 @@ TextureAtlas &MapRenderer::getTextureAtlas(ItemType &itemType)
   return *itemType.textureAtlas;
 }
 
-void MapRenderer::drawItem(Item item, Position position)
+void MapRenderer::drawItem(Item &item, Position position)
 {
   const auto y = item.getWeight();
   auto &atlas = getTextureAtlas(*item.itemType);
@@ -749,7 +749,8 @@ void MapRenderer::drawItem(Item item, Position position)
 
   renderData.info.textureWindow = item.getTextureWindow();
 
-  drawSprite(position.x, position.y, 32, 32);
+  const auto drawOffset = item.getDrawOffset();
+  drawSprite(position.x + drawOffset.x, position.y + drawOffset.y, item.getWidth(), item.getHeight());
 }
 
 void MapRenderer::setTexture(std::shared_ptr<Texture> texture)

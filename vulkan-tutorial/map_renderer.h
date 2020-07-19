@@ -203,7 +203,7 @@ public:
 
 	void drawSprite(float x, float y, float width, float height);
 
-	void drawItem(Item item, Position position);
+	void drawItem(Item &item, Position position);
 
 	TextureAtlas &getTextureAtlas(const uint32_t spriteId);
 	TextureAtlas &getTextureAtlas(ItemType &itemType);

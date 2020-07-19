@@ -35,11 +35,9 @@ void Appearances::loadFromFile(const std::filesystem::path path)
             auto absolutePath = filesystem::absolute(filesystem::path(path));
             std::cerr << "Failed to parse appearances file at " << absolutePath << "." << endl;
         }
-        std::cout << "c" << std::endl;
 
         google::protobuf::ShutdownProtobufLibrary();
     }
-    std::cout << "d" << std::endl;
 
     for (int i = 0; i < parsed.object_size(); ++i)
     {

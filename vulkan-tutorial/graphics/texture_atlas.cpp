@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "../debug.h"
+
 constexpr uint32_t SPRITE_SIZE = 32;
 constexpr uint32_t TEXTURE_ATLAS_WIDTH = 384;
 constexpr uint32_t TEXTURE_ATLAS_HEIGHT = 384;
@@ -35,30 +37,40 @@ TextureAtlas::TextureAtlas(uint32_t id, CompressedBytes &buffer, uint32_t width,
     this->columns = 12;
     this->spriteWidth = SPRITE_SIZE;
     this->spriteHeight = SPRITE_SIZE;
+    drawOffset.x = 0;
+    drawOffset.y = 0;
     break;
   case SpriteLayout::ONE_BY_TWO:
     this->rows = 6;
     this->columns = 12;
     this->spriteWidth = SPRITE_SIZE;
     this->spriteHeight = SPRITE_SIZE * 2;
+    drawOffset.x = 0;
+    drawOffset.y = -1;
     break;
   case SpriteLayout::TWO_BY_ONE:
     this->rows = 12;
     this->columns = 6;
     this->spriteWidth = SPRITE_SIZE * 2;
     this->spriteHeight = SPRITE_SIZE;
+    drawOffset.x = -1;
+    drawOffset.y = 0;
     break;
   case SpriteLayout::TWO_BY_TWO:
     this->rows = 6;
     this->columns = 6;
     this->spriteWidth = SPRITE_SIZE * 2;
     this->spriteHeight = SPRITE_SIZE * 2;
+    drawOffset.x = -1;
+    drawOffset.y = -1;
     break;
   default:
     this->rows = 12;
     this->columns = 12;
     this->spriteWidth = SPRITE_SIZE;
     this->spriteHeight = SPRITE_SIZE;
+    drawOffset.x = 0;
+    drawOffset.y = 0;
     break;
   }
 
@@ -70,13 +82,13 @@ const TextureWindow TextureAtlas::getTextureWindow(uint32_t offset) const
   auto row = offset / columns;
   auto col = offset % columns;
 
-  const float x = static_cast<float>(col) / columns;
+  const float x = (static_cast<float>(col) / columns);
   const float y = static_cast<float>(rows - row) / rows;
 
   const float width = static_cast<float>(spriteWidth) / this->width;
-  const float height = static_cast<float>(spriteHeight) / this->height;
+  const float height = static_cast<float>(spriteHeight) / (this->height + 1);
 
-  return TextureWindow{x, y, x + width, y - height};
+  return TextureWindow{x, y, x + width - 1.0f / this->width, y - height };
 }
 
 void print_byte(uint8_t b)
@@ -89,7 +101,7 @@ void nextN(std::vector<uint8_t> &buffer, uint32_t offset, uint32_t n)
   //std::cout << "Next " << std::to_string(n) << ":" << std::endl;
   uint8_t k = 0;
   uint8_t *data = buffer.data();
-  for (auto i = 0; i < n; ++i)
+  for (uint32_t i = 0; i < n; ++i)
   {
     print_byte(*(data + offset + i));
   }

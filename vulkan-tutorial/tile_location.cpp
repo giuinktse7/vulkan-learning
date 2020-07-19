@@ -18,3 +18,7 @@ void TileLocation::setTile(std::unique_ptr<Tile> tile)
 {
   this->tile = std::move(tile);
 }
+Tile *TileLocation::getTile() const
+{
+  return tile ? tile.get() : nullptr;
+}

@@ -8,6 +8,12 @@
 #include "texture.h"
 #include "appearances.h"
 
+struct DrawOffset
+{
+	int8_t x;
+	int8_t y;
+};
+
 struct TextureAtlas
 {
 	using CompressedBytes = std::vector<uint8_t>;
@@ -29,6 +35,8 @@ struct TextureAtlas
 
 	uint32_t spriteWidth;
 	uint32_t spriteHeight;
+
+	DrawOffset drawOffset;
 
 	const TextureWindow getTextureWindow(uint32_t offset) const;
 

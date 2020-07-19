@@ -37,12 +37,12 @@ Node::~Node()
   }
 }
 
-bool Node::isLeaf()
+bool Node::isLeaf() const
 {
   return nodeType == NodeType::Leaf;
 }
 
-bool Node::isRoot()
+bool Node::isRoot() const
 {
   return nodeType == NodeType::Root;
 }
@@ -50,6 +50,13 @@ bool Node::isRoot()
 TileLocation &Floor::getTileLocation(int x, int y)
 {
   return locations[(x & 3) * 4 + (y & 3)];
+}
+
+TileLocation &Floor::getTileLocation(uint32_t index)
+{
+  DEBUG_ASSERT(index < MAP_LAYERS, "Index '" + std::to_string(index) + "' is larger than MAP_LAYERS (=" + std::to_string(MAP_LAYERS) + ").");
+
+  return locations[index];
 }
 
 Floor &Node::createFloor(int x, int y, int z)
@@ -91,9 +98,15 @@ Floor::~Floor()
   cout << "~Floor()" << endl;
 }
 
-Node &Node::getLeaf(int x, int y)
+Floor *Node::getFloor(uint32_t z) const
 {
-  Node *node = this;
+  DEBUG_ASSERT(isLeaf(), "Only leaves contain floors.");
+  return this->children[z].get();
+}
+
+Node *Node::getLeafUnsafe(int x, int y) const
+{
+  Node *node = const_cast<Node *>(this);
 
   uint32_t currentX = x;
   uint32_t currentY = y;
@@ -102,25 +115,34 @@ Node &Node::getLeaf(int x, int y)
   {
     if (node->isLeaf())
     {
-      return *node;
+      return node;
     }
 
     uint32_t index = ((currentX & 0xC000) >> 14) | ((currentY & 0xC000) >> 12);
 
     std::unique_ptr<Node> &child = node->nodes[index];
-    if (child)
+    if (!child)
     {
-      node = child.get();
-      currentX <<= 2;
-      currentY <<= 2;
+      return nullptr;
     }
-    else
-    {
-      std::stringstream s;
-      s << "There is no leaf for position { x=" << x << ", y=" << y << " }.";
-      ABORT_PROGRAM(s.str());
-    }
+
+    node = child.get();
+    currentX <<= 2;
+    currentY <<= 2;
   }
+}
+
+Node &Node::getLeaf(int x, int y)
+{
+  Node *node = getLeafUnsafe(x, y);
+  if (!node)
+  {
+    std::stringstream s;
+    s << "There is no leaf for position { x=" << x << ", y=" << y << " }.";
+    ABORT_PROGRAM(s.str());
+  }
+
+  return *node;
 }
 
 Node &Node::getLeafWithCreate(int x, int y)

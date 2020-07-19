@@ -220,7 +220,7 @@ public:
 		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
 	}
 
-	void setMousePosition(double x, double y)
+	void setMousePosition(float x, float y)
 	{
 		this->mousePosition.x = x;
 		this->mousePosition.y = y;

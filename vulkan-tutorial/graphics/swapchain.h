@@ -56,7 +56,7 @@ public:
     return imageCount;
   }
 
-  uint32_t getImageViewCount()
+  size_t getImageViewCount()
   {
     return imageViews.size();
   }

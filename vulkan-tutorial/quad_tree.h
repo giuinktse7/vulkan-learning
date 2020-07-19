@@ -5,6 +5,10 @@
 #include <memory>
 
 #include "tile_location.h"
+#include "const.h"
+
+class MapIterator;
+class Map;
 
 enum class NodeType
 {
@@ -12,8 +16,6 @@ enum class NodeType
 	Node,
 	Leaf
 };
-
-constexpr uint16_t MAP_TREE_CHILDREN_COUNT = 16;
 
 class Floor
 {
@@ -25,8 +27,10 @@ public:
 	Floor &operator=(const Floor &) = delete;
 
 	TileLocation &getTileLocation(int x, int y);
+	TileLocation &getTileLocation(uint32_t index);
 
 private:
+	// x, y locations
 	TileLocation locations[MAP_TREE_CHILDREN_COUNT];
 };
 
@@ -44,16 +48,20 @@ namespace quadtree
 		// Get a leaf node. Creates the leaf node if it does not already exist.
 		Node &getLeafWithCreate(int x, int y);
 		Node &getLeaf(int x, int y);
+		Node *getLeafUnsafe(int x, int y) const;
 
 		Floor &createFloor(int x, int y, int z);
+		Floor *getFloor(uint32_t z) const;
 
-		bool isLeaf();
-		bool isRoot();
+		bool isLeaf() const;
+		bool isRoot() const;
 
-	private:
+		friend class Map;
+		friend class MapIterator;
+
+	protected:
 		NodeType nodeType = NodeType::Root;
-		union
-		{
+		union {
 			std::array<std::unique_ptr<Node>, MAP_TREE_CHILDREN_COUNT> nodes{};
 			std::array<std::unique_ptr<Floor>, MAP_TREE_CHILDREN_COUNT> children;
 		};

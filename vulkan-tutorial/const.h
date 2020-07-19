@@ -3,6 +3,10 @@
 #include <type_traits>
 #include <stdint.h>
 
+// Map constants
+constexpr uint16_t MAP_TREE_CHILDREN_COUNT = 16;
+constexpr uint16_t MAP_LAYERS = 16;
+
 enum class SpriteLayout
 {
 	ONE_BY_ONE = 0,

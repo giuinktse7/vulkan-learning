@@ -402,16 +402,7 @@ void Engine::nextFrame()
   {
     renderFrame();
 
-    for (int x = -250; x < 250; ++x)
-    {
-      for (int y = -250; y < 250; ++y)
-      {
-        drawItem(*map.items.at(4526), Position{x, y, 1});
-      }
-    }
-
-    drawItem(*map.items.at(2274), Position{4, 3, 1});
-    drawItem(*map.items.at(2554), Position{8, 8, 1});
+    map.draw();
     endFrame();
   }
 }

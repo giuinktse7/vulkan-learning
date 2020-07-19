@@ -39,6 +39,8 @@
 #include "graphics/appearances.h"
 #include "map.h"
 
+using namespace std;
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -120,7 +122,7 @@ void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 
 static void cursorPositionCallback(GLFWwindow *window, double x, double y)
 {
-	Engine::getInstance()->setMousePosition(x, y);
+	Engine::getInstance()->setMousePosition((float)x, (float)y);
 }
 
 GLFWwindow *initWindow()
@@ -156,24 +158,44 @@ private:
 	uint16_t x = 0;
 };
 
-void test()
+void populateTestMap()
 {
-	Map map;
-	map.createTile(2, 2, 7);
+	auto engine = Engine::getInstance();
+	auto &map = engine->map;
+	Tile &tile1 = map.createTile(2, 1, 7);
+	Tile &tile2 = map.createTile(2, 2, 7);
+	Tile &tile3 = map.createTile(2, 3, 7);
+	Tile& tile4 = map.createTile(4, 4, 7);
+
+	// auto shovel = Item::create(2554);
+	auto shovel = Item::create(2554);
+	auto tree = Item::create(2706);
+	auto grass = Item::create(103);
+	auto waterBorder = Item::create(6643);
+	auto border = Item::create(6565);
+	auto border2 = Item::create(6565);
+	auto border3 = Item::create(6565);
+
+	tile4.addItem(std::move(tree));
+
+	// tile1.addItem(std::move(border));
+	tile2.addItem(std::move(border2));
+
+	tile3.addItem(std::move(shovel));
+	// tile.addItem(std::move(tree));
+	tile3.addItem(std::move(grass));
+	// tile3.addItem(std::move(waterBorder));
+	tile3.addItem(std::move(border3));
 }
 
 int main()
 {
-	test();
-	return 0;
-
 	MapRenderer *mapRenderer;
 
 	Engine engine;
 
 	try
 	{
-
 		Appearances::loadFromFile("data/appearances.dat");
 		std::cout << "Loaded appearances.dat." << std::endl;
 		Appearances::loadCatalog("data/catalog-content.json");
@@ -187,14 +209,14 @@ int main()
 		mapRenderer = new MapRenderer();
 		engine.setMapRenderer(mapRenderer);
 
+		populateTestMap();
+
+		// return 0;
+
 		GLFWwindow *window = initWindow();
 		engine.initialize(window);
 
 		engine.getMapRenderer()->loadTextureAtlases();
-
-		engine.map.addItem(2554); // shovel
-		engine.map.addItem(4526); // grass
-		engine.map.addItem(2274); // avalanche rune
 
 		while (!glfwWindowShouldClose(window))
 		{
