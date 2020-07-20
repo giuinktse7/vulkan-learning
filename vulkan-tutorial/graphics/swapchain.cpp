@@ -16,12 +16,11 @@ void SwapChain::initialize()
 
 void SwapChain::create()
 {
-  Engine *engine = Engine::getInstance();
-  SwapChainSupportDetails swapChainSupport = querySupport(engine->getPhysicalDevice(), engine->getSurface());
+  SwapChainSupportDetails swapChainSupport = querySupport(g_engine->getPhysicalDevice(), g_engine->getSurface());
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-  this->extent = chooseSwapExtent(swapChainSupport.capabilities, *engine->getWindow());
+  this->extent = chooseSwapExtent(swapChainSupport.capabilities, *g_engine->getWindow());
 
   minImageCount = swapChainSupport.capabilities.minImageCount;
   imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -32,7 +31,7 @@ void SwapChain::create()
 
   VkSwapchainCreateInfoKHR createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createInfo.surface = engine->getSurface();
+  createInfo.surface = g_engine->getSurface();
 
   createInfo.minImageCount = imageCount;
   createInfo.imageFormat = surfaceFormat.format;
@@ -41,7 +40,7 @@ void SwapChain::create()
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  QueueFamilyIndices indices = engine->getQueueFamilyIndices();
+  QueueFamilyIndices indices = g_engine->getQueueFamilyIndices();
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
   if (indices.graphicsFamily != indices.presentFamily)
@@ -60,14 +59,14 @@ void SwapChain::create()
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;
 
-  if (vkCreateSwapchainKHR(engine->getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS)
+  if (vkCreateSwapchainKHR(g_engine->getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create swap chain!");
   }
 
-  vkGetSwapchainImagesKHR(engine->getDevice(), swapChain, &imageCount, nullptr);
+  vkGetSwapchainImagesKHR(g_engine->getDevice(), swapChain, &imageCount, nullptr);
   images.resize(imageCount);
-  vkGetSwapchainImagesKHR(engine->getDevice(), swapChain, &imageCount, images.data());
+  vkGetSwapchainImagesKHR(g_engine->getDevice(), swapChain, &imageCount, images.data());
 
   imageFormat = surfaceFormat.format;
 }
@@ -75,12 +74,11 @@ void SwapChain::create()
 void SwapChain::recreate()
 {
   Logger::info("Recreating swap chain");
-  Engine *engine = Engine::getInstance();
-  GLFWwindow *window = engine->getWindow();
+  GLFWwindow *window = g_engine->getWindow();
 
-  vkDeviceWaitIdle(engine->getDevice());
+  vkDeviceWaitIdle(g_engine->getDevice());
 
-  if (!Engine::isValidWindowSize())
+  if (!g_engine->isValidWindowSize())
   {
     this->validExtent = false;
     return;
@@ -92,8 +90,8 @@ void SwapChain::recreate()
 
   createImageViews();
 
-  engine->cleanupSyncObjects();
-  engine->createSyncObjects();
+  g_engine->cleanupSyncObjects();
+  g_engine->createSyncObjects();
   this->validExtent = true;
 }
 
@@ -183,22 +181,20 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilit
 
 void SwapChain::createImageViews()
 {
-  Engine *engine = Engine::getInstance();
 
   imageViews.resize(images.size());
 
   for (size_t i = 0; i < images.size(); i++)
   {
-    imageViews[i] = VulkanHelpers::createImageView(engine->getDevice(), images[i], imageFormat);
+    imageViews[i] = VulkanHelpers::createImageView(g_engine->getDevice(), images[i], imageFormat);
   }
 }
 
 void SwapChain::cleanup()
 {
-  Engine *engine = Engine::getInstance();
-  VkDevice device = engine->getDevice();
+  VkDevice device = g_engine->getDevice();
 
-    for (auto imageView : imageViews)
+  for (auto imageView : imageViews)
   {
     vkDestroyImageView(device, imageView, nullptr);
   }

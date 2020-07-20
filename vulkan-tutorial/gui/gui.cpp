@@ -24,23 +24,22 @@ bool dockOpened = true;
 
 void GUI::initForVulkan()
 {
-  Engine *engine = Engine::getInstance();
 
   createDescriptorPool();
   createRenderPass();
 
-  ImGui_ImplGlfw_InitForVulkan(engine->getWindow(), true);
+  ImGui_ImplGlfw_InitForVulkan(g_engine->getWindow(), true);
   ImGui_ImplVulkan_InitInfo initInfo{};
-  initInfo.Instance = engine->getVkInstance();
-  initInfo.PhysicalDevice = engine->getPhysicalDevice();
-  initInfo.Device = engine->getDevice();
+  initInfo.Instance = g_engine->getVkInstance();
+  initInfo.PhysicalDevice = g_engine->getPhysicalDevice();
+  initInfo.Device = g_engine->getDevice();
   initInfo.QueueFamily = 0;
-  initInfo.Queue = *engine->getGraphicsQueue();
+  initInfo.Queue = *g_engine->getGraphicsQueue();
   initInfo.PipelineCache = VK_NULL_HANDLE;
   initInfo.DescriptorPool = descriptorPool;
-  initInfo.Allocator = engine->getAllocator();
-  initInfo.ImageCount = engine->getImageCount();
-  initInfo.MinImageCount = engine->getMinImageCount();
+  initInfo.Allocator = g_engine->getAllocator();
+  initInfo.ImageCount = g_engine->getImageCount();
+  initInfo.MinImageCount = g_engine->getMinImageCount();
   initInfo.CheckVkResultFn = checkVkResult;
   ImGui_ImplVulkan_Init(&initInfo, renderPass);
 
@@ -209,10 +208,9 @@ void GUI::recordFrame(uint32_t currentFrame)
 
   updateCommandPool(currentFrame);
 
-  Engine *engine = Engine::getInstance();
-  VkExtent2D extent = engine->getSwapChain().getExtent();
+  VkExtent2D extent = g_engine->getSwapChain().getExtent();
 
-  glm::vec4 clearColor = engine->clearColor;
+  glm::vec4 clearColor = g_engine->clearColor;
   VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
 
   VkRenderPassBeginInfo info = {};
@@ -230,7 +228,6 @@ void GUI::recordFrame(uint32_t currentFrame)
 
 void GUI::createDescriptorPool()
 {
-  Engine *engine = Engine::getInstance();
 
   VkDescriptorPoolSize pool_sizes[] =
       {
@@ -252,7 +249,7 @@ void GUI::createDescriptorPool()
   pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
   pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
   pool_info.pPoolSizes = pool_sizes;
-  if (vkCreateDescriptorPool(engine->getDevice(), &pool_info, engine->getAllocator(), &descriptorPool) != VK_SUCCESS)
+  if (vkCreateDescriptorPool(g_engine->getDevice(), &pool_info, g_engine->getAllocator(), &descriptorPool) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor pool!");
   }
@@ -269,9 +266,8 @@ void GUI::endFrame(uint32_t currentFrame)
 
 void GUI::createFrameBuffers()
 {
-  Engine *engine = Engine::getInstance();
 
-  frameBuffers.resize(engine->getImageCount());
+  frameBuffers.resize(g_engine->getImageCount());
 
   VkImageView attachment[1];
   VkFramebufferCreateInfo info = {};
@@ -279,13 +275,13 @@ void GUI::createFrameBuffers()
   info.renderPass = renderPass;
   info.attachmentCount = 1;
   info.pAttachments = attachment;
-  info.width = engine->getWidth();
-  info.height = engine->getHeight();
+  info.width = g_engine->getWidth();
+  info.height = g_engine->getHeight();
   info.layers = 1;
-  for (uint32_t i = 0; i < engine->getImageCount(); i++)
+  for (uint32_t i = 0; i < g_engine->getImageCount(); i++)
   {
-    attachment[0] = engine->getSwapChain().getImageView(i);
-    if (vkCreateFramebuffer(engine->getDevice(), &info, engine->getAllocator(), &frameBuffers[i]) != VK_SUCCESS)
+    attachment[0] = g_engine->getSwapChain().getImageView(i);
+    if (vkCreateFramebuffer(g_engine->getDevice(), &info, g_engine->getAllocator(), &frameBuffers[i]) != VK_SUCCESS)
     {
       throw std::runtime_error("failed to create framebuffer!");
     }
@@ -294,9 +290,8 @@ void GUI::createFrameBuffers()
 
 void GUI::createRenderPass()
 {
-  Engine *engine = Engine::getInstance();
   VkAttachmentDescription attachment = {};
-  attachment.format = engine->getSwapChain().getImageFormat();
+  attachment.format = g_engine->getSwapChain().getImageFormat();
   attachment.samples = VK_SAMPLE_COUNT_1_BIT;
   attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
   attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -330,7 +325,7 @@ void GUI::createRenderPass()
   info.pSubpasses = &subpass;
   info.dependencyCount = 1;
   info.pDependencies = &dependency;
-  if (vkCreateRenderPass(engine->getDevice(), &info, nullptr, &renderPass) != VK_SUCCESS)
+  if (vkCreateRenderPass(g_engine->getDevice(), &info, nullptr, &renderPass) != VK_SUCCESS)
   {
     throw std::runtime_error("Could not create Dear ImGui's render pass");
   }
@@ -338,17 +333,15 @@ void GUI::createRenderPass()
 
 void GUI::createFontsTexture()
 {
-  Engine *engine = Engine::getInstance();
-  VkCommandBuffer commandBuffer = engine->beginSingleTimeCommands();
+  VkCommandBuffer commandBuffer = g_engine->beginSingleTimeCommands();
   ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-  engine->endSingleTimeCommands(commandBuffer);
+  g_engine->endSingleTimeCommands(commandBuffer);
 }
 
 void GUI::setupCommandPoolsAndBuffers()
 {
-  Engine *engine = Engine::getInstance();
 
-  size_t size = engine->getSwapChain().getImageViewCount();
+  size_t size = g_engine->getSwapChain().getImageViewCount();
 
   commandPools.resize(size);
   commandBuffers.resize(size);
@@ -371,7 +364,7 @@ void GUI::checkVkResult(VkResult err)
 void GUI::updateCommandPool(uint32_t currentFrame)
 {
 
-  if (vkResetCommandPool(Engine::getInstance()->getDevice(), commandPools[currentFrame], 0) != VK_SUCCESS)
+  if (vkResetCommandPool(g_engine->getDevice(), commandPools[currentFrame], 0) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to reset GUI command pool!");
   }
@@ -387,11 +380,10 @@ void GUI::updateCommandPool(uint32_t currentFrame)
 
 void GUI::recreate()
 {
-  Engine *engine = Engine::getInstance();
 
   cleanup();
 
-  ImGui_ImplVulkan_SetMinImageCount(engine->getMinImageCount());
+  ImGui_ImplVulkan_SetMinImageCount(g_engine->getMinImageCount());
 
   createRenderPass();
   setupCommandPoolsAndBuffers();
@@ -400,9 +392,8 @@ void GUI::recreate()
 
 void GUI::cleanup()
 {
-  Engine *engine = Engine::getInstance();
 
-  VkDevice device = engine->getDevice();
+  VkDevice device = g_engine->getDevice();
 
   for (auto framebuffer : frameBuffers)
   {
@@ -411,7 +402,7 @@ void GUI::cleanup()
 
   vkDestroyRenderPass(device, renderPass, nullptr);
 
-  for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
+  for (size_t i = 0; i < g_engine->getMaxFramesInFlight(); ++i)
   {
     auto &commandBuffer = commandBuffers[i];
     if (commandBuffer)

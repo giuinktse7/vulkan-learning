@@ -5,7 +5,7 @@
 
 #include "engine.h"
 
-#define MAX_NUM_TEXTURES 256
+constexpr uint32_t MAX_NUM_TEXTURES = 256;
 
 VkDescriptorSetLayout ResourceDescriptor::createLayout(const VkDevice &device)
 {
@@ -40,10 +40,9 @@ VkDescriptorSetLayout ResourceDescriptor::createLayout(const VkDevice &device)
 
 VkDescriptorPool ResourceDescriptor::createPool()
 {
-  Engine *engine = Engine::getInstance();
 
   std::array<VkDescriptorPoolSize, 2> poolSizes{};
-  size_t descriptorCount = engine->getMaxFramesInFlight() * 2;
+  uint32_t descriptorCount = g_engine->getMaxFramesInFlight() * 2;
 
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   poolSizes[0].descriptorCount = descriptorCount;
@@ -53,12 +52,12 @@ VkDescriptorPool ResourceDescriptor::createPool()
 
   VkDescriptorPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = poolSizes.size();
+  poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = descriptorCount + MAX_NUM_TEXTURES;
 
   VkDescriptorPool pool;
-  if (vkCreateDescriptorPool(engine->getDevice(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
+  if (vkCreateDescriptorPool(g_engine->getDevice(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor pool!");
   }

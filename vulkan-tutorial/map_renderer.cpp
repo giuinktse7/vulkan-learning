@@ -23,7 +23,6 @@ MapRenderer::MapRenderer(std::unique_ptr<Map> map)
 void MapRenderer::initialize()
 {
 
-  Engine *engine = Engine::getInstance();
   frame = &frames.front();
 
   renderPass = createRenderPass();
@@ -43,7 +42,7 @@ void MapRenderer::initialize()
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   void *data;
-  vkMapMemory(engine->getDevice(), indexStagingBuffer.deviceMemory, 0, indexSize, 0, &data);
+  g_engine->mapMemory(indexStagingBuffer.deviceMemory, 0, indexSize, 0, &data);
   uint16_t *indices = reinterpret_cast<uint16_t *>(data);
   std::array<uint16_t, 6> indexArray{0, 1, 3, 3, 1, 2};
 
@@ -54,15 +53,15 @@ void MapRenderer::initialize()
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-  VkCommandBuffer commandBuffer = engine->beginSingleTimeCommands();
+  VkCommandBuffer commandBuffer = g_engine->beginSingleTimeCommands();
   VkBufferCopy copyRegion = {};
   copyRegion.size = indexSize;
   vkCmdCopyBuffer(commandBuffer, indexStagingBuffer.buffer, indexBuffer.buffer, 1, &copyRegion);
-  engine->endSingleTimeCommands(commandBuffer);
+  g_engine->endSingleTimeCommands(commandBuffer);
 
-  vkUnmapMemory(engine->getDevice(), indexStagingBuffer.deviceMemory);
+  vkUnmapMemory(g_engine->getDevice(), indexStagingBuffer.deviceMemory);
 
-  auto maxFrames = engine->getMaxFramesInFlight();
+  auto maxFrames = g_engine->getMaxFramesInFlight();
 
   uint8_t whitePixel[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
@@ -76,8 +75,6 @@ void MapRenderer::addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas)
 
 void MapRenderer::loadTextureAtlases()
 {
-  auto engine = Engine::getInstance();
-
   auto start = std::chrono::high_resolution_clock::now();
   for (const auto &pair : Appearances::catalogInfo)
   {
@@ -91,9 +88,8 @@ void MapRenderer::loadTextureAtlases()
 
 VkRenderPass MapRenderer::createRenderPass()
 {
-  Engine *engine = Engine::getInstance();
   VkAttachmentDescription colorAttachment{};
-  colorAttachment.format = engine->getSwapChain().getImageFormat();
+  colorAttachment.format = g_engine->getSwapChain().getImageFormat();
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 
   colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -135,7 +131,7 @@ VkRenderPass MapRenderer::createRenderPass()
   renderPassInfo.pDependencies = &dependency;
 
   VkRenderPass renderPass;
-  if (vkCreateRenderPass(engine->getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+  if (vkCreateRenderPass(g_engine->getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create render pass!");
   }
@@ -145,13 +141,11 @@ VkRenderPass MapRenderer::createRenderPass()
 
 void MapRenderer::createGraphicsPipeline()
 {
-  Engine *engine = Engine::getInstance();
-
   std::vector<uint8_t> vertShaderCode = File::read("shaders/vert.spv");
   std::vector<uint8_t> fragShaderCode = File::read("shaders/frag.spv");
 
-  VkShaderModule vertShaderModule = engine->createShaderModule(vertShaderCode);
-  VkShaderModule fragShaderModule = engine->createShaderModule(fragShaderCode);
+  VkShaderModule vertShaderModule = g_engine->createShaderModule(vertShaderCode);
+  VkShaderModule fragShaderModule = g_engine->createShaderModule(fragShaderCode);
 
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -186,14 +180,14 @@ void MapRenderer::createGraphicsPipeline()
   VkViewport viewport = {};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = (float)engine->getWidth();
-  viewport.height = (float)engine->getHeight();
+  viewport.width = (float)g_engine->getWidth();
+  viewport.height = (float)g_engine->getHeight();
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
 
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
-  scissor.extent = engine->getSwapChain().getExtent();
+  scissor.extent = g_engine->getSwapChain().getExtent();
 
   VkPipelineViewportStateCreateInfo viewportState = {};
   viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -243,7 +237,7 @@ void MapRenderer::createGraphicsPipeline()
   std::array<VkDescriptorSetLayout, 2> layouts = {frameDescriptorSetLayout, textureDescriptorSetLayout};
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = layouts.size();
+  pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
   pipelineLayoutInfo.pSetLayouts = layouts.data();
 
   VkPushConstantRange pushConstantRange{};
@@ -254,7 +248,7 @@ void MapRenderer::createGraphicsPipeline()
   pipelineLayoutInfo.pushConstantRangeCount = 1;
   pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-  if (vkCreatePipelineLayout(engine->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+  if (vkCreatePipelineLayout(g_engine->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create pipeline layout!");
   }
@@ -274,14 +268,14 @@ void MapRenderer::createGraphicsPipeline()
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-  if (vkCreateGraphicsPipelines(engine->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) !=
+  if (vkCreateGraphicsPipelines(g_engine->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) !=
       VK_SUCCESS)
   {
     throw std::runtime_error("failed to create graphics pipeline!");
   }
 
-  vkDestroyShaderModule(engine->getDevice(), fragShaderModule, nullptr);
-  vkDestroyShaderModule(engine->getDevice(), vertShaderModule, nullptr);
+  vkDestroyShaderModule(g_engine->getDevice(), fragShaderModule, nullptr);
+  vkDestroyShaderModule(g_engine->getDevice(), vertShaderModule, nullptr);
 }
 
 void MapRenderer::drawBatches()
@@ -293,11 +287,12 @@ void MapRenderer::drawBatches()
       frame->descriptorSet,
       nullptr};
 
+  vkCmdBindIndexBuffer(frame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
   for (auto &batch : frame->batchDraw.batches)
   {
     buffers[0] = batch.buffer.buffer;
     vkCmdBindVertexBuffers(frame->commandBuffer, 0, 1, buffers, offsets);
-    vkCmdBindIndexBuffer(frame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
 
     uint32_t offset = 0;
     for (const auto &descriptorInfo : batch.descriptorIndices)
@@ -308,7 +303,7 @@ void MapRenderer::drawBatches()
                               VK_PIPELINE_BIND_POINT_GRAPHICS,
                               pipelineLayout,
                               0,
-                              descriptorSets.size(),
+                              static_cast<uint32_t>(descriptorSets.size()),
                               descriptorSets.data(),
                               0,
                               nullptr);
@@ -322,19 +317,20 @@ void MapRenderer::drawBatches()
 
       offset = descriptorInfo.end + 1;
     }
+
+    batch.invalidate();
   }
 }
 
 void MapRenderer::beginRenderPass()
 {
-  Engine *engine = Engine::getInstance();
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass = renderPass;
   renderPassInfo.framebuffer = frame->frameBuffer;
   renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = engine->getSwapChain().getExtent();
+  renderPassInfo.renderArea.extent = g_engine->getSwapChain().getExtent();
   renderPassInfo.clearValueCount = 1;
   VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
   renderPassInfo.pClearValues = &clearValue;
@@ -349,8 +345,6 @@ void MapRenderer::endRenderPass()
 
 void MapRenderer::startCommandBuffer()
 {
-  Engine *engine = Engine::getInstance();
-
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool = commandPool;
@@ -359,7 +353,7 @@ void MapRenderer::startCommandBuffer()
 
   VkCommandBuffer &commandBuffer = frame->commandBuffer;
 
-  if (vkAllocateCommandBuffers(engine->getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS)
+  if (vkAllocateCommandBuffers(g_engine->getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to allocate command buffer");
   }
@@ -378,12 +372,10 @@ void MapRenderer::startCommandBuffer()
 
 void MapRenderer::recordFrame(uint32_t currentFrame)
 {
-  Engine *engine = Engine::getInstance();
-
   frame = &frames[currentFrame];
   if (frame->commandBuffer)
   {
-    vkFreeCommandBuffers(engine->getDevice(), commandPool, 1, &frame->commandBuffer);
+    vkFreeCommandBuffers(g_engine->getDevice(), commandPool, 1, &frame->commandBuffer);
     frame->commandBuffer = nullptr;
   }
 
@@ -400,7 +392,6 @@ void MapRenderer::recordFrame(uint32_t currentFrame)
 
 void MapRenderer::drawMap()
 {
-  auto engine = Engine::getInstance();
   for (const auto &tileLocation : map->begin())
   {
     auto position = tileLocation->getPosition();
@@ -417,10 +408,8 @@ void MapRenderer::drawMap()
 
 void MapRenderer::updateUniformBuffer()
 {
-  Engine *engine = Engine::getInstance();
-
   int width, height;
-  glfwGetFramebufferSize(engine->getWindow(), &width, &height);
+  glfwGetFramebufferSize(g_engine->getWindow(), &width, &height);
 
   float zoom = 1 / camera.zoomFactor;
   auto translated = glm::translate(
@@ -434,32 +423,30 @@ void MapRenderer::updateUniformBuffer()
                                    translated;
 
   void *data;
-  vkMapMemory(engine->getDevice(), frame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
+  g_engine->mapMemory(frame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
   memcpy(data, &uniformBufferObject, sizeof(ItemUniformBufferObject));
-  vkUnmapMemory(engine->getDevice(), frame->uniformBuffer.deviceMemory);
+  vkUnmapMemory(g_engine->getDevice(), frame->uniformBuffer.deviceMemory);
 }
 
 void MapRenderer::createFrameBuffers()
 {
-  Engine *engine = Engine::getInstance();
+  uint32_t imageViewCount = g_engine->getImageCount();
 
-  uint32_t imageViewCount = engine->getImageCount();
-
-  for (size_t i = 0; i < imageViewCount; ++i)
+  for (uint32_t i = 0; i < imageViewCount; ++i)
   {
     VkImageView attachments[] = {
-        engine->getSwapChain().getImageView(i)};
+        g_engine->getSwapChain().getImageView(i)};
 
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = renderPass;
     framebufferInfo.attachmentCount = 1;
     framebufferInfo.pAttachments = attachments;
-    framebufferInfo.width = engine->getWidth();
-    framebufferInfo.height = engine->getHeight();
+    framebufferInfo.width = g_engine->getWidth();
+    framebufferInfo.height = g_engine->getHeight();
     framebufferInfo.layers = 1;
 
-    if (vkCreateFramebuffer(engine->getDevice(), &framebufferInfo, nullptr, &frames[i].frameBuffer) != VK_SUCCESS)
+    if (vkCreateFramebuffer(g_engine->getDevice(), &framebufferInfo, nullptr, &frames[i].frameBuffer) != VK_SUCCESS)
     {
       throw std::runtime_error("failed to create framebuffer!");
     }
@@ -517,25 +504,23 @@ void MapRenderer::drawItem(Item &item, Position position)
 
 void MapRenderer::cleanup()
 {
-  Engine *engine = Engine::getInstance();
-
   for (auto &frame : frames)
   {
-    vkDestroyFramebuffer(Engine::getInstance()->getDevice(), frame.frameBuffer, nullptr);
+    vkDestroyFramebuffer(g_engine->getDevice(), frame.frameBuffer, nullptr);
   }
 
   for (auto &frame : frames)
   {
     vkFreeCommandBuffers(
-        engine->getDevice(),
+        g_engine->getDevice(),
         commandPool,
         1,
         &frame.commandBuffer);
   }
 
-  vkDestroyPipeline(engine->getDevice(), graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(engine->getDevice(), pipelineLayout, nullptr);
-  vkDestroyRenderPass(engine->getDevice(), renderPass, nullptr);
+  vkDestroyPipeline(g_engine->getDevice(), graphicsPipeline, nullptr);
+  vkDestroyPipelineLayout(g_engine->getDevice(), pipelineLayout, nullptr);
+  vkDestroyRenderPass(g_engine->getDevice(), renderPass, nullptr);
 }
 
 void MapRenderer::recreate()
@@ -548,8 +533,6 @@ void MapRenderer::recreate()
 
 void MapRenderer::createDescriptorSetLayouts()
 {
-  Engine *engine = Engine::getInstance();
-
   VkDescriptorSetLayoutCreateInfo layoutInfo = {};
   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   layoutInfo.bindingCount = 1;
@@ -563,7 +546,7 @@ void MapRenderer::createDescriptorSetLayouts()
 
   layoutInfo.pBindings = &layoutBinding;
 
-  if (vkCreateDescriptorSetLayout(engine->getDevice(), &layoutInfo, nullptr, &frameDescriptorSetLayout) != VK_SUCCESS)
+  if (vkCreateDescriptorSetLayout(g_engine->getDevice(), &layoutInfo, nullptr, &frameDescriptorSetLayout) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor set layout");
   }
@@ -577,7 +560,7 @@ void MapRenderer::createDescriptorSetLayouts()
 
   layoutInfo.pBindings = &po;
 
-  if (vkCreateDescriptorSetLayout(engine->getDevice(), &layoutInfo, nullptr, &textureDescriptorSetLayout) != VK_SUCCESS)
+  if (vkCreateDescriptorSetLayout(g_engine->getDevice(), &layoutInfo, nullptr, &textureDescriptorSetLayout) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor set layout");
   }
@@ -585,11 +568,9 @@ void MapRenderer::createDescriptorSetLayouts()
 
 void MapRenderer::createUniformBuffers()
 {
-  Engine *engine = Engine::getInstance();
-
   VkDeviceSize bufferSize = sizeof(ItemUniformBufferObject);
 
-  for (size_t i = 0; i < engine->getMaxFramesInFlight(); i++)
+  for (size_t i = 0; i < g_engine->getMaxFramesInFlight(); i++)
   {
     frames[i].uniformBuffer = Buffer::create(bufferSize,
                                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -599,10 +580,8 @@ void MapRenderer::createUniformBuffers()
 
 void MapRenderer::createDescriptorPool()
 {
-  Engine *engine = Engine::getInstance();
-
   std::array<VkDescriptorPoolSize, 2> poolSizes{};
-  uint32_t descriptorCount = engine->getMaxFramesInFlight() * 2;
+  uint32_t descriptorCount = g_engine->getMaxFramesInFlight() * 2;
 
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   poolSizes[0].descriptorCount = descriptorCount;
@@ -612,11 +591,11 @@ void MapRenderer::createDescriptorPool()
 
   VkDescriptorPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = poolSizes.size();
+  poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = descriptorCount + MAX_NUM_TEXTURES;
 
-  if (vkCreateDescriptorPool(engine->getDevice(), &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS)
+  if (vkCreateDescriptorPool(g_engine->getDevice(), &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create descriptor pool!");
   }
@@ -624,9 +603,7 @@ void MapRenderer::createDescriptorPool()
 
 void MapRenderer::createDescriptorSets()
 {
-  Engine *engine = Engine::getInstance();
-
-  uint32_t maxFrames = engine->getMaxFramesInFlight();
+  uint32_t maxFrames = g_engine->getMaxFramesInFlight();
   std::vector<VkDescriptorSetLayout> layouts(maxFrames, frameDescriptorSetLayout);
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -636,7 +613,7 @@ void MapRenderer::createDescriptorSets()
 
   std::array<VkDescriptorSet, 3> descriptorSets;
 
-  if (vkAllocateDescriptorSets(engine->getDevice(), &allocInfo, &descriptorSets[0]) != VK_SUCCESS)
+  if (vkAllocateDescriptorSets(g_engine->getDevice(), &allocInfo, &descriptorSets[0]) != VK_SUCCESS)
   {
     ABORT_PROGRAM("failed to allocate descriptor sets");
   }
@@ -646,7 +623,7 @@ void MapRenderer::createDescriptorSets()
     frames[i].descriptorSet = descriptorSets[i];
   }
 
-  for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
+  for (size_t i = 0; i < g_engine->getMaxFramesInFlight(); ++i)
   {
     VkDescriptorBufferInfo bufferInfo = {};
     bufferInfo.buffer = frame->uniformBuffer.buffer;
@@ -662,20 +639,18 @@ void MapRenderer::createDescriptorSets()
     descriptorWrites.descriptorCount = 1;
     descriptorWrites.pBufferInfo = &bufferInfo;
 
-    vkUpdateDescriptorSets(engine->getDevice(), 1, &descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(g_engine->getDevice(), 1, &descriptorWrites, 0, nullptr);
   }
 }
 
 void MapRenderer::createCommandPool()
 {
-  Engine *engine = Engine::getInstance();
-
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  poolInfo.queueFamilyIndex = engine->getQueueFamilyIndices().graphicsFamily.value();
+  poolInfo.queueFamilyIndex = g_engine->getQueueFamilyIndices().graphicsFamily.value();
   poolInfo.flags = 0; // Optional
 
-  if (vkCreateCommandPool(engine->getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+  if (vkCreateCommandPool(g_engine->getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create graphics command pool!");
   }

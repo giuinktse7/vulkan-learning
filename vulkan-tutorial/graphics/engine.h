@@ -24,13 +24,19 @@
 
 #include "../gui/gui.h"
 
+class Engine;
+
+extern Engine *g_engine;
+
+namespace engine
+{
+
+	void create();
+
+} // namespace engine
+
 class Engine
 {
-protected:
-	//Engine()
-	//{
-	//}
-	//~Engine() {}
 public:
 	Engine();
 	~Engine();
@@ -39,8 +45,13 @@ public:
 
 	static const int TILE_SIZE = 32;
 
-	static Engine *getInstance();
-	static void setInstance(Engine *instance);
+	/* Vulkan helpers */
+	VkResult mapMemory(
+			VkDeviceMemory memory,
+			VkDeviceSize offset,
+			VkDeviceSize size,
+			VkMemoryMapFlags flags,
+			void **ppData);
 
 	VkInstance &getVkInstance()
 	{
@@ -182,10 +193,9 @@ public:
 
 	std::shared_ptr<Texture> CreateTexture(const std::string &filename);
 
-
 	void endFrame();
 
-	static bool isValidWindowSize();
+	bool isValidWindowSize();
 
 	void setKeyDown(int key)
 	{
@@ -244,7 +254,6 @@ public:
 
 	bool initFrame();
 	void nextFrame();
-
 
 	VkShaderModule createShaderModule(const std::vector<uint8_t> &code);
 
@@ -347,24 +356,6 @@ private:
 
 	std::unordered_set<int> keys;
 
-	struct DrawCommand
-	{
-		DrawCommand(VkDescriptorSet descriptorSet, uint16_t baseIndex, uint16_t indexCount, int bufferIndex)
-				: descriptorSet(descriptorSet),
-					baseIndex(baseIndex),
-					numIndices(indexCount),
-					bufferIndex(bufferIndex)
-		{
-		}
-		VkDescriptorSet descriptorSet;
-		uint16_t baseIndex;
-		uint16_t numIndices;
-		int bufferIndex;
-	};
-
-	std::vector<DrawCommand> drawCommands;
-	unsigned long drawCommandCount;
-
 	void createVulkanInstance();
 
 	static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
@@ -383,7 +374,6 @@ private:
 	{
 		this->window = window;
 	}
-
 
 	void presentFrame();
 	void recreateSwapChain();

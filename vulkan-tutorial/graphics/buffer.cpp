@@ -6,8 +6,7 @@
 
 BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
-  Engine *engine = Engine::getInstance();
-  VkDevice device = engine->getDevice();
+  VkDevice device = g_engine->getDevice();
 
   VkBuffer buffer;
   VkDeviceMemory bufferMemory;
@@ -29,7 +28,7 @@ BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = VulkanHelpers::findMemoryType(engine->getPhysicalDevice(), memRequirements.memoryTypeBits, properties);
+  allocInfo.memoryTypeIndex = VulkanHelpers::findMemoryType(g_engine->getPhysicalDevice(), memRequirements.memoryTypeBits, properties);
 
   if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
   {
@@ -43,13 +42,13 @@ BoundBuffer Buffer::create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
 
 void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-  VkCommandBuffer commandBuffer = Engine::getInstance()->beginSingleTimeCommands();
+  VkCommandBuffer commandBuffer = g_engine->beginSingleTimeCommands();
 
   VkBufferCopy copyRegion{};
   copyRegion.size = size;
   vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-  Engine::getInstance()->endSingleTimeCommands(commandBuffer);
+  g_engine->endSingleTimeCommands(commandBuffer);
 }
 
 /*
@@ -57,7 +56,7 @@ void Buffer::copy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 */
 void Buffer::copyToMemory(VkDeviceMemory bufferMemory, uint8_t *data, VkDeviceSize size)
 {
-  VkDevice device = Engine::getInstance()->getDevice();
+  VkDevice device = g_engine->getDevice();
   void *mapped = nullptr;
   // vkMapMemory allows us to access the memory at the VkDeviceMemory.
   vkMapMemory(device, bufferMemory, 0, size, 0, &mapped);

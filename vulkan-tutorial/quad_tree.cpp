@@ -111,13 +111,8 @@ Node *Node::getLeafUnsafe(int x, int y) const
   uint32_t currentX = x;
   uint32_t currentY = y;
 
-  while (node)
+  while (!node->isLeaf())
   {
-    if (node->isLeaf())
-    {
-      return node;
-    }
-
     uint32_t index = ((currentX & 0xC000) >> 14) | ((currentY & 0xC000) >> 12);
 
     std::unique_ptr<Node> &child = node->nodes[index];
@@ -130,6 +125,8 @@ Node *Node::getLeafUnsafe(int x, int y) const
     currentX <<= 2;
     currentY <<= 2;
   }
+
+  return node;
 }
 
 Node &Node::getLeaf(int x, int y)
@@ -153,7 +150,9 @@ Node &Node::getLeafWithCreate(int x, int y)
 
   uint8_t level = 6;
 
-  while (node)
+  Node *leaf = nullptr;
+
+  while (!leaf)
   {
     /*  The index is given by the bytes YYXX.
         XX is given by the two MSB in currentX, and YY by the two MSB in currentY.
@@ -166,7 +165,8 @@ Node &Node::getLeafWithCreate(int x, int y)
     {
       if (child->isLeaf())
       {
-        return *child;
+        leaf = child.get();
+        break;
       }
     }
     else
@@ -174,7 +174,8 @@ Node &Node::getLeafWithCreate(int x, int y)
       if (level == 0)
       {
         child = make_unique<Node>(NodeType::Leaf);
-        return *child;
+        leaf = child.get();
+        break;
       }
       else
       {
@@ -187,4 +188,6 @@ Node &Node::getLeafWithCreate(int x, int y)
     currentY <<= 2;
     --level;
   }
+
+  return *leaf;
 }

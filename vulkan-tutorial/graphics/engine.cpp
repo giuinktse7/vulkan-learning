@@ -15,14 +15,40 @@
 
 #include <imgui_impl_glfw.h>
 
-/* 
-  Singleton variables
-*/
-Engine *Engine::pinstance_{nullptr};
-std::mutex Engine::mutex_;
+Engine *g_engine;
+
+namespace engine
+{
+  namespace
+  {
+    std::unique_ptr<Engine> g_engine_container = nullptr;
+  }
+
+  void create()
+  {
+    if (g_engine)
+    {
+      ABORT_PROGRAM("The engine is already created.");
+    }
+
+    g_engine_container = std::make_unique<Engine>();
+    g_engine = g_engine_container.get();
+  }
+
+} // namespace engine
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
+VkResult Engine::mapMemory(
+    VkDeviceMemory memory,
+    VkDeviceSize offset,
+    VkDeviceSize size,
+    VkMemoryMapFlags flags,
+    void **ppData)
+{
+  return vkMapMemory(device, memory, offset, size, flags, ppData);
+}
 
 Engine::Engine()
 {
@@ -30,29 +56,6 @@ Engine::Engine()
 
 Engine::~Engine()
 {
-}
-
-/**
- * The first time we call GetInstance we will lock the storage location
- *      and then we make sure again that the variable is null and then we
- *      set the value. RU:
- */
-Engine *Engine::getInstance()
-{
-  if (pinstance_ == nullptr)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (pinstance_ == nullptr)
-    {
-      pinstance_ = new Engine();
-    }
-  }
-  return pinstance_;
-}
-
-void Engine::setInstance(Engine *instance)
-{
-  pinstance_ = instance;
 }
 
 void Engine::initialize(GLFWwindow *window)
@@ -539,7 +542,7 @@ void Engine::cleanupSyncObjects()
 bool Engine::isValidWindowSize()
 {
   int width = 0, height = 0;
-  glfwGetFramebufferSize(Engine::getInstance()->getWindow(), &width, &height);
+  glfwGetFramebufferSize(getWindow(), &width, &height);
   return !(width == 0 || height == 0);
 }
 

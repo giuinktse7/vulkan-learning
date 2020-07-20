@@ -46,29 +46,25 @@ const uint32_t HEIGHT = 600;
 
 void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 {
-	Engine *engine = Engine::getInstance();
-	engine->setFrameBufferResized(true);
-
-	engine->nextFrame();
+	g_engine->setFrameBufferResized(true);
+	g_engine->nextFrame();
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
-	Engine *engine = Engine::getInstance();
-
-	bool ctrlDown = engine->isCtrlDown();
+	bool ctrlDown = g_engine->isCtrlDown();
 
 	// Handle CTRL
 	if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
 	{
 		if (action == GLFW_RELEASE)
 		{
-			engine->setKeyUp(key);
+			g_engine->setKeyUp(key);
 		}
 		else if (action == GLFW_PRESS)
 		{
-			engine->setKeyDown(key);
+			g_engine->setKeyDown(key);
 		}
 	}
 
@@ -81,11 +77,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
 	if (ctrlDown && key == GLFW_KEY_0)
 	{
-		engine->resetZoom();
+		g_engine->resetZoom();
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = static_cast<float>(Engine::TILE_SIZE) * 11 / (engine->getCameraZoomStep() + 1);
+	float step = static_cast<float>(Engine::TILE_SIZE) * 11 / (g_engine->getCameraZoomStep() + 1);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
@@ -104,25 +100,24 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 		delta.y = -step;
 	}
 
-	Engine::getInstance()->translateCamera(delta);
+	g_engine->translateCamera(delta);
 }
 
 void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
-	Engine *engine = Engine::getInstance();
 	if (yoffset > 0)
 	{
-		engine->zoomIn();
+		g_engine->zoomIn();
 	}
 	else
 	{
-		engine->zoomOut();
+		g_engine->zoomOut();
 	}
 }
 
 static void cursorPositionCallback(GLFWwindow *window, double x, double y)
 {
-	Engine::getInstance()->setMousePosition((float)x, (float)y);
+	g_engine->setMousePosition((float)x, (float)y);
 }
 
 GLFWwindow *initWindow()
@@ -160,8 +155,7 @@ private:
 
 void populateTestMap()
 {
-	auto engine = Engine::getInstance();
-	auto &map = *engine->getMapRenderer()->map;
+	auto &map = *g_engine->getMapRenderer()->map;
 	Tile &tile1 = map.createTile(2, 1, 7);
 	Tile &tile2 = map.createTile(3, 3, 7);
 	// Tile &tile3 = map.createTile(2, 3, 7);
@@ -210,10 +204,10 @@ int main()
 {
 	MapRenderer *mapRenderer;
 
-	Engine engine;
-
 	try
 	{
+		engine::create();
+
 		Appearances::loadFromFile("data/appearances.dat");
 		std::cout << "Loaded appearances.dat." << std::endl;
 		Appearances::loadCatalog("data/catalog-content.json");
@@ -222,27 +216,25 @@ int main()
 		Items::loadFromOtb("data/items.otb");
 		Items::loadFromXml("data/items.xml");
 
-		Engine::setInstance(&engine);
-
 		mapRenderer = new MapRenderer(std::make_unique<Map>());
-		engine.setMapRenderer(mapRenderer);
+		g_engine->setMapRenderer(mapRenderer);
 
 		populateTestMap();
 
 		// return 0;
 
 		GLFWwindow *window = initWindow();
-		engine.initialize(window);
+		g_engine->initialize(window);
 
-		engine.getMapRenderer()->loadTextureAtlases();
+		g_engine->getMapRenderer()->loadTextureAtlases();
 
 		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
-			engine.nextFrame();
+			g_engine->nextFrame();
 		}
 
-		engine.WaitUntilDeviceIdle();
+		g_engine->WaitUntilDeviceIdle();
 	}
 	catch (const std::exception &e)
 	{

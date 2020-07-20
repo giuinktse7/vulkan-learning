@@ -69,8 +69,8 @@ tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path p
 			continue;
 		}
 
-		int32_t fromId = itemNode.attribute("fromid").as_int();
-		int32_t toId = itemNode.attribute("toid").as_int();
+		uint32_t fromId = itemNode.attribute("fromid").as_uint();
+		uint32_t toId = itemNode.attribute("toid").as_uint();
 		if (pugi::xml_attribute attribute = itemNode.attribute("id"))
 		{
 			fromId = toId = attribute.as_int();

@@ -13,7 +13,7 @@
 #include "../item.h"
 #include "../position.h"
 
-constexpr uint32_t BATCH_DEVICE_SIZE = 64 * 1024 * sizeof(Vertex);
+constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
 constexpr uint32_t TILE_SIZE = 32;
 
 struct Batch
@@ -46,6 +46,8 @@ struct Batch
 	template <std::size_t SIZE>
 	void addVertices(std::array<Vertex, SIZE> &vertices);
 
+	void reset();
+
 	void mapStagingBuffer();
 	void unmapStagingBuffer();
 
@@ -61,7 +63,13 @@ struct Batch
 		return size == BATCH_DEVICE_SIZE;
 	}
 
+	void invalidate();
+
+	friend class BatchDraw;
+
 private:
+	// Flag to signal whether recreation (i.e. re-mapping) is necessary.
+	bool valid;
 };
 
 class BatchDraw

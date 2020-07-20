@@ -11,13 +11,12 @@ BatchDraw::BatchDraw()
 
 Batch::~Batch()
 {
-  auto engine = Engine::getInstance();
-  vkDestroyBuffer(engine->getDevice(), stagingBuffer.buffer, nullptr);
-  vkFreeMemory(engine->getDevice(), stagingBuffer.deviceMemory, nullptr);
+  vkDestroyBuffer(g_engine->getDevice(), stagingBuffer.buffer, nullptr);
+  vkFreeMemory(g_engine->getDevice(), stagingBuffer.deviceMemory, nullptr);
 }
 
 Batch::Batch()
-    : size(0), descriptorSet(nullptr)
+    : size(0), descriptorSet(nullptr), valid(true)
 {
   this->stagingBuffer = Buffer::create(
       BATCH_DEVICE_SIZE,
@@ -32,12 +31,25 @@ Batch::Batch()
   mapStagingBuffer();
 }
 
+void Batch::invalidate()
+{
+  this->valid = false;
+}
+
+void Batch::reset()
+{
+  this->size = 0;
+  this->descriptorIndices.clear();
+  this->descriptorSet = nullptr;
+  this->vertices = nullptr;
+  this->current = nullptr;
+  this->valid = true;
+}
+
 void Batch::mapStagingBuffer()
 {
-  auto engine = Engine::getInstance();
-
   void *data;
-  vkMapMemory(engine->getDevice(), this->stagingBuffer.deviceMemory, 0, BATCH_DEVICE_SIZE, 0, &data);
+  g_engine->mapMemory(this->stagingBuffer.deviceMemory, 0, BATCH_DEVICE_SIZE, 0, &data);
   this->vertices = reinterpret_cast<Vertex *>(data);
   this->current = vertices;
 
@@ -46,11 +58,9 @@ void Batch::mapStagingBuffer()
 
 void Batch::unmapStagingBuffer()
 {
-  auto engine = Engine::getInstance();
-
   DEBUG_ASSERT(current != nullptr, "Tried to unmap an item batch that has not been mapped.");
 
-  vkUnmapMemory(engine->getDevice(), this->stagingBuffer.deviceMemory);
+  vkUnmapMemory(g_engine->getDevice(), this->stagingBuffer.deviceMemory);
   this->vertices = nullptr;
   this->current = nullptr;
 }
@@ -72,11 +82,11 @@ void BatchDraw::push(Item &item, Position &pos)
 {
   auto drawOffset = item.getDrawOffset();
 
-  float worldX = (pos.x + drawOffset.x) * TILE_SIZE;
-  float worldY = (pos.y + drawOffset.y) * TILE_SIZE;
+  int worldX = (pos.x + drawOffset.x) * TILE_SIZE;
+  int worldY = (pos.y + drawOffset.y) * TILE_SIZE;
 
-  float width = item.getWidth();
-  float height = item.getHeight();
+  uint32_t width = item.getWidth();
+  uint32_t height = item.getHeight();
 
   auto window = item.getTextureWindow();
 
@@ -98,7 +108,7 @@ void Batch::addVertices(std::array<Vertex, SIZE> &vertexArray)
 {
   memcpy(this->current, &vertexArray, sizeof(vertexArray));
   current += vertexArray.size();
-  size += vertexArray.size();
+  size += static_cast<uint32_t>(vertexArray.size());
 }
 
 Batch &BatchDraw::getBatch()
@@ -114,23 +124,27 @@ Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
     batches.emplace_back();
   }
 
-  if (!batches[batchIndex].canHold(requiredVertexCount))
+  Batch &batch = batches.at(batchIndex);
+
+  if (!batch.canHold(requiredVertexCount))
   {
-    batches[batchIndex].setDescriptor(nullptr);
-    batches[batchIndex].copyStagingToDevice(this->commandBuffer);
-    batches[batchIndex].unmapStagingBuffer();
+    batch.setDescriptor(nullptr);
+    batch.copyStagingToDevice(this->commandBuffer);
+    batch.unmapStagingBuffer();
 
     ++batchIndex;
     if (batchIndex == batches.size())
       batches.emplace_back();
   }
 
-  if (!batches[batchIndex].current)
+  batch = batches.at(batchIndex);
+  if (!batch.valid)
   {
-    batches[batchIndex].mapStagingBuffer();
+    batch.reset();
+    batch.mapStagingBuffer();
   }
 
-  return batches[batchIndex];
+  return batch;
 }
 
 void BatchDraw::reset()

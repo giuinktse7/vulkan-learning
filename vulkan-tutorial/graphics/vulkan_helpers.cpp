@@ -81,15 +81,14 @@ uint32_t VulkanHelpers::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t
 
 void VulkanHelpers::createCommandPool(VkCommandPool *commandPool, VkCommandPoolCreateFlags flags)
 {
-  Engine *engine = Engine::getInstance();
-  QueueFamilyIndices indices = engine->getQueueFamilyIndices();
+  QueueFamilyIndices indices = g_engine->getQueueFamilyIndices();
 
   VkCommandPoolCreateInfo commandPoolCreateInfo = {};
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandPoolCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
   commandPoolCreateInfo.flags = flags;
 
-  if (vkCreateCommandPool(engine->getDevice(), &commandPoolCreateInfo, nullptr, commandPool) != VK_SUCCESS)
+  if (vkCreateCommandPool(g_engine->getDevice(), &commandPoolCreateInfo, nullptr, commandPool) != VK_SUCCESS)
   {
     throw std::runtime_error("Could not create graphics command pool");
   }
@@ -97,7 +96,6 @@ void VulkanHelpers::createCommandPool(VkCommandPool *commandPool, VkCommandPoolC
 
 void VulkanHelpers::createCommandBuffers(VkCommandBuffer *commandBuffer, uint32_t commandBufferCount, VkCommandPool &commandPool)
 {
-  Engine *engine = Engine::getInstance();
 
   VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
   commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -105,5 +103,5 @@ void VulkanHelpers::createCommandBuffers(VkCommandBuffer *commandBuffer, uint32_
   commandBufferAllocateInfo.commandPool = commandPool;
   commandBufferAllocateInfo.commandBufferCount = commandBufferCount;
 
-  vkAllocateCommandBuffers(engine->getDevice(), &commandBufferAllocateInfo, commandBuffer);
+  vkAllocateCommandBuffers(g_engine->getDevice(), &commandBufferAllocateInfo, commandBuffer);
 }

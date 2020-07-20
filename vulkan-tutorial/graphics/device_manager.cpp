@@ -12,9 +12,8 @@
 
 VkPhysicalDevice DeviceManager::pickPhysicalDevice()
 {
-  Engine *engine = Engine::getInstance();
   uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(engine->getVkInstance(), &deviceCount, nullptr);
+  vkEnumeratePhysicalDevices(g_engine->getVkInstance(), &deviceCount, nullptr);
 
   if (deviceCount == 0)
   {
@@ -22,7 +21,7 @@ VkPhysicalDevice DeviceManager::pickPhysicalDevice()
   }
 
   std::vector<VkPhysicalDevice> devices(deviceCount);
-  vkEnumeratePhysicalDevices(engine->getVkInstance(), &deviceCount, devices.data());
+  vkEnumeratePhysicalDevices(g_engine->getVkInstance(), &deviceCount, devices.data());
 
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
@@ -45,7 +44,6 @@ VkPhysicalDevice DeviceManager::pickPhysicalDevice()
 
 bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
 {
-  Engine *engine = Engine::getInstance();
   QueueFamilyIndices indices = getQueueFamilies(device);
 
   bool extensionsSupported = VulkanHelpers::checkDeviceExtensionSupport(device);
@@ -53,7 +51,7 @@ bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
   bool swapChainAdequate = false;
   if (extensionsSupported)
   {
-    SwapChainSupportDetails swapChainSupport = SwapChain::querySupport(device, engine->getSurface());
+    SwapChainSupportDetails swapChainSupport = SwapChain::querySupport(device, g_engine->getSurface());
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
   }
 
@@ -65,8 +63,7 @@ bool DeviceManager::isDeviceSuitable(VkPhysicalDevice device)
 
 VkDevice DeviceManager::createLogicalDevice()
 {
-  Engine *engine = Engine::getInstance();
-  VkPhysicalDevice &physicalDevice = engine->getPhysicalDevice();
+  VkPhysicalDevice &physicalDevice = g_engine->getPhysicalDevice();
   QueueFamilyIndices indices = getQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -115,8 +112,8 @@ VkDevice DeviceManager::createLogicalDevice()
     throw std::runtime_error("Failed to create logical device!");
   }
 
-  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, engine->getGraphicsQueue());
-  vkGetDeviceQueue(device, indices.presentFamily.value(), 0, engine->getPresentQueue());
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, g_engine->getGraphicsQueue());
+  vkGetDeviceQueue(device, indices.presentFamily.value(), 0, g_engine->getPresentQueue());
 
   return device;
 }
@@ -140,7 +137,7 @@ QueueFamilyIndices DeviceManager::getQueueFamilies(VkPhysicalDevice physicalDevi
     }
 
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, Engine::getInstance()->getSurface(), &presentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, g_engine->getSurface(), &presentSupport);
 
     if (presentSupport)
     {

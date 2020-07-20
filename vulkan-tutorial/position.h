@@ -22,7 +22,7 @@ enum Direction : uint8_t
 
 struct Position
 {
-	int_fast64_t x, y, z;
+	int x, y, z;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Position &pos)

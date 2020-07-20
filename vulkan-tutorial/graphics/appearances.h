@@ -5,7 +5,22 @@
 #include <filesystem>
 #include <unordered_map>
 
+#ifndef MESSAGES_WRAPPER_H
+#define MESSAGES_WRAPPER_H
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4251 4100 4267)
+#endif
+
 #include "protobuf/appearances.pb.h"
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+#endif
+
 #include "../const.h"
 
 struct CatalogInfo
