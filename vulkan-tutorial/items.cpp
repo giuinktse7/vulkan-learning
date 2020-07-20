@@ -81,7 +81,7 @@ tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path p
 			return unexpecting("Could not read item id from item node.");
 		}
 
-		for (size_t id = fromId; id <= toId; ++id)
+		for (uint32_t id = fromId; id <= toId; ++id)
 		{
 			auto result = loadItemFromXml(itemNode, id);
 			if (!result.has_value())
@@ -207,7 +207,7 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 		{
 			if ((attribute = itemAttributesNode.attribute("value")))
 			{
-				it.weight = attribute.as_int() / 100.f;
+				it.weight = static_cast<uint32_t>(std::floor(attribute.as_int() / 100.f));
 			}
 		}
 		else if (key == "armor")
