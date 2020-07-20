@@ -43,32 +43,6 @@ TileLocation *Map::getTileLocation(int x, int y, int z) const
   return nullptr;
 }
 
-void Map::draw()
-{
-  auto engine = Engine::getInstance();
-  for (const auto &tileLocation : begin())
-  {
-    auto position = tileLocation->getPosition();
-    auto tile = tileLocation->getTile();
-
-    if (tile->getGround())
-    {
-      engine->drawItem(*tile->getGround(), position);
-    }
-    for (const auto &item : tile->getItems())
-      engine->drawItem(*item, position);
-  }
-}
-
-void Map::drawTile(Tile &tile)
-{
-  auto engine = Engine::getInstance();
-  for (const auto &item : tile.getItems())
-  {
-    engine->drawItem(*item, tile.getPosition());
-  }
-}
-
 MapIterator Map::begin()
 {
   MapIterator iterator;

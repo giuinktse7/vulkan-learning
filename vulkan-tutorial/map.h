@@ -95,10 +95,6 @@ public:
 	createTile(int x, int y, int z);
 	TileLocation *getTileLocation(int x, int y, int z) const;
 
-	void draw();
-
 private:
 	quadtree::Node root;
-
-	void drawTile(Tile &tile);
 };
