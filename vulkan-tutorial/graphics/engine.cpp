@@ -400,17 +400,11 @@ void Engine::nextFrame()
 {
   if (initFrame())
   {
-    renderFrame();
+    mapRenderer->recordFrame(currentFrame);
+    gui.recordFrame(currentFrame);
 
-    map.draw();
     endFrame();
   }
-}
-
-void Engine::renderFrame()
-{
-  mapRenderer->renderFrame(currentFrame);
-  gui.renderFrame(currentFrame);
 }
 
 void Engine::createSyncObjects()
@@ -457,11 +451,6 @@ VkShaderModule Engine::createShaderModule(const std::vector<uint8_t> &code)
 std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
 {
   return std::make_shared<Texture>(filename);
-}
-
-void Engine::setTexture(std::shared_ptr<Texture> texture)
-{
-  mapRenderer->setTexture(texture);
 }
 
 void Engine::recreateSwapChain()

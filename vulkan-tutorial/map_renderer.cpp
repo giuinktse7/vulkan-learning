@@ -9,14 +9,22 @@
 #include "graphics/resource-descriptor.h"
 #include "graphics/appearances.h"
 
+#include "debug.h"
+
 #include "util.h"
 
 #include "logger.h"
+
+MapRenderer::MapRenderer(std::unique_ptr<Map> map)
+{
+  this->map = std::move(map);
+}
 
 void MapRenderer::initialize()
 {
 
   Engine *engine = Engine::getInstance();
+  frame = &frames.front();
 
   renderPass = createRenderPass();
   createDescriptorSetLayouts();
@@ -27,14 +35,34 @@ void MapRenderer::initialize()
   createDescriptorPool();
   createDescriptorSets();
 
+  uint32_t indexSize = 6 * sizeof(uint16_t);
+
+  BoundBuffer indexStagingBuffer = Buffer::create(
+      indexSize,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  void *data;
+  vkMapMemory(engine->getDevice(), indexStagingBuffer.deviceMemory, 0, indexSize, 0, &data);
+  uint16_t *indices = reinterpret_cast<uint16_t *>(data);
+  std::array<uint16_t, 6> indexArray{0, 1, 3, 3, 1, 2};
+
+  memcpy(indices, &indexArray, sizeof(indexArray));
+
+  indexBuffer = Buffer::create(
+      indexSize,
+      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  VkCommandBuffer commandBuffer = engine->beginSingleTimeCommands();
+  VkBufferCopy copyRegion = {};
+  copyRegion.size = indexSize;
+  vkCmdCopyBuffer(commandBuffer, indexStagingBuffer.buffer, indexBuffer.buffer, 1, &copyRegion);
+  engine->endSingleTimeCommands(commandBuffer);
+
+  vkUnmapMemory(engine->getDevice(), indexStagingBuffer.deviceMemory);
+
   auto maxFrames = engine->getMaxFramesInFlight();
-
-  renderData.commandBuffers.resize(maxFrames);
-
-  renderData.indexBuffers.resize(maxFrames);
-  renderData.indexStagingBuffers.resize(maxFrames);
-  renderData.vertexBuffers.resize(maxFrames);
-  renderData.vertexStagingBuffers.resize(maxFrames);
 
   uint8_t whitePixel[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
@@ -218,6 +246,14 @@ void MapRenderer::createGraphicsPipeline()
   pipelineLayoutInfo.setLayoutCount = layouts.size();
   pipelineLayoutInfo.pSetLayouts = layouts.data();
 
+  VkPushConstantRange pushConstantRange{};
+  pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  pushConstantRange.size = sizeof(TextureOffset);
+  pushConstantRange.offset = 0;
+
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
   if (vkCreatePipelineLayout(engine->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create pipeline layout!");
@@ -248,6 +284,47 @@ void MapRenderer::createGraphicsPipeline()
   vkDestroyShaderModule(engine->getDevice(), vertShaderModule, nullptr);
 }
 
+void MapRenderer::drawBatches()
+{
+  VkDeviceSize offsets[] = {0};
+  VkBuffer buffers[] = {nullptr};
+
+  std::array<VkDescriptorSet, 2> descriptorSets = {
+      frame->descriptorSet,
+      nullptr};
+
+  for (auto &batch : frame->batchDraw.batches)
+  {
+    buffers[0] = batch.buffer.buffer;
+    vkCmdBindVertexBuffers(frame->commandBuffer, 0, 1, buffers, offsets);
+    vkCmdBindIndexBuffer(frame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+    uint32_t offset = 0;
+    for (const auto &descriptorInfo : batch.descriptorIndices)
+    {
+      descriptorSets[1] = descriptorInfo.descriptor;
+
+      vkCmdBindDescriptorSets(frame->commandBuffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout,
+                              0,
+                              descriptorSets.size(),
+                              descriptorSets.data(),
+                              0,
+                              nullptr);
+
+      // 4 is vertices for one sprite.
+      uint32_t sprites = (descriptorInfo.end - offset + 1) / 4;
+      for (uint32_t spriteIndex = 0; spriteIndex < sprites; ++spriteIndex)
+      {
+        vkCmdDrawIndexed(frame->commandBuffer, 6, 1, 0, offset + spriteIndex * 4, 0);
+      }
+
+      offset = descriptorInfo.end + 1;
+    }
+  }
+}
+
 void MapRenderer::beginRenderPass()
 {
   Engine *engine = Engine::getInstance();
@@ -255,19 +332,19 @@ void MapRenderer::beginRenderPass()
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass = renderPass;
-  renderPassInfo.framebuffer = getFrameBuffer();
+  renderPassInfo.framebuffer = frame->frameBuffer;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = engine->getSwapChain().getExtent();
   renderPassInfo.clearValueCount = 1;
   VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
   renderPassInfo.pClearValues = &clearValue;
 
-  vkCmdBeginRenderPass(getCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(frame->commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void MapRenderer::endRenderPass()
 {
-  vkCmdEndRenderPass(getCommandBuffer());
+  vkCmdEndRenderPass(frame->commandBuffer);
 }
 
 void MapRenderer::startCommandBuffer()
@@ -280,7 +357,7 @@ void MapRenderer::startCommandBuffer()
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = 1;
 
-  VkCommandBuffer &commandBuffer = getCommandBuffer();
+  VkCommandBuffer &commandBuffer = frame->commandBuffer;
 
   if (vkAllocateCommandBuffers(engine->getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS)
   {
@@ -296,32 +373,46 @@ void MapRenderer::startCommandBuffer()
     throw std::runtime_error("failed to begin recording command buffer");
   }
 
-  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+  frame->batchDraw.commandBuffer = commandBuffer;
 }
 
-void MapRenderer::renderFrame(uint32_t frameIndex)
+void MapRenderer::recordFrame(uint32_t currentFrame)
 {
   Engine *engine = Engine::getInstance();
 
-  setCurrentFrame(frameIndex);
-
-  auto &commandBuffer = getCommandBuffer();
-  vkFreeCommandBuffers(
-      engine->getDevice(),
-      commandPool,
-      1,
-      &commandBuffer);
-  commandBuffer = nullptr;
-
-  renderData.info.descriptorSet = defaultTexture->getDescriptorSet();
-  renderData.info.textureWindow = defaultTexture->getTextureWindow();
-  renderData.info.color = {1.0f, 1.0f, 1.0f, 1.0f};
-
-  currentBufferIndex = 0;
+  frame = &frames[currentFrame];
+  if (frame->commandBuffer)
+  {
+    vkFreeCommandBuffers(engine->getDevice(), commandPool, 1, &frame->commandBuffer);
+    frame->commandBuffer = nullptr;
+  }
 
   startCommandBuffer();
+  vkCmdBindPipeline(frame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
   updateUniformBuffer();
+
+  frame->batchDraw.reset();
+
+  drawMap();
+  frame->batchDraw.prepareDraw();
+}
+
+void MapRenderer::drawMap()
+{
+  auto engine = Engine::getInstance();
+  for (const auto &tileLocation : map->begin())
+  {
+    auto position = tileLocation->getPosition();
+    auto tile = tileLocation->getTile();
+
+    if (tile->getGround())
+    {
+      drawItem(*tile->getGround(), position);
+    }
+    for (const auto &item : tile->getItems())
+      drawItem(*item, position);
+  }
 }
 
 void MapRenderer::updateUniformBuffer()
@@ -335,17 +426,17 @@ void MapRenderer::updateUniformBuffer()
   auto translated = glm::translate(
       glm::mat4(1),
       glm::vec3(camera.position.x, camera.position.y, 0.0f));
-  renderData.uniformBufferObject.projection = glm::ortho(
-                                                  0.0f,
-                                                  width * zoom,
-                                                  height * zoom,
-                                                  0.0f) *
-                                              translated;
+  uniformBufferObject.projection = glm::ortho(
+                                       0.0f,
+                                       width * zoom,
+                                       height * zoom,
+                                       0.0f) *
+                                   translated;
 
   void *data;
-  vkMapMemory(engine->getDevice(), getUniformBuffer().bufferMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
-  memcpy(data, &renderData.uniformBufferObject, sizeof(ItemUniformBufferObject));
-  vkUnmapMemory(engine->getDevice(), getUniformBuffer().bufferMemory);
+  vkMapMemory(engine->getDevice(), frame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
+  memcpy(data, &uniformBufferObject, sizeof(ItemUniformBufferObject));
+  vkUnmapMemory(engine->getDevice(), frame->uniformBuffer.deviceMemory);
 }
 
 void MapRenderer::createFrameBuffers()
@@ -353,7 +444,6 @@ void MapRenderer::createFrameBuffers()
   Engine *engine = Engine::getInstance();
 
   uint32_t imageViewCount = engine->getImageCount();
-  renderData.frameBuffers.resize(imageViewCount);
 
   for (size_t i = 0; i < imageViewCount; ++i)
   {
@@ -369,7 +459,7 @@ void MapRenderer::createFrameBuffers()
     framebufferInfo.height = engine->getHeight();
     framebufferInfo.layers = 1;
 
-    if (vkCreateFramebuffer(engine->getDevice(), &framebufferInfo, nullptr, &renderData.frameBuffers[i]) != VK_SUCCESS)
+    if (vkCreateFramebuffer(engine->getDevice(), &framebufferInfo, nullptr, &frames[i].frameBuffer) != VK_SUCCESS)
     {
       throw std::runtime_error("failed to create framebuffer!");
     }
@@ -378,335 +468,16 @@ void MapRenderer::createFrameBuffers()
 
 void MapRenderer::endFrame()
 {
-  queueCurrentBatch();
-  drawBatches();
-
-  if (vkEndCommandBuffer(getCommandBuffer()) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to record command buffer");
-  }
-}
-
-void MapRenderer::drawBatches()
-{
-
   beginRenderPass();
 
-  VkCommandBuffer &commandBuffer = getCommandBuffer();
+  drawBatches();
 
-  if (!drawCommands.empty())
+  vkCmdEndRenderPass(frame->commandBuffer);
+
+  if (vkEndCommandBuffer(frame->commandBuffer) != VK_SUCCESS)
   {
-    int curBuffer = -1;
-
-    for (auto &command : drawCommands)
-    {
-      if (command.bufferIndex != curBuffer)
-      {
-        curBuffer = command.bufferIndex;
-
-        VkBuffer vertexBuffers[] = {renderData.getVertexBuffers()[curBuffer].buffer};
-        VkDeviceSize offsets[] = {0};
-
-        vkCmdBindVertexBuffers(
-            commandBuffer,
-            0,
-            1,
-            vertexBuffers,
-            offsets);
-
-        vkCmdBindIndexBuffer(
-            commandBuffer,
-            renderData.getIndexBuffers()[curBuffer].buffer,
-            0,
-            VK_INDEX_TYPE_UINT16);
-      }
-
-      std::array<VkDescriptorSet, 2> descriptorSets = {
-          renderData.getDescriptorSet(),
-          command.descriptorSet};
-
-      vkCmdBindDescriptorSets(commandBuffer,
-                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              pipelineLayout,
-                              0,
-                              descriptorSets.size(),
-                              descriptorSets.data(),
-                              0, nullptr);
-
-      vkCmdDrawIndexed(commandBuffer, command.numIndices, 1, command.baseIndex, 0, 0);
-    }
+    ABORT_PROGRAM("failed to record command buffer");
   }
-
-  vkCmdEndRenderPass(commandBuffer);
-
-  drawCommands.clear();
-}
-
-void MapRenderer::queueCurrentBatch()
-{
-  queueDrawCommand();
-  copyStagingBuffersToDevice();
-  unmapStagingBuffers();
-
-  currentBufferIndex++;
-}
-
-void MapRenderer::queueDrawCommand()
-{
-  if (!renderData.info.isStaged())
-  {
-    return;
-  }
-
-  drawCommands.emplace_back(renderData.info.descriptorSet,
-                            renderData.info.indexOffset,
-                            renderData.info.indexCount,
-                            currentBufferIndex);
-
-  renderData.info.offset();
-}
-
-void MapRenderer::copyStagingBuffersToDevice()
-{
-  VkCommandBuffer commandBuffer = getCommandBuffer();
-  auto &indexWrite = renderData.info.indexWrite;
-  auto &vertexWrite = renderData.info.vertexWrite;
-
-  VkDeviceSize indexSize = (indexWrite.cursor - indexWrite.start) * sizeof(uint16_t);
-  if (indexSize > 0)
-  {
-    auto indexBuffer = getIndexBuffer();
-    auto indexStagingBuffer = getIndexStagingBuffer();
-
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = indexSize;
-    vkCmdCopyBuffer(commandBuffer, indexStagingBuffer.buffer, indexBuffer.buffer, 1, &copyRegion);
-  }
-
-  VkDeviceSize vertexSize = (vertexWrite.cursor - vertexWrite.start) * sizeof(Vertex);
-  if (vertexSize > 0)
-  {
-    auto vertexBuffer = getVertexBuffer();
-    auto vertexStagingBuffer = getVertexStagingBuffer();
-
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = vertexSize;
-    vkCmdCopyBuffer(commandBuffer, vertexStagingBuffer.buffer, vertexBuffer.buffer, 1, &copyRegion);
-  }
-}
-
-BoundBuffer &MapRenderer::getVertexBuffer()
-{
-  auto &buffers = renderData.getVertexBuffers();
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating vertex buffer");
-
-    auto buffer = Buffer::create(
-        getVertexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range");
-  }
-
-  return buffers[currentBufferIndex];
-}
-
-BoundBuffer &MapRenderer::getIndexBuffer()
-{
-  auto &buffers = renderData.getIndexBuffers();
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating index buffer");
-
-    auto buffer = Buffer::create(
-        getIndexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range (getIndexBuffer)");
-  }
-
-  return buffers[currentBufferIndex];
-}
-
-BoundBuffer &MapRenderer::getVertexStagingBuffer()
-{
-  auto &buffers = renderData.getVertexStagingBuffers();
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating vertex staging buffer");
-
-    auto buffer = Buffer::create(
-        getVertexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range (getVertexStagingBuffer)");
-  }
-
-  auto &vsb = buffers[currentBufferIndex];
-  return vsb;
-}
-
-BoundBuffer &MapRenderer::getIndexStagingBuffer()
-{
-  auto &buffers = renderData.getIndexStagingBuffers();
-  if (currentBufferIndex == buffers.size())
-  {
-    Logger::info("Creating index staging buffer");
-
-    auto buffer = Buffer::create(
-        getIndexBufferSize(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    buffers.push_back(buffer);
-  }
-
-  if (currentBufferIndex > buffers.size())
-  {
-    throw std::runtime_error("current buffer index value out of range (getIndexStagingBuffer)");
-  }
-
-  auto &isb = buffers[currentBufferIndex];
-  return isb;
-}
-
-void MapRenderer::mapStagingBufferMemory()
-{
-  Engine *engine = Engine::getInstance();
-  auto &indexWrite = renderData.info.indexWrite;
-  auto &vertexWrite = renderData.info.vertexWrite;
-
-  void *data;
-
-  auto indexStagingBuffer = getIndexStagingBuffer();
-  vkMapMemory(engine->getDevice(), indexStagingBuffer.bufferMemory, 0, getIndexBufferSize(), 0, &data);
-  indexWrite.start = reinterpret_cast<uint16_t *>(data);
-  indexWrite.cursor = indexWrite.start;
-  indexWrite.end = indexWrite.start + getMaxNumIndices();
-
-  auto vertexStagingBuffer = getVertexStagingBuffer();
-  vkMapMemory(engine->getDevice(), vertexStagingBuffer.bufferMemory, 0, getVertexBufferSize(), 0, &data);
-  vertexWrite.start = reinterpret_cast<Vertex *>(data);
-  vertexWrite.cursor = vertexWrite.start;
-  vertexWrite.end = vertexWrite.start + getMaxNumVertices();
-
-  renderData.info.resetOffset();
-}
-
-void MapRenderer::unmapStagingBuffers()
-{
-  Engine *engine = Engine::getInstance();
-
-  auto &indexWrite = renderData.info.indexWrite;
-  auto &vertexWrite = renderData.info.vertexWrite;
-
-  if (!indexWrite.start && !vertexWrite.start)
-  {
-    return;
-  }
-
-  auto indexStagingBuffer = getIndexStagingBuffer();
-  vkUnmapMemory(engine->getDevice(), indexStagingBuffer.bufferMemory);
-  indexWrite.start = nullptr;
-  indexWrite.cursor = nullptr;
-  indexWrite.end = nullptr;
-
-  auto vertexStagingBuffer = getVertexStagingBuffer();
-  vkUnmapMemory(engine->getDevice(), vertexStagingBuffer.bufferMemory);
-  vertexWrite.start = nullptr;
-  vertexWrite.cursor = nullptr;
-  vertexWrite.end = nullptr;
-}
-
-VkDeviceSize MapRenderer::getVertexBufferSize()
-{
-  return getMaxNumVertices() * sizeof(Vertex);
-}
-
-VkDeviceSize MapRenderer::getIndexBufferSize()
-{
-  return getMaxNumIndices() * sizeof(uint16_t);
-}
-
-VkDeviceSize MapRenderer::getMaxNumIndices()
-{
-  return MAX_VERTICES;
-}
-
-VkDeviceSize MapRenderer::getMaxNumVertices()
-{
-  return MAX_VERTICES;
-}
-
-void MapRenderer::drawTriangles(const uint16_t *indices, size_t indexCount, const Vertex *vertices, size_t vertexCount)
-{
-  auto &indexWrite = renderData.info.indexWrite;
-  auto &vertexWrite = renderData.info.vertexWrite;
-  if (!getCommandBuffer())
-  {
-    throw std::runtime_error("no command buffer");
-  }
-
-  if (!indexWrite.cursor || !vertexWrite.cursor)
-  {
-    mapStagingBufferMemory();
-  }
-
-  auto vbFull = vertexWrite.cursor + vertexCount >= vertexWrite.end;
-  auto ibFull = indexWrite.cursor + indexCount >= indexWrite.end;
-  if (vbFull || ibFull)
-  {
-    queueCurrentBatch();
-    mapStagingBufferMemory();
-  }
-
-  if (!indexWrite.cursor || !vertexWrite.cursor)
-  {
-    throw std::runtime_error("write destination is null");
-  }
-
-  auto base = static_cast<uint16_t>(vertexWrite.cursor - vertexWrite.start);
-
-  // Both indices and vertices need adjustment while being copied to
-  // the index/vertex buffers. The indices need the base added,
-  // and the vertices need to be colored, for example.
-  auto vertexRead = vertices;
-  for (int i = 0; i < vertexCount; ++i)
-  {
-    vertexWrite.cursor->pos = vertexRead->pos;
-    // vertexWrite.cursor->color = vertexRead->color * renderData.info.color;
-    vertexWrite.cursor->texCoord = vertexRead->texCoord;
-    vertexWrite.cursor->blendMode = renderData.info.blendMode;
-
-    ++vertexWrite.cursor;
-    ++vertexRead;
-  }
-
-  auto indexRead = indices;
-  for (int i = 0; i < indexCount; ++i)
-  {
-    *indexWrite.cursor = *indexRead + base;
-    ++indexWrite.cursor;
-    ++indexRead;
-  }
-
-  renderData.info.indexCount += indexCount;
-  renderData.info.vertexCount += vertexCount;
 }
 
 TextureAtlas &MapRenderer::getTextureAtlas(const uint32_t spriteId)
@@ -739,71 +510,27 @@ TextureAtlas &MapRenderer::getTextureAtlas(ItemType &itemType)
 
 void MapRenderer::drawItem(Item &item, Position position)
 {
-  const auto y = item.getWeight();
   auto &atlas = getTextureAtlas(*item.itemType);
-  if (atlas.getDescriptorSet() != renderData.info.descriptorSet)
-  {
-    queueDrawCommand();
-    renderData.info.descriptorSet = atlas.getDescriptorSet();
-  }
 
-  renderData.info.textureWindow = item.getTextureWindow();
-
-  const auto drawOffset = item.getDrawOffset();
-  drawSprite(position.x + drawOffset.x, position.y + drawOffset.y, item.getWidth(), item.getHeight());
-}
-
-void MapRenderer::setTexture(std::shared_ptr<Texture> texture)
-{
-  if (!texture)
-  {
-    texture = defaultTexture;
-  }
-
-  if (texture->getDescriptorSet() != renderData.info.descriptorSet)
-  {
-    queueDrawCommand();
-    renderData.info.descriptorSet = texture->getDescriptorSet();
-  }
-  renderData.info.textureWindow = texture->getTextureWindow();
-}
-
-void MapRenderer::drawSprite(float x, float y, float width, float height)
-{
-  float worldX = x * TILE_SIZE;
-  float worldY = y * TILE_SIZE;
-
-  TextureWindow &window = renderData.info.textureWindow;
-  glm::vec4 color = renderData.info.color;
-
-  std::array<uint16_t, 6> indices{0, 1, 3, 3, 1, 2};
-
-  std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, color, {window.x0, window.y0}},
-      {{worldX, worldY + height}, color, {window.x0, window.y1}},
-      {{worldX + width, worldY + height}, color, {window.x1, window.y1}},
-      {{worldX + width, worldY}, color, {window.x1, window.y0}},
-  }};
-
-  drawTriangles(indices.data(), indices.size(), vertices.data(), vertices.size());
+  frame->batchDraw.push(item, position);
 }
 
 void MapRenderer::cleanup()
 {
   Engine *engine = Engine::getInstance();
 
-  for (auto framebuffer : renderData.frameBuffers)
+  for (auto &frame : frames)
   {
-    vkDestroyFramebuffer(Engine::getInstance()->getDevice(), framebuffer, nullptr);
+    vkDestroyFramebuffer(Engine::getInstance()->getDevice(), frame.frameBuffer, nullptr);
   }
 
-  for (auto commandBuffer : renderData.commandBuffers)
+  for (auto &frame : frames)
   {
     vkFreeCommandBuffers(
         engine->getDevice(),
         commandPool,
         1,
-        &commandBuffer);
+        &frame.commandBuffer);
   }
 
   vkDestroyPipeline(engine->getDevice(), graphicsPipeline, nullptr);
@@ -860,15 +587,13 @@ void MapRenderer::createUniformBuffers()
 {
   Engine *engine = Engine::getInstance();
 
-  renderData.uniformBuffers.resize(engine->getMaxFramesInFlight());
-
   VkDeviceSize bufferSize = sizeof(ItemUniformBufferObject);
 
   for (size_t i = 0; i < engine->getMaxFramesInFlight(); i++)
   {
-    renderData.uniformBuffers[i] = (Buffer::create(bufferSize,
-                                                   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+    frames[i].uniformBuffer = Buffer::create(bufferSize,
+                                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
   }
 }
 
@@ -909,22 +634,28 @@ void MapRenderer::createDescriptorSets()
   allocInfo.descriptorSetCount = maxFrames;
   allocInfo.pSetLayouts = layouts.data();
 
-  renderData.descriptorSets.resize(maxFrames);
-  if (vkAllocateDescriptorSets(engine->getDevice(), &allocInfo, &renderData.descriptorSets[0]) != VK_SUCCESS)
+  std::array<VkDescriptorSet, 3> descriptorSets;
+
+  if (vkAllocateDescriptorSets(engine->getDevice(), &allocInfo, &descriptorSets[0]) != VK_SUCCESS)
   {
-    throw std::runtime_error("failed to allocate descriptor sets");
+    ABORT_PROGRAM("failed to allocate descriptor sets");
+  }
+
+  for (uint32_t i = 0; i < descriptorSets.size(); ++i)
+  {
+    frames[i].descriptorSet = descriptorSets[i];
   }
 
   for (size_t i = 0; i < engine->getMaxFramesInFlight(); ++i)
   {
     VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = renderData.uniformBuffers[i].buffer;
+    bufferInfo.buffer = frame->uniformBuffer.buffer;
     bufferInfo.offset = 0;
     bufferInfo.range = sizeof(ItemUniformBufferObject);
 
     VkWriteDescriptorSet descriptorWrites = {};
     descriptorWrites.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites.dstSet = renderData.descriptorSets[i];
+    descriptorWrites.dstSet = frames[i].descriptorSet;
     descriptorWrites.dstBinding = 0;
     descriptorWrites.dstArrayElement = 0;
     descriptorWrites.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

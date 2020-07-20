@@ -75,7 +75,7 @@ static void HelpMarker(const char *desc)
   }
 }
 
-void GUI::renderFrame(uint32_t currentFrame)
+void GUI::recordFrame(uint32_t currentFrame)
 {
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -348,7 +348,7 @@ void GUI::setupCommandPoolsAndBuffers()
 {
   Engine *engine = Engine::getInstance();
 
-  uint32_t size = engine->getSwapChain().getImageViewCount();
+  size_t size = engine->getSwapChain().getImageViewCount();
 
   commandPools.resize(size);
   commandBuffers.resize(size);

@@ -35,8 +35,6 @@ public:
 	Engine();
 	~Engine();
 
-	Map map;
-
 	unsigned long frames = 0;
 
 	static const int TILE_SIZE = 32;
@@ -184,17 +182,6 @@ public:
 
 	std::shared_ptr<Texture> CreateTexture(const std::string &filename);
 
-	void setTexture(std::shared_ptr<Texture> texture);
-
-	void drawSprite(float x, float y, float width, float height)
-	{
-		mapRenderer->drawSprite(x, y, width, height);
-	}
-
-	void drawItem(Item &item, Position position)
-	{
-		mapRenderer->drawItem(item, position);
-	}
 
 	void endFrame();
 
@@ -255,11 +242,9 @@ public:
 		return swapChain.getExtent().height;
 	}
 
+	bool initFrame();
 	void nextFrame();
 
-	void renderFrame();
-
-	bool initFrame();
 
 	VkShaderModule createShaderModule(const std::vector<uint8_t> &code);
 
@@ -399,45 +384,7 @@ private:
 		this->window = window;
 	}
 
-	void initializeQueueFamilies();
-
-	void createDescriptorSetLayouts();
-	void createUniformBuffers();
-
-	void createPerFrameDescriptorSets();
-
-	void createIndexAndVertexBuffers();
-
-	void startMainCommandBuffer();
-
-	void updateUniformBuffer();
-
-	bool queueDrawCommand();
-
-	void drawTriangles(const uint16_t *indices, size_t numIndices, const Vertex *vertices, size_t numVertices);
-
-	void mapStagingBufferMemory();
-
-	BoundBuffer &getVertexBuffer();
-	BoundBuffer &getIndexBuffer();
-
-	BoundBuffer &getVertexStagingBuffer();
-	BoundBuffer &getIndexStagingBuffer();
-
-	VkDeviceSize getMaxNumIndices();
-	VkDeviceSize getMaxNumVertices();
-
-	VkDeviceSize getVertexBufferSize();
-	VkDeviceSize getIndexBufferSize();
-
-	void queueCurrentBatch();
-	void copyStagingBuffersToDevice(VkCommandBuffer commandBuffer);
-
-	void unmapStagingBuffers();
-
-	void drawBatches();
 
 	void presentFrame();
-
 	void recreateSwapChain();
 };

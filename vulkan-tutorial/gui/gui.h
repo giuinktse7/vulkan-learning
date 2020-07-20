@@ -13,7 +13,7 @@ public:
 
 	bool testOpen = true;
 
-	void renderFrame(uint32_t currentFrame);
+	void recordFrame(uint32_t currentFrame);
 
 	void recreate();
 

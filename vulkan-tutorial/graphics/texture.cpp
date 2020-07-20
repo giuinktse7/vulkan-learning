@@ -58,7 +58,7 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-  Buffer::copyToMemory(stagingBuffer.bufferMemory, pixels, imageSize);
+  Buffer::copyToMemory(stagingBuffer.deviceMemory, pixels, imageSize);
 
   // VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
   VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
@@ -87,7 +87,7 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   vkDestroyBuffer(device, stagingBuffer.buffer, nullptr);
-  vkFreeMemory(device, stagingBuffer.bufferMemory, nullptr);
+  vkFreeMemory(device, stagingBuffer.deviceMemory, nullptr);
 
   imageView = VulkanHelpers::createImageView(device, textureImage, format);
   sampler = createSampler();

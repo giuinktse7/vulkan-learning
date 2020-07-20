@@ -25,6 +25,16 @@
 
 #include "graphics/texture_atlas.h"
 
+#include "graphics/batch_item_draw.h"
+
+#include "map.h"
+
+struct TextureOffset
+{
+	float x;
+	float y;
+};
+
 struct ItemUniformBufferObject
 {
 	glm::mat4 projection;
@@ -48,146 +58,46 @@ struct WriteRange
 	T *end;
 };
 
-struct RenderInfo
+struct FrameData
 {
-	uint16_t indexCount = 0;
-	uint16_t indexOffset = 0;
-	uint16_t vertexCount = 0;
-	uint16_t vertexOffset = 0;
+	VkFramebuffer frameBuffer = nullptr;
+	VkCommandBuffer commandBuffer = nullptr;
+	BoundBuffer uniformBuffer{};
+	VkDescriptorSet descriptorSet = nullptr;
 
-	VkDescriptorSet descriptorSet;
-	TextureWindow textureWindow;
-
-	glm::vec4 color;
-	BlendMode blendMode = BlendMode::BM_ADD;
-
-	WriteRange<uint16_t> indexWrite;
-	WriteRange<Vertex> vertexWrite;
-
-	bool isStaged() const
-	{
-		return indexCount > 0;
-	}
-
-	void resetOffset()
-	{
-		indexCount = 0;
-		indexOffset = 0;
-		vertexCount = 0;
-		vertexOffset = 0;
-	}
-
-	void offset()
-	{
-		indexOffset += indexCount;
-		indexCount = 0;
-		vertexOffset += vertexCount;
-		vertexCount = 0;
-	}
-};
-
-struct RenderData
-{
-	RenderInfo info;
-
-	std::vector<VkFramebuffer> frameBuffers;
-	std::vector<VkCommandBuffer> commandBuffers;
-
-	std::vector<VkDescriptorSet> descriptorSets;
-
-	ItemUniformBufferObject uniformBufferObject;
-	std::vector<BoundBuffer> uniformBuffers;
-
-	std::vector<std::vector<BoundBuffer>> indexBuffers;
-	std::vector<std::vector<BoundBuffer>> indexStagingBuffers;
-	std::vector<std::vector<BoundBuffer>> vertexBuffers;
-	std::vector<std::vector<BoundBuffer>> vertexStagingBuffers;
-
-	uint32_t index = 0;
-
-	std::vector<BoundBuffer> &getVertexBuffers()
-	{
-		return vertexBuffers[index];
-	}
-
-	std::vector<BoundBuffer> &getIndexBuffers()
-	{
-		return indexBuffers[index];
-	}
-
-	std::vector<BoundBuffer> &getVertexStagingBuffers()
-	{
-		return vertexStagingBuffers[index];
-	}
-
-	std::vector<BoundBuffer> &getIndexStagingBuffers()
-	{
-		return indexStagingBuffers[index];
-	}
-
-	VkFramebuffer &getFrameBuffer()
-	{
-		return frameBuffers[index];
-	}
-
-	VkCommandBuffer &getCommandBuffer()
-	{
-		return commandBuffers[index];
-	}
-
-	VkDescriptorSet getDescriptorSet()
-	{
-		return descriptorSets[index];
-	}
-
-	BoundBuffer &getUniformBuffer()
-	{
-		return uniformBuffers[index];
-	}
-
-	void setCurrentIndex(uint32_t index)
-	{
-		this->index = index;
-	}
-
-	void resize(uint32_t size)
-	{
-		frameBuffers.resize(size);
-		commandBuffers.resize(size);
-		uniformBuffers.resize(size);
-	}
+	BatchDraw batchDraw{};
 };
 
 class MapRenderer
 {
 public:
+	MapRenderer(std::unique_ptr<Map> map);
 	static const int MAX_NUM_TEXTURES = 256 * 256;
 
 	static const int TILE_SIZE = 32;
 	static const uint32_t MAX_VERTICES = 64 * 1024;
 
+	std::unique_ptr<Map> map;
+
 	Camera camera;
+
+	BoundBuffer indexBuffer;
+	ItemUniformBufferObject uniformBufferObject;
 
 	void initialize();
 	void recreate();
 
-	void renderFrame(uint32_t currentFrame);
+	void recordFrame(uint32_t currentFrame);
 	void endFrame();
-
-	void setTexture(std::shared_ptr<Texture> texture);
 
 	void addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas);
 
-	VkCommandBuffer &getCommandBuffer()
+	VkCommandBuffer getCommandBuffer()
 	{
-		return renderData.getCommandBuffer();
+		return frame->commandBuffer;
 	}
 
 	VkRenderPass createRenderPass();
-	void setCurrentFrame(uint32_t frame)
-	{
-		this->renderData.setCurrentIndex(frame);
-	}
 
 	VkDescriptorPool &getDescriptorPool()
 	{
@@ -201,14 +111,16 @@ public:
 
 	void loadTextureAtlases();
 
-	void drawSprite(float x, float y, float width, float height);
-
 	void drawItem(Item &item, Position position);
 
 	TextureAtlas &getTextureAtlas(const uint32_t spriteId);
 	TextureAtlas &getTextureAtlas(ItemType &itemType);
 
 private:
+	std::array<FrameData, 3> frames;
+
+	FrameData *frame;
+
 	VkRenderPass renderPass;
 
 	VkCommandPool commandPool;
@@ -217,7 +129,6 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline = {};
 
-	RenderData renderData;
 	VkDescriptorSetLayout frameDescriptorSetLayout;
 	VkDescriptorSetLayout textureDescriptorSetLayout;
 
@@ -251,16 +162,6 @@ private:
 	std::vector<DrawCommand> drawCommands;
 	int currentBufferIndex = 0;
 
-	VkFramebuffer &getFrameBuffer()
-	{
-		return renderData.getFrameBuffer();
-	}
-
-	BoundBuffer &getUniformBuffer()
-	{
-		return renderData.getUniformBuffer();
-	}
-
 	void createGraphicsPipeline();
 	void createCommandPool();
 	void createUniformBuffers();
@@ -274,28 +175,8 @@ private:
 	void beginRenderPass();
 	void endRenderPass();
 
-	void mapStagingBufferMemory();
-
-	BoundBuffer &getVertexBuffer();
-	BoundBuffer &getIndexBuffer();
-
-	BoundBuffer &getVertexStagingBuffer();
-	BoundBuffer &getIndexStagingBuffer();
-
-	VkDeviceSize getMaxNumIndices();
-	VkDeviceSize getMaxNumVertices();
-
-	VkDeviceSize getVertexBufferSize();
-	VkDeviceSize getIndexBufferSize();
-
-	void queueCurrentBatch();
-	void queueDrawCommand();
-	void copyStagingBuffersToDevice();
-	void unmapStagingBuffers();
-
+	void drawMap();
 	void drawBatches();
-
-	void drawTriangles(const uint16_t *indices, size_t indexCount, const Vertex *vertices, size_t vertexCount);
 
 	void cleanup();
 };
