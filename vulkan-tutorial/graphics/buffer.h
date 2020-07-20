@@ -5,8 +5,8 @@
 
 struct BoundBuffer
 {
-	VkBuffer buffer;
-	VkDeviceMemory bufferMemory;
+	VkBuffer buffer = nullptr;
+	VkDeviceMemory deviceMemory = nullptr;
 };
 
 namespace Buffer
