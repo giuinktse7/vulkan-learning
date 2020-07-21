@@ -355,28 +355,41 @@ void MapRenderer::startCommandBuffer()
     throw std::runtime_error("failed to allocate command buffer");
   }
 
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-  if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to begin recording command buffer");
-  }
-
-  frame->batchDraw.commandBuffer = commandBuffer;
+  //VkCommandBufferBeginInfo beginInfo = {};
+  //beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  //beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  //
+  //if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+  //{
+  //  throw std::runtime_error("failed to begin recording command buffer");
+  //}
+  //
+  //frame->batchDraw.commandBuffer = commandBuffer;
 }
 
 void MapRenderer::recordFrame(uint32_t currentFrame)
 {
   frame = &frames[currentFrame];
-  if (frame->commandBuffer)
+  if (!frame->commandBuffer)
   {
-    vkFreeCommandBuffers(g_engine->getDevice(), commandPool, 1, &frame->commandBuffer);
-    frame->commandBuffer = nullptr;
+    // vkFreeCommandBuffers(g_engine->getDevice(), commandPool, 1, &frame->commandBuffer);
+    // frame->commandBuffer = nullptr;
+    startCommandBuffer();
   }
 
-  startCommandBuffer();
+  vkResetCommandBuffer(frame->commandBuffer, 0);
+
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  if (vkBeginCommandBuffer(frame->commandBuffer, &beginInfo) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to begin recording command buffer");
+  }
+
+  frame->batchDraw.commandBuffer = frame->commandBuffer;
+
   vkCmdBindPipeline(frame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
   updateUniformBuffer();
@@ -648,7 +661,7 @@ void MapRenderer::createCommandPool()
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.queueFamilyIndex = g_engine->getQueueFamilyIndices().graphicsFamily.value();
-  poolInfo.flags = 0; // Optional
+  poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
   if (vkCreateCommandPool(g_engine->getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
   {
