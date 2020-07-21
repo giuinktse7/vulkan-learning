@@ -25,7 +25,7 @@ void MapRenderer::initialize()
 
   frame = &frames.front();
 
-  renderPass = createRenderPass();
+  createRenderPass();
   createDescriptorSetLayouts();
   createGraphicsPipeline();
   createFrameBuffers();
@@ -86,7 +86,7 @@ void MapRenderer::loadTextureAtlases()
   std::cout << "Loaded compressed sprites in " << duration << " milliseconds." << std::endl;
 }
 
-VkRenderPass MapRenderer::createRenderPass()
+void MapRenderer::createRenderPass()
 {
   VkAttachmentDescription colorAttachment{};
   colorAttachment.format = g_engine->getSwapChain().getImageFormat();
@@ -130,13 +130,10 @@ VkRenderPass MapRenderer::createRenderPass()
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies = &dependency;
 
-  VkRenderPass renderPass;
-  if (vkCreateRenderPass(g_engine->getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+  if (vkCreateRenderPass(g_engine->getDevice(), &renderPassInfo, nullptr, &this->renderPass) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to create render pass!");
   }
-
-  return renderPass;
 }
 
 void MapRenderer::createGraphicsPipeline()
@@ -507,6 +504,7 @@ void MapRenderer::cleanup()
   for (auto &frame : frames)
   {
     vkDestroyFramebuffer(g_engine->getDevice(), frame.frameBuffer, nullptr);
+    frame.frameBuffer = VK_NULL_HANDLE;
   }
 
   for (auto &frame : frames)
@@ -516,6 +514,7 @@ void MapRenderer::cleanup()
         commandPool,
         1,
         &frame.commandBuffer);
+    frame.commandBuffer = VK_NULL_HANDLE;
   }
 
   vkDestroyPipeline(g_engine->getDevice(), graphicsPipeline, nullptr);
@@ -525,9 +524,10 @@ void MapRenderer::cleanup()
 
 void MapRenderer::recreate()
 {
+  cleanup();
+
   createRenderPass();
   createGraphicsPipeline();
-
   createFrameBuffers();
 }
 

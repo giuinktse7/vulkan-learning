@@ -97,7 +97,7 @@ public:
 		return frame->commandBuffer;
 	}
 
-	VkRenderPass createRenderPass();
+	void createRenderPass();
 
 	VkDescriptorPool &getDescriptorPool()
 	{
