@@ -51,6 +51,7 @@ VkResult Engine::mapMemory(
 }
 
 Engine::Engine()
+    : frame(&frames[0])
 {
 }
 
@@ -160,11 +161,6 @@ bool Engine::checkValidationLayerSupport()
 
   std::vector<VkLayerProperties> availableLayers(layerCount);
   vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-  // for (const auto &layerProp : availableLayers)
-  // {
-  // 	std::cout << layerProp.layerName << std::endl;
-  // }
 
   if (!chronosOrStandardValidation(availableLayers))
   {
@@ -361,27 +357,20 @@ bool Engine::initFrame()
     recreateSwapChain();
   }
 
-  vkWaitForFences(
-      device,
-      1,
-      &inFlightFences[currentFrame],
-      VK_TRUE,
-      std::numeric_limits<uint64_t>::max());
+  vkWaitForFences(device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
+
+  uint32_t imageIndex;
 
   VkResult result = vkAcquireNextImageKHR(
       device,
       swapChain.get(),
-      std::numeric_limits<uint64_t>::max(),
-      imageAvailableSemaphores[previousFrame],
+      UINT64_MAX,
+      frame->imageAvailableSemaphore,
       VK_NULL_HANDLE,
-      &currentFrame);
-
-  vkResetFences(device, 1, &inFlightFences[currentFrame]);
+      &imageIndex);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
   {
-    Logger::info("StartFrame::recreate");
-
     recreateSwapChain();
   }
   if (framebufferResized)
@@ -389,12 +378,20 @@ bool Engine::initFrame()
     framebufferResized = false;
     recreateSwapChain();
     return initFrame();
-    // return false;
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
   {
     throw std::runtime_error("failed to acquire swap chain image");
   }
+
+  if (imageFences[imageIndex] != VK_NULL_HANDLE)
+  {
+    vkWaitForFences(device, 1, &imageFences[imageIndex], VK_TRUE, UINT64_MAX);
+  }
+
+  imageFences[imageIndex] = frame->inFlightFence;
+
+  vkResetFences(device, 1, &frame->inFlightFence);
 
   return true;
 }
@@ -403,8 +400,8 @@ void Engine::nextFrame()
 {
   if (initFrame())
   {
-    mapRenderer->recordFrame(currentFrame);
-    gui.recordFrame(currentFrame);
+    mapRenderer->recordFrame(currentFrameIndex);
+    gui.recordFrame(currentFrameIndex);
 
     endFrame();
   }
@@ -412,10 +409,6 @@ void Engine::nextFrame()
 
 void Engine::createSyncObjects()
 {
-  imageAvailableSemaphores.resize(getMaxFramesInFlight());
-  renderFinishedSemaphores.resize(getMaxFramesInFlight());
-  inFlightFences.resize(getMaxFramesInFlight());
-
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -423,11 +416,11 @@ void Engine::createSyncObjects()
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (size_t i = 0; i < getMaxFramesInFlight(); i++)
+  for (auto &frame : frames)
   {
-    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frame.imageAvailableSemaphore) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frame.renderCompleteSemaphore) != VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &frame.inFlightFence) != VK_SUCCESS)
     {
 
       throw std::runtime_error("failed to create synchronization objects for a frame!");
@@ -456,56 +449,64 @@ std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
   return std::make_shared<Texture>(filename);
 }
 
+void Engine::setFrameIndex(uint32_t index)
+{
+  prevFrame = frame;
+  frame = &frames[index];
+  currentFrameIndex = index;
+}
+
 void Engine::recreateSwapChain()
 {
   swapChain.recreate();
+  imageFences.fill(VK_NULL_HANDLE);
 
   mapRenderer->recreate();
   gui.recreate();
 
-  currentFrame = 0;
+  setFrameIndex(0);
 }
 
 void Engine::endFrame()
 {
   mapRenderer->endFrame();
-  gui.endFrame(currentFrame);
+  gui.endFrame(currentFrameIndex);
 
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
   std::array<VkCommandBuffer, 2> submitCommandBuffers = {
       mapRenderer->getCommandBuffer(),
-      gui.getCommandBuffer(currentFrame)};
+      gui.getCommandBuffer(currentFrameIndex)};
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = &imageAvailableSemaphores[previousFrame];
+  submitInfo.pWaitSemaphores = &frame->imageAvailableSemaphore;
   submitInfo.pWaitDstStageMask = waitStages;
   submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
   submitInfo.pCommandBuffers = submitCommandBuffers.data();
   submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
+  submitInfo.pSignalSemaphores = &frame->renderCompleteSemaphore;
 
-  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame->inFlightFence) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to submit command buffer to the graphics queue");
   }
 
   presentFrame();
 
-  currentFrame = (currentFrame + 1) % getMaxFramesInFlight();
+  setFrameIndex((currentFrameIndex + 1) % getMaxFramesInFlight());
 }
 
 void Engine::presentFrame()
 {
   VkSwapchainKHR swapChains[] = {swapChain.get()};
-  uint32_t imageIndices[] = {currentFrame};
+  uint32_t imageIndices[] = {currentFrameIndex};
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
+  presentInfo.pWaitSemaphores = &frame->renderCompleteSemaphore;
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = swapChains;
   presentInfo.pImageIndices = imageIndices;
@@ -514,7 +515,7 @@ void Engine::presentFrame()
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
   {
-    Logger::info("EndFrame::recreate");
+    Logger::info("recreate in presentFrame");
     framebufferResized = false;
     recreateSwapChain();
   }
@@ -531,11 +532,11 @@ void Engine::WaitUntilDeviceIdle()
 
 void Engine::cleanupSyncObjects()
 {
-  for (size_t i = 0; i < getMaxFramesInFlight(); ++i)
+  for (auto &frame : frames)
   {
-    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-    vkDestroyFence(device, inFlightFences[i], nullptr);
+    vkDestroySemaphore(device, frame.imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(device, frame.renderCompleteSemaphore, nullptr);
+    vkDestroyFence(device, frame.inFlightFence, nullptr);
   }
 }
 

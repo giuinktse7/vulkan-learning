@@ -41,7 +41,12 @@ public:
 	Engine();
 	~Engine();
 
-	unsigned long frames = 0;
+	struct FrameData
+	{
+		VkSemaphore imageAvailableSemaphore = nullptr;
+		VkSemaphore renderCompleteSemaphore = nullptr;
+		VkFence inFlightFence = nullptr;
+	};
 
 	static const int TILE_SIZE = 32;
 
@@ -136,36 +141,6 @@ public:
 	void endSingleTimeCommands(VkCommandBuffer buffer);
 
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
-	std::vector<VkFence> getInFlightFences()
-	{
-		return inFlightFences;
-	};
-
-	std::vector<VkFence> getImagesInFlight()
-	{
-		return imagesInFlight;
-	}
-
-	std::vector<VkSemaphore> getImageAvailableSemaphores()
-	{
-		return imageAvailableSemaphores;
-	};
-
-	VkSemaphore getImageAvailableSemaphore(size_t index)
-	{
-		return imageAvailableSemaphores[index];
-	};
-
-	std::vector<VkSemaphore> getRenderFinishedSemaphores()
-	{
-		return renderFinishedSemaphores;
-	};
-
-	VkSemaphore getRenderFinishedSemaphore(size_t index)
-	{
-		return renderFinishedSemaphores[index];
-	};
 
 	void shutdown();
 
@@ -300,14 +275,15 @@ public:
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 private:
+	std::array<FrameData, 3> frames;
+	// Fences for vkAcquireNextImageKHR
+	std::array<VkFence, 3> imageFences;
+	FrameData *prevFrame = nullptr;
+	FrameData *frame = nullptr;
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
 
 	GUI gui;
-
-	static Engine *pinstance_;
-	static std::mutex mutex_;
-
 	GLFWwindow *window;
 
 	int width;
@@ -338,12 +314,6 @@ private:
 
 	std::vector<BoundBuffer> uniformBuffers;
 
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-
-	std::vector<VkFence> inFlightFences;
-	std::vector<VkFence> imagesInFlight;
-
 	VkDescriptorSetLayout perTextureDescriptorSetLayout;
 	VkDescriptorSetLayout perFrameDescriptorSetLayout;
 
@@ -352,7 +322,7 @@ private:
 	VkCommandBuffer currentCommandBuffer;
 
 	uint32_t previousFrame;
-	uint32_t currentFrame;
+	uint32_t currentFrameIndex;
 
 	std::unordered_set<int> keys;
 
@@ -364,6 +334,8 @@ private:
 	static std::vector<const char *> getRequiredExtensions();
 	static bool chronosOrStandardValidation(std::vector<VkLayerProperties> &props);
 	void createSurface();
+
+	void setFrameIndex(uint32_t index);
 
 	void setSurface(VkSurfaceKHR &surface)
 	{
