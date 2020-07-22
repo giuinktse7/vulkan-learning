@@ -18,7 +18,7 @@ public:
   glm::vec4 viewPos = glm::vec4();
 
   float zoomFactor = 1.0f;
-  int zoomStep = 15;
+  int zoomStep = 10;
 
   float movementSpeed = 1.0f;
   bool updated = false;
