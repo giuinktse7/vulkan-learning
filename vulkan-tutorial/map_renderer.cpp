@@ -418,13 +418,8 @@ void MapRenderer::updateUniformBuffer()
   float zoom = 1 / camera.zoomFactor;
   auto translated = glm::translate(
       glm::mat4(1),
-      glm::vec3(camera.position.x, camera.position.y, 0.0f));
-  uniformBufferObject.projection = glm::ortho(
-                                       0.0f,
-                                       width * zoom,
-                                       height * zoom,
-                                       0.0f) *
-                                   translated;
+      glm::vec3(std::floor(camera.position.x), std::floor(camera.position.y), 0.0f));
+  uniformBufferObject.projection = glm::ortho(0.0f, width * zoom, height * zoom, 0.0f) * translated;
 
   void *data;
   g_engine->mapMemory(frame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);

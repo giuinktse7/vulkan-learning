@@ -73,7 +73,7 @@ void SwapChain::create()
 
 void SwapChain::recreate()
 {
-  Logger::info("Recreating swap chain");
+  // Logger::info("Recreating swap chain");
   GLFWwindow *window = g_engine->getWindow();
 
   vkDeviceWaitIdle(g_engine->getDevice());

@@ -157,31 +157,33 @@ void populateTestMap()
 {
 	auto &map = *g_engine->getMapRenderer()->map;
 	Tile &tile1 = map.createTile(2, 1, 7);
-	Tile &tile2 = map.createTile(3, 3, 7);
-	// Tile &tile3 = map.createTile(2, 3, 7);
+	Tile &tile2 = map.createTile(1, 1, 7);
+	Tile &tile3 = map.createTile(3, 1, 7);
+	Tile &tile4 = map.createTile(4, 1, 7);
 	// Tile &tile4 = map.createTile(4, 4, 7);
 
 	// // auto shovel = Item::create(2554);
-	// auto shovel = Item::create(2554);
+	auto shovel = Item::create(2554);
 	auto tree = Item::create(2706);
-	// auto grass = Item::create(103);
-	// auto waterBorder = Item::create(6643);
-	// auto border = Item::create(6565);
-	// auto border2 = Item::create(6565);
-	// auto border3 = Item::create(6565);
+	auto grass = Item::create(103);
+	auto waterBorder = Item::create(6643);
+	auto border = Item::create(6565);
+	auto border2 = Item::create(6565);
+	auto border3 = Item::create(6565);
 
-	// tile4.addItem(std::move(tree));
+	tile4.addItem(std::move(tree));
 
+	tile3.addItem(std::move(Item::create(104)));
+	tile3.addItem(std::move(Item::create(2155)));
+	tile4.addItem(std::move(Item::create(2155)));
+
+	// tile1.addItem(std::move(Item::create(103)));
+	tile1.addItem(std::move(shovel));
 	tile1.addItem(std::move(Item::create(103)));
-	tile2.addItem(std::move(Item::create(4526)));
-	tile2.addItem(std::move(tree));
-	// tile2.addItem(std::move(border2));
+	tile2.addItem(std::move(border2));
 
-	// tile3.addItem(std::move(shovel));
-	// // tile.addItem(std::move(tree));
-	// tile3.addItem(std::move(grass));
-	// // tile3.addItem(std::move(waterBorder));
-	// tile3.addItem(std::move(border3));
+	tile3.addItem(std::move(grass));
+	tile3.addItem(std::move(border3));
 }
 
 class X

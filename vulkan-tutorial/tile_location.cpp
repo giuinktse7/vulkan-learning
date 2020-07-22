@@ -6,12 +6,12 @@
 
 TileLocation::TileLocation()
 {
-  std::cout << "TileLocation()" << std::endl;
+  // std::cout << "TileLocation()" << std::endl;
 }
 
 TileLocation::~TileLocation()
 {
-  std::cout << "~TileLocation()" << std::endl;
+  // std::cout << "~TileLocation()" << std::endl;
 }
 
 void TileLocation::setTile(std::unique_ptr<Tile> tile)
