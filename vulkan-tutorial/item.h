@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "graphics/texture.h"
 #include "graphics/appearances.h"
+#include <glm/glm.hpp>
 
 #include "items.h"
 #include "graphics/texture_atlas.h"
@@ -58,6 +59,7 @@ public:
 	}
 
 	const TextureWindow getTextureWindow() const;
+	const glm::vec2 getTextureAtlasSize() const;
 
 	const bool isGround() const;
 

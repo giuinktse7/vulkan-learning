@@ -82,22 +82,27 @@ void BatchDraw::push(Item &item, Position &pos)
 {
   auto drawOffset = item.getDrawOffset();
 
-  int worldX = (pos.x + drawOffset.x) * TILE_SIZE;
-  int worldY = (pos.y + drawOffset.y) * TILE_SIZE;
+  int worldX = g_engine->gameToWorldPos(pos.x + drawOffset.x);
+  int worldY = g_engine->gameToWorldPos(pos.y + drawOffset.y);
 
   uint32_t width = item.getWidth();
   uint32_t height = item.getHeight();
 
   auto window = item.getTextureWindow();
+  glm::vec2 atlasSize = item.getTextureAtlasSize();
+  const float offsetX = 0.5f / atlasSize.x;
+  const float offsetY = 0.5f / atlasSize.y;
+
+  const glm::vec4 rect = {window.x0 + offsetX, window.y0 - offsetY, window.x1 - offsetX, window.y1 + offsetY};
 
   Batch &batch = getBatch(4);
   batch.setDescriptor(item.itemType->textureAtlas->getDescriptorSet());
 
   std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, DEFAULT_COLOR, {window.x0, window.y0}},
-      {{worldX, worldY + height}, DEFAULT_COLOR, {window.x0, window.y1}},
-      {{worldX + width, worldY + height}, DEFAULT_COLOR, {window.x1, window.y1}},
-      {{worldX + width, worldY}, DEFAULT_COLOR, {window.x1, window.y0}},
+      {{worldX, worldY}, DEFAULT_COLOR, {window.x0, window.y0}, rect},
+      {{worldX, worldY + height}, DEFAULT_COLOR, {window.x0, window.y1}, rect},
+      {{worldX + width, worldY + height}, DEFAULT_COLOR, {window.x1, window.y1}, rect},
+      {{worldX + width, worldY}, DEFAULT_COLOR, {window.x1, window.y0}, rect},
   }};
 
   batch.addVertices(vertices);

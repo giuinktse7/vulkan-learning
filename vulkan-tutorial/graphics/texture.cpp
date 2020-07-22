@@ -147,14 +147,11 @@ VkSampler Texture::createSampler()
   samplerInfo.magFilter = VK_FILTER_LINEAR;
   samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
   samplerInfo.anisotropyEnable = VK_FALSE;
-  samplerInfo.maxAnisotropy = 16.0f;
-
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
-
   samplerInfo.compareEnable = VK_FALSE;
   // samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
   // samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;

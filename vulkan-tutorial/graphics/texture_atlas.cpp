@@ -82,13 +82,13 @@ const TextureWindow TextureAtlas::getTextureWindow(uint32_t offset) const
   auto row = offset / columns;
   auto col = offset % columns;
 
-  const float x = (static_cast<float>(col) / columns);
+  const float x = static_cast<float>(col) / columns;
   const float y = static_cast<float>(rows - row) / rows;
 
   const float width = static_cast<float>(spriteWidth) / this->width;
-  const float height = static_cast<float>(spriteHeight) / (this->height + 1);
+  const float height = static_cast<float>(spriteHeight) / this->height;
 
-  return TextureWindow{x, y, x + width - 1.0f / this->width, y - height };
+  return TextureWindow{x, y, x + width, y - height};
 }
 
 void print_byte(uint8_t b)
@@ -144,7 +144,7 @@ void fixMagenta(std::vector<uint8_t> &buffer, uint32_t offset)
 
     if (readU32(buffer, offset + cursor) == 0xFF00FF)
     {
-      std::fill(buffer.begin() + offset + cursor, buffer.begin() + offset + cursor + 4, 0);
+      std::fill(buffer.begin() + offset + cursor, buffer.begin() + offset + cursor + 3, 0);
     }
   }
 }

@@ -100,8 +100,6 @@ void MapRenderer::createRenderPass()
 
   colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  // The map renderer should not present anymore since GUI will be drawn on top
-  // colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
   colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
   VkAttachmentReference colorAttachmentRef{};
@@ -212,24 +210,20 @@ void MapRenderer::createGraphicsPipeline()
   colorBlendAttachment.colorWriteMask =
       VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
       VK_COLOR_COMPONENT_A_BIT;
+
   colorBlendAttachment.blendEnable = VK_TRUE;
-  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
   colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
   colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};
   colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   colorBlending.logicOpEnable = VK_FALSE;
-  colorBlending.logicOp = VK_LOGIC_OP_COPY;
   colorBlending.attachmentCount = 1;
   colorBlending.pAttachments = &colorBlendAttachment;
-  colorBlending.blendConstants[0] = 1.0f;
-  colorBlending.blendConstants[1] = 1.0f;
-  colorBlending.blendConstants[2] = 1.0f;
-  colorBlending.blendConstants[3] = 1.0f;
 
   std::array<VkDescriptorSetLayout, 2> layouts = {frameDescriptorSetLayout, textureDescriptorSetLayout};
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};

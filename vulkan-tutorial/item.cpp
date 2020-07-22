@@ -20,8 +20,12 @@ const TextureWindow Item::getTextureWindow() const
 {
 	uint32_t spriteId = this->itemType->appearance->frame_group().at(0).sprite_info().sprite_id(0);
 	uint32_t baseOffset = spriteId - itemType->textureAtlas->firstSpriteId;
-
 	return itemType->textureAtlas->getTextureWindow(baseOffset);
+}
+
+const glm::vec2 Item::getTextureAtlasSize() const
+{
+	return {itemType->textureAtlas->width, itemType->textureAtlas->height};
 }
 
 const bool Item::isGround() const

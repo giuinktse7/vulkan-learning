@@ -133,6 +133,11 @@ public:
 		currentCommandBuffer = nullptr;
 	}
 
+	const int gameToWorldPos(int gamePos) const;
+	const int worldToGamePos(float worldPos) const;
+	const Position screenToGamePos(float screenX, float screenY) const;
+	const Position screenToGamePos(glm::vec2 pos) const;
+
 	void createCommandPool();
 
 	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);

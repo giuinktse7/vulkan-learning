@@ -14,7 +14,6 @@
 #include "../position.h"
 
 constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
-constexpr uint32_t TILE_SIZE = 32;
 
 struct Batch
 {

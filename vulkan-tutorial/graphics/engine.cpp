@@ -15,6 +15,8 @@
 
 #include <imgui_impl_glfw.h>
 
+constexpr uint32_t TILE_SIZE = 32;
+
 Engine *g_engine;
 
 namespace engine
@@ -465,6 +467,31 @@ void Engine::recreateSwapChain()
   gui.recreate();
 
   setFrameIndex(0);
+}
+
+const int Engine::gameToWorldPos(int gamePosition) const
+{
+  return gamePosition * TILE_SIZE;
+}
+
+const int Engine::worldToGamePos(float worldPos) const
+{
+  return static_cast<int>(worldPos / TILE_SIZE);
+}
+
+const Position Engine::screenToGamePos(glm::vec2 pos) const
+{
+  return screenToGamePos(pos.x, pos.y);
+}
+
+const Position Engine::screenToGamePos(float screenX, float screenY) const
+{
+  auto camera = mapRenderer->camera;
+
+  int x = worldToGamePos(-camera.position.x + screenX);
+  int y = worldToGamePos(-camera.position.y + screenY);
+
+  return {x, y, 7};
 }
 
 void Engine::endFrame()
