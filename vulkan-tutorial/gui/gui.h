@@ -7,13 +7,11 @@ class GUI
 {
 public:
 	void initialize();
-	void startFrame(uint32_t currentFrame);
+	void recordFrame(uint32_t currentFrame);
 	void endFrame(uint32_t currentFrame);
 	void updateCommandPool(uint32_t currentFrame);
 
 	bool testOpen = true;
-
-	void recordFrame(uint32_t currentFrame);
 
 	void recreate();
 
@@ -28,6 +26,8 @@ public:
 	}
 
 private:
+	void createMenuBar();
+
 	void initForVulkan();
 	void createDescriptorPool();
 	void createRenderPass();

@@ -1,4 +1,7 @@
 #include "gui.h"
+
+#include <sstream>
+
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
@@ -49,18 +52,6 @@ void GUI::initForVulkan()
   createFrameBuffers();
 }
 
-void GUI::startFrame(uint32_t currentFrame)
-{
-  ImGui_ImplVulkan_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-
-  ImGui::ShowDemoWindow();
-
-  ImGui::Render();
-  ImDrawData *drawData = ImGui::GetDrawData();
-}
-
 static void HelpMarker(const char *desc)
 {
   ImGui::TextDisabled("(?)");
@@ -74,57 +65,111 @@ static void HelpMarker(const char *desc)
   }
 }
 
-void GUI::recordFrame(uint32_t currentFrame)
+void GUI::createMenuBar()
 {
-  ImGui_ImplVulkan_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
+  float menuHeight = 20.0f;
 
-  ImGui::Begin("My First Tool", &testOpen, ImGuiWindowFlags_MenuBar);
+  ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar;
+
+  auto *viewport = ImGui::GetMainViewport();
+
+  ImVec2 size = {viewport->GetWorkSize().x, menuHeight};
+
+  ImGui::SetNextWindowPos({0, 0});
+  ImGui::SetNextWindowSize(size);
+  ImGui::SetNextWindowViewport(viewport->ID);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+  windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+  windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSizeConstraints({-1, menuHeight}, {-1, menuHeight});
+  ImGui::Begin("Top menu bar", nullptr, windowFlags);
+  ImGui::PopStyleVar(3);
+
   if (ImGui::BeginMenuBar())
   {
     if (ImGui::BeginMenu("File"))
     {
-      if (ImGui::MenuItem("Open..", "Ctrl+O"))
-      { /* Do stuff */
-      }
-      if (ImGui::MenuItem("Save", "Ctrl+S"))
-      { /* Do stuff */
-      }
-      if (ImGui::MenuItem("Close", "Ctrl+W"))
-      {
-        testOpen = false;
-      }
+      // Disabling fullscreen would allow the window to be moved to the front of other windows,
+      // which we can't undo at the moment without finer window depth/z control.
+      //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
+      ImGui::MenuItem("Ponko", "");
+      ImGui::Separator();
       ImGui::EndMenu();
     }
+    if (ImGui::BeginMenu("Edit"))
+    {
+      ImGui::MenuItem("Nothing here yet.");
+      ImGui::EndMenu();
+    }
+
+    HelpMarker("Map editor. Repository: https://github.com/giuinktse7/vulkan-learning");
+
     ImGui::EndMenuBar();
   }
-
-  // Plot some values
-  const float my_values[] = {0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f};
-  ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
-
-  // Display contents in a scrolling region
-  ImGui::TextColored(ImVec4(1, 1, 0, 1), "Important Stuff");
-  ImGui::BeginChild("Scrolling");
-  for (int n = 0; n < 50; n++)
-    ImGui::Text("%04d: Some text", n);
-  ImGui::EndChild();
   ImGui::End();
+}
 
-  // ImGui::ShowDemoWindow();
+constexpr uint32_t DEFAULT_PADDING = 4.0f;
+
+void GUI::recordFrame(uint32_t currentFrame)
+{
+
+  ImGui_ImplVulkan_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+
+  // ImGui::Begin("My First Tool", &testOpen, ImGuiWindowFlags_MenuBar);
+  // if (ImGui::BeginMenuBar())
+  // {
+  //   if (ImGui::BeginMenu("File"))
+  //   {
+  //     if (ImGui::MenuItem("Open..", "Ctrl+O"))
+  //     { /* Do stuff */
+  //     }
+  //     if (ImGui::MenuItem("Save", "Ctrl+S"))
+  //     { /* Do stuff */
+  //     }
+  //     if (ImGui::MenuItem("Close", "Ctrl+W"))
+  //     {
+  //       testOpen = false;
+  //     }
+  //     ImGui::EndMenu();
+  //   }
+  //   ImGui::EndMenuBar();
+  // }
+
+  // // Plot some values
+  // const float my_values[] = {0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f};
+  // ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
+
+  // // Display contents in a scrolling region
+  // ImGui::TextColored(ImVec4(1, 1, 0, 1), "Important Stuff");
+  // ImGui::BeginChild("Scrolling");
+  // for (int n = 0; n < 50; n++)
+  //   ImGui::Text("%04d: Some text", n);
+  // ImGui::EndChild();
+  // ImGui::End();
 
   static bool opt_fullscreen_persistant = true;
   bool opt_fullscreen = opt_fullscreen_persistant;
   static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
+  float padding = DEFAULT_PADDING;
+
+  float bottomBarHeight = 20 + padding * 2;
+
   // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
   // because it would be confusing to have two docking targets within each others.
-  ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
   if (opt_fullscreen)
   {
     ImGuiViewport *viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->GetWorkPos());
+
+    ImGui::SetNextWindowPos({0, static_cast<float>(g_engine->getHeight() - bottomBarHeight)});
     ImGui::SetNextWindowSize(viewport->GetWorkSize());
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -138,73 +183,41 @@ void GUI::recordFrame(uint32_t currentFrame)
   if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
     window_flags |= ImGuiWindowFlags_NoBackground;
 
-  // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-  // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-  // all active windows docked into it will lose their parent and become undocked.
-  // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-  // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-  ImGui::SetNextWindowSizeConstraints({-1, 80}, {-1, 80});
+  ImGui::SetNextWindowSizeConstraints({-1, bottomBarHeight}, {-1, bottomBarHeight});
   ImGui::Begin("DockSpace Demo", &dockOpened, window_flags);
   ImGui::PopStyleVar();
 
   if (opt_fullscreen)
     ImGui::PopStyleVar(2);
 
-  ImGuiIO &io = ImGui::GetIO();
-  if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-  {
-    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-  }
+  ImGuiViewport *viewport = ImGui::GetMainViewport();
 
-  if (ImGui::BeginMenuBar())
-  {
-    if (ImGui::BeginMenu("File"))
-    {
-      // Disabling fullscreen would allow the window to be moved to the front of other windows,
-      // which we can't undo at the moment without finer window depth/z control.
-      //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
-      ImGui::MenuItem("Ponko", "");
-      ImGui::Separator();
-      if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
-        dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
-      if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))
-        dockspace_flags ^= ImGuiDockNodeFlags_NoResize;
-      if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))
-        dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
-      if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0))
-        dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode;
-      if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))
-        dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
-      ImGui::Separator();
-      if (ImGui::MenuItem("Close DockSpace", NULL, false, dockOpened != NULL))
-        dockOpened = false;
-      ImGui::EndMenu();
-    }
-    HelpMarker(
-        "When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!"
-        "\n\n"
-        " > if io.ConfigDockingWithShift==false (default):"
-        "\n"
-        "   drag windows from title bar to dock"
-        "\n"
-        " > if io.ConfigDockingWithShift==true:"
-        "\n"
-        "   drag windows from anywhere and hold Shift to dock"
-        "\n\n"
-        "This demo app has nothing to do with it!"
-        "\n\n"
-        "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window. This is useful so you can decorate your main application window (e.g. with a menu bar)."
-        "\n\n"
-        "ImGui::DockSpace() comes with one hard constraint: it needs to be submitted _before_ any window which may be docked into it. Therefore, if you use a dock spot as the central point of your application, you'll probably want it to be part of the very first window you are submitting to imgui every frame."
-        "\n\n"
-        "(NB: because of this constraint, the implicit \"Debug\" window can not be docked into an explicit DockSpace() node, because that window is submitted as part of the NewFrame() call. An easy workaround is that you can create your own implicit \"Debug##2\" window after calling DockSpace() and leave it in the window stack for anyone to use.)");
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {padding, padding});
+  ImGui::PopStyleVar(1);
 
-    ImGui::EndMenuBar();
-  }
+  ImGui::BeginChild("Bottom1", {viewport->GetWorkSize().x / 4, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
+
+  std::string zoom = "Zoom factor: " + std::to_string(g_engine->getMapRenderer()->camera.zoomFactor);
+  ImGui::Text(zoom.c_str());
+
+  ImGui::EndChild();
+
+  ImGui::SameLine();
+
+  ImGui::BeginChild("Bottom2", {viewport->GetWorkSize().x / 4, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
+
+  auto [x, y, z] = g_engine->screenToGamePos(g_engine->getMousePosition());
+
+  std::ostringstream positionString;
+  positionString << "x: " << (x) << " y: " << (y) << " z: " << z;
+  ImGui::Text(positionString.str().c_str());
+
+  ImGui::EndChild();
 
   ImGui::End();
+
+  createMenuBar();
 
   updateCommandPool(currentFrame);
 
