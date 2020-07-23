@@ -10,6 +10,11 @@ public:
 	void recordFrame(uint32_t currentFrame);
 	void endFrame(uint32_t currentFrame);
 	void updateCommandPool(uint32_t currentFrame);
+	void captureIO();
+
+	/* Data */
+	uint32_t selectedServerId = 100;
+	/* End data */
 
 	bool testOpen = true;
 
@@ -26,7 +31,7 @@ public:
 	}
 
 private:
-	void createMenuBar();
+	void createTopMenuBar();
 
 	void initForVulkan();
 	void createDescriptorPool();

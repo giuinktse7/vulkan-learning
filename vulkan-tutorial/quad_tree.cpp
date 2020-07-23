@@ -59,7 +59,7 @@ TileLocation &Floor::getTileLocation(uint32_t index)
   return locations[index];
 }
 
-Floor &Node::createFloor(int x, int y, int z)
+Floor &Node::getOrCreateFloor(int x, int y, int z)
 {
   DEBUG_ASSERT(isLeaf(), "Only leaf nodes can create a floor.");
 

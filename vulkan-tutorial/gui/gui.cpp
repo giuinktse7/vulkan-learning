@@ -6,6 +6,8 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
 
+// #include <imgui_internal.h>
+
 #include "../graphics/engine.h"
 #include "../graphics/vulkan_helpers.h"
 
@@ -65,7 +67,7 @@ static void HelpMarker(const char *desc)
   }
 }
 
-void GUI::createMenuBar()
+void GUI::createTopMenuBar()
 {
   float menuHeight = 20.0f;
 
@@ -107,6 +109,11 @@ void GUI::createMenuBar()
     }
 
     HelpMarker("Map editor. Repository: https://github.com/giuinktse7/vulkan-learning");
+    int selectedId = static_cast<int>(this->selectedServerId);
+    if (ImGui::InputInt("serverIdInput", &selectedId, 1, 20) && selectedId >= 100)
+    {
+      this->selectedServerId = static_cast<uint32_t>(std::max(100, selectedId));
+    }
 
     ImGui::EndMenuBar();
   }
@@ -121,6 +128,9 @@ void GUI::recordFrame(uint32_t currentFrame)
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
+
+  bool open = true;
+  ImGui::ShowDemoWindow(&open);
 
   // ImGui::Begin("My First Tool", &testOpen, ImGuiWindowFlags_MenuBar);
   // if (ImGui::BeginMenuBar())
@@ -217,7 +227,7 @@ void GUI::recordFrame(uint32_t currentFrame)
 
   ImGui::End();
 
-  createMenuBar();
+  createTopMenuBar();
 
   updateCommandPool(currentFrame);
 
@@ -237,6 +247,14 @@ void GUI::recordFrame(uint32_t currentFrame)
   vkCmdBeginRenderPass(commandBuffers[currentFrame], &info, VK_SUBPASS_CONTENTS_INLINE);
 
   ImGui::Render();
+  this->captureIO();
+}
+
+void GUI::captureIO()
+{
+  auto io = ImGui::GetIO();
+  g_engine->captureMouse = !io.WantCaptureMouse;
+  g_engine->captureKeyboard = !io.WantCaptureKeyboard;
 }
 
 void GUI::createDescriptorPool()

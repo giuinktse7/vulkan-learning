@@ -25,6 +25,16 @@ struct Position
 	int x, y, z;
 };
 
+inline bool operator==(const Position &pos1, const Position &pos2)
+{
+	return pos1.x == pos2.x && pos1.y == pos2.y && pos1.z == pos2.z;
+}
+
+inline bool operator!=(const Position &pos1, const Position &pos2)
+{
+	return !(pos1 == pos2);
+}
+
 inline std::ostream &operator<<(std::ostream &os, const Position &pos)
 {
 	os << pos.x << ':' << pos.y << ':' << pos.z;

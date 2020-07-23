@@ -52,7 +52,8 @@ void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-
+	if (!g_engine->captureKeyboard)
+		return;
 	bool ctrlDown = g_engine->isCtrlDown();
 
 	// Handle CTRL
@@ -105,6 +106,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
 void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
+	if (!g_engine->captureMouse)
+		return;
 	if (yoffset > 0)
 	{
 		g_engine->zoomIn();
@@ -117,7 +120,34 @@ void scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 
 static void cursorPositionCallback(GLFWwindow *window, double x, double y)
 {
+	if (!g_engine->captureMouse)
+		return;
+	Position oldGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
+
 	g_engine->setMousePosition((float)x, (float)y);
+	Position newGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
+	if (oldGamePos != newGamePos)
+	{
+		// Dragging
+		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+		{
+			auto &map = *g_engine->getMapRenderer()->map;
+			auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
+
+			auto item = Item::create(g_engine->getSelectedServerId());
+			map.getOrCreateTile(pos).addItem(std::move(item));
+		}
+	}
+}
+
+void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
+{
+	if (!g_engine->captureMouse)
+		return;
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+	{
+	}
 }
 
 GLFWwindow *initWindow()
@@ -131,6 +161,7 @@ GLFWwindow *initWindow()
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetScrollCallback(window, scrollCallback);
 	glfwSetCursorPosCallback(window, cursorPositionCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
@@ -156,10 +187,10 @@ private:
 void populateTestMap()
 {
 	auto &map = *g_engine->getMapRenderer()->map;
-	Tile &tile1 = map.createTile(2, 1, 7);
-	Tile &tile2 = map.createTile(1, 1, 7);
-	Tile &tile3 = map.createTile(3, 1, 7);
-	Tile &tile4 = map.createTile(4, 1, 7);
+	Tile &tile1 = map.getOrCreateTile(2, 1, 7);
+	Tile &tile2 = map.getOrCreateTile(1, 1, 7);
+	Tile &tile3 = map.getOrCreateTile(3, 1, 7);
+	Tile &tile4 = map.getOrCreateTile(4, 1, 7);
 	// Tile &tile4 = map.createTile(4, 4, 7);
 
 	// // auto shovel = Item::create(2554);

@@ -12,14 +12,19 @@ Map::Map()
 {
 }
 
-Tile &Map::createTile(int x, int y, int z)
+Tile &Map::getOrCreateTile(Position &pos)
+{
+  return getOrCreateTile(pos.x, pos.y, pos.z);
+}
+
+Tile &Map::getOrCreateTile(int x, int y, int z)
 {
   DEBUG_ASSERT(root.isRoot(), "Only root nodes can create a tile.");
   auto &leaf = root.getLeafWithCreate(x, y);
 
   DEBUG_ASSERT(leaf.isLeaf(), "The node must be a leaf node.");
 
-  Floor &floor = leaf.createFloor(x, y, z);
+  Floor &floor = leaf.getOrCreateFloor(x, y, z);
   TileLocation &location = floor.getTileLocation(x, y);
 
   if (!location.getTile())

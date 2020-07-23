@@ -48,6 +48,10 @@ public:
 		VkFence inFlightFence = nullptr;
 	};
 
+	// Can be set to false if the UI is currently capturing the mouse.
+	bool captureMouse = true;
+	bool captureKeyboard = true;
+
 	static const int TILE_SIZE = 32;
 
 	/* Vulkan helpers */
@@ -275,6 +279,11 @@ public:
 	MapRenderer *getMapRenderer()
 	{
 		return mapRenderer;
+	}
+
+	const uint32_t getSelectedServerId() const
+	{
+		return gui.selectedServerId;
 	}
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};

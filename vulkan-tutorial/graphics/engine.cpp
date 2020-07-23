@@ -488,8 +488,8 @@ const Position Engine::screenToGamePos(float screenX, float screenY) const
 {
   auto camera = mapRenderer->camera;
 
-  int x = worldToGamePos(-camera.position.x + screenX);
-  int y = worldToGamePos(-camera.position.y + screenY);
+  int x = worldToGamePos(-camera.position.x + screenX / camera.zoomFactor);
+  int y = worldToGamePos(-camera.position.y + screenY / camera.zoomFactor);
 
   return {x, y, 7};
 }

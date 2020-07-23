@@ -50,7 +50,7 @@ namespace quadtree
 		Node &getLeaf(int x, int y);
 		Node *getLeafUnsafe(int x, int y) const;
 
-		Floor &createFloor(int x, int y, int z);
+		Floor &getOrCreateFloor(int x, int y, int z);
 		Floor *getFloor(uint32_t z) const;
 
 		bool isLeaf() const;
@@ -61,7 +61,8 @@ namespace quadtree
 
 	protected:
 		NodeType nodeType = NodeType::Root;
-		union {
+		union
+		{
 			std::array<std::unique_ptr<Node>, MAP_TREE_CHILDREN_COUNT> nodes{};
 			std::array<std::unique_ptr<Floor>, MAP_TREE_CHILDREN_COUNT> children;
 		};

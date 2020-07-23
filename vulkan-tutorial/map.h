@@ -8,6 +8,7 @@
 #include "tile.h"
 #include "tile_location.h"
 #include "quad_tree.h"
+#include "position.h"
 
 class Map;
 
@@ -91,8 +92,8 @@ public:
 	MapIterator begin();
 	MapIterator end();
 
-	Tile &
-	createTile(int x, int y, int z);
+	Tile &getOrCreateTile(int x, int y, int z);
+	Tile &getOrCreateTile(Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
 
 private:
