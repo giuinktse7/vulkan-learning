@@ -52,17 +52,17 @@ TileLocation *Map::getTileLocation(int x, int y, int z) const
 
 Map::Iterator *Map::Iterator::nextFromLeaf()
 {
-  auto &node = stack.top().node;
-  DEBUG_ASSERT(node.isLeaf(), "The node must be a leaf node.");
+  quadtree::Node *node = stack.top().node;
+  DEBUG_ASSERT(node->isLeaf(), "The node must be a leaf node.");
 
   for (uint32_t z = this->floorIndex; z < MAP_LAYERS; ++z)
   {
-    if (Floor *floor = node.getFloor(z))
+    if (Floor *floor = node->getFloor(z))
     {
       for (uint32_t i = this->tileIndex; i < MAP_LAYERS; ++i)
       {
         TileLocation &location = floor->getTileLocation(i);
-        if (location.hasTile())
+        if (location.hasTile() && (location.getTile()->getItems().size() > 0 || location.getTile()->getGround()))
         {
           this->value = &location;
           this->floorIndex = z;
@@ -77,28 +77,33 @@ Map::Iterator *Map::Iterator::nextFromLeaf()
   return nullptr;
 }
 
+void Map::Iterator::emplace(quadtree::Node *node)
+{
+  stack.emplace(node);
+}
+
 Map::Iterator Map::begin()
 {
   Map::Iterator iterator;
-  iterator.push(this->root);
+  iterator.emplace(&this->root);
 
   while (!iterator.stack.empty())
   {
-    auto current = iterator.stack.top();
+    Map::Iterator::NodeIndex &current = iterator.stack.top();
 
-    if (current.node.isLeaf())
+    if (current.node->isLeaf())
     {
       auto next = iterator.nextFromLeaf();
       return next ? *next : end();
     }
 
-    uint32_t size = current.node.nodes.size();
+    uint32_t size = current.node->nodes.size();
     for (uint32_t i = current.cursor; i < size; ++i)
     {
-      if (auto &child = current.node.nodes[i])
+      if (auto &child = current.node->nodes[i])
       {
         current.cursor = i + 1;
-        iterator.push(*child.get());
+        iterator.emplace(child.get());
         break;
       }
     }
@@ -123,9 +128,9 @@ Map::Iterator &Map::Iterator::operator++()
 {
   while (!stack.empty())
   {
-    auto &current = stack.top();
+    Map::Iterator::NodeIndex &current = stack.top();
 
-    if (current.node.isLeaf())
+    if (current.node->isLeaf())
     {
       auto next = nextFromLeaf();
       if (!next)
@@ -140,7 +145,7 @@ Map::Iterator &Map::Iterator::operator++()
     tileIndex = 0;
     floorIndex = 0;
 
-    uint32_t size = current.node.nodes.size();
+    uint32_t size = current.node->nodes.size();
     // This node is finished
     if (current.cursor == size)
     {
@@ -150,10 +155,10 @@ Map::Iterator &Map::Iterator::operator++()
 
     for (; current.cursor < size; ++current.cursor)
     {
-      if (auto &child = current.node.nodes[current.cursor])
+      if (auto &child = current.node->nodes[current.cursor])
       {
         current.cursor += 1;
-        push(*child.get());
+        emplace(child.get());
         break;
       }
     }
@@ -176,48 +181,6 @@ Map::Iterator::Iterator()
 Map::Iterator::~Iterator()
 {
   // std::cout << "~MapIterator()" << std::endl;
-}
-
-void Map::printTiles()
-{
-  std::stack<quadtree::Node *> stack;
-  stack.push(&this->root);
-
-  while (!stack.empty())
-  {
-    auto current = stack.top();
-    stack.pop();
-
-    if (current->isLeaf())
-    {
-      for (uint32_t z = 0; z < MAP_LAYERS; ++z)
-      {
-        Floor *floor = current->getFloor(z);
-        if (floor)
-        {
-          for (uint32_t i = 0; i < MAP_LAYERS; ++i)
-          {
-            TileLocation &location = floor->getTileLocation(i);
-            if (location.getTile())
-            {
-              std::cout << location.getPosition() << std::endl;
-            }
-          }
-        }
-      }
-    }
-    else
-    {
-      for (uint32_t i = 0; i < MAP_LAYERS; ++i)
-      {
-        auto &node = current->nodes[MAP_LAYERS - i - 1];
-        if (node)
-        {
-          stack.push(node.get());
-        }
-      }
-    }
-  }
 }
 
 TileLocation *Map::Iterator::operator*()

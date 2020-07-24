@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <iostream>
 
+#include "debug.h"
+
 #include "item.h"
 #include "tile.h"
 #include "tile_location.h"
@@ -37,10 +39,7 @@ private:
 		// Mark the iterator as finished
 		void finish();
 
-		void push(quadtree::Node &node)
-		{
-			stack.push({node});
-		}
+		void emplace(quadtree::Node *node);
 
 		TileLocation *operator*();
 		TileLocation *operator->();
@@ -61,18 +60,18 @@ private:
 		struct NodeIndex
 		{
 			uint32_t cursor = 0;
-			quadtree::Node &node;
+			quadtree::Node *node;
 
-			bool operator==(const NodeIndex &other)
-			{
-				return other.cursor == cursor && &other.node == &node;
-			}
-			bool operator==(NodeIndex &other)
-			{
-				return other.cursor == cursor && &other.node == &node;
-			}
+			NodeIndex(quadtree::Node *node) : cursor(0), node(node) {}
 
-			NodeIndex(quadtree::Node &node) : cursor(0), node(node) {}
+			// bool operator==(const NodeIndex &other)
+			// {
+			// 	return other.cursor == cursor && &other.node == &node;
+			// }
+			// bool operator==(NodeIndex &other)
+			// {
+			// 	return other.cursor == cursor && &other.node == &node;
+			// }
 		};
 
 		friend class Map;
@@ -83,7 +82,7 @@ private:
 			return value == nullptr;
 		}
 
-		std::stack<NodeIndex> stack;
+		std::stack<NodeIndex> stack{};
 		uint32_t tileIndex = 0;
 		uint32_t floorIndex = 0;
 		TileLocation *value = nullptr;
@@ -91,8 +90,6 @@ private:
 
 public:
 	Map();
-
-	void printTiles();
 
 	Iterator begin();
 	Iterator end();
