@@ -16,7 +16,7 @@ Batch::~Batch()
 }
 
 Batch::Batch()
-    : size(0), descriptorSet(nullptr), valid(true)
+    : vertexCount(0), descriptorSet(nullptr), valid(true)
 {
   this->stagingBuffer = Buffer::create(
       BATCH_DEVICE_SIZE,
@@ -38,7 +38,7 @@ void Batch::invalidate()
 
 void Batch::reset()
 {
-  this->size = 0;
+  this->vertexCount = 0;
   this->descriptorIndices.clear();
   this->descriptorSet = nullptr;
   this->vertices = nullptr;
@@ -70,11 +70,11 @@ void Batch::copyStagingToDevice(VkCommandBuffer commandBuffer)
   DEBUG_ASSERT(this->isCopiedToDevice == false, "The staging buffer has alreday been copied to the device.");
   this->isCopiedToDevice = true;
 
-  if (size == 0)
+  if (vertexCount == 0)
     return;
 
   VkBufferCopy copyRegion = {};
-  copyRegion.size = this->size * sizeof(Vertex);
+  copyRegion.size = this->vertexCount * sizeof(Vertex);
   vkCmdCopyBuffer(commandBuffer, stagingBuffer.buffer, buffer.buffer, 1, &copyRegion);
 }
 
@@ -113,7 +113,7 @@ void Batch::addVertices(std::array<Vertex, SIZE> &vertexArray)
 {
   memcpy(this->current, &vertexArray, sizeof(vertexArray));
   current += vertexArray.size();
-  size += static_cast<uint32_t>(vertexArray.size());
+  vertexCount += static_cast<uint32_t>(vertexArray.size());
 }
 
 Batch &BatchDraw::getBatch()
@@ -131,6 +131,12 @@ Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
 
   Batch &batch = batches.at(batchIndex);
 
+  if (!batch.valid)
+  {
+    batch.reset();
+    batch.mapStagingBuffer();
+  }
+
   if (!batch.canHold(requiredVertexCount))
   {
     batch.setDescriptor(nullptr);
@@ -143,11 +149,6 @@ Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
   }
 
   batch = batches.at(batchIndex);
-  if (!batch.valid)
-  {
-    batch.reset();
-    batch.mapStagingBuffer();
-  }
 
   return batch;
 }
@@ -161,14 +162,14 @@ void Batch::addVertex(const Vertex &vertex)
 {
   *current = vertex;
   ++current;
-  ++size;
+  ++vertexCount;
 }
 
 void Batch::setDescriptor(VkDescriptorSet descriptor)
 {
   if (this->descriptorSet && this->descriptorSet != descriptor)
   {
-    descriptorIndices.emplace_back<Batch::DescriptorIndex>({this->descriptorSet, size - 1});
+    descriptorIndices.emplace_back<Batch::DescriptorIndex>({this->descriptorSet, vertexCount - 1});
   }
 
   this->descriptorSet = descriptor;

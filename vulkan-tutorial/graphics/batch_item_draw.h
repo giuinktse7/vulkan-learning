@@ -31,7 +31,7 @@ struct Batch
 	Vertex *vertices = nullptr;
 	Vertex *current = nullptr;
 
-	uint32_t size;
+	uint32_t vertexCount = 0;
 
 	std::vector<Batch::DescriptorIndex> descriptorIndices;
 	VkDescriptorSet descriptorSet;
@@ -54,12 +54,7 @@ struct Batch
 
 	const bool canHold(uint32_t vertexCount) const
 	{
-		return size + vertexCount < BATCH_DEVICE_SIZE;
-	}
-
-	const bool isFull() const
-	{
-		return size == BATCH_DEVICE_SIZE;
+		return (this->vertexCount + vertexCount) * sizeof(Vertex) < BATCH_DEVICE_SIZE;
 	}
 
 	void invalidate();
@@ -68,7 +63,7 @@ struct Batch
 
 private:
 	// Flag to signal whether recreation (i.e. re-mapping) is necessary.
-	bool valid;
+	bool valid = true;
 };
 
 class BatchDraw
