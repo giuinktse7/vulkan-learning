@@ -19,7 +19,13 @@ constexpr uint32_t LEVELS_IN_QUAD_TREE = (16 - 4) / 2;
 Node::Node(NodeType nodeType)
     : nodeType(nodeType)
 {
-  cout << "Construct node" << endl;
+  // cout << "Construct node" << endl;
+}
+
+Node::Node(NodeType nodeType, int level)
+    : nodeType(nodeType), level(level)
+{
+  // cout << "Construct node" << endl;
 }
 
 Node::~Node()
@@ -27,12 +33,12 @@ Node::~Node()
 
   if (isLeaf())
   {
-    cout << "Destruct child node" << endl;
+    // cout << "Destruct child node" << endl;
     std::destroy(children.begin(), children.end());
   }
   else
   {
-    cout << "Destruct node" << endl;
+    // cout << "Destruct node" << endl;
     std::destroy(nodes.begin(), nodes.end());
   }
 }
@@ -173,13 +179,13 @@ Node &Node::getLeafWithCreate(int x, int y)
     {
       if (level == 0)
       {
-        child = make_unique<Node>(NodeType::Leaf);
+        child = make_unique<Node>(NodeType::Leaf, 0);
         leaf = child.get();
         break;
       }
       else
       {
-        child = make_unique<Node>(NodeType::Node);
+        child = make_unique<Node>(NodeType::Node, level);
       }
     }
 

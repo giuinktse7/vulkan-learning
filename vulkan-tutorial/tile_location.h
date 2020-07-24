@@ -16,6 +16,7 @@ public:
 	TileLocation &operator=(const TileLocation &) = delete;
 
 	Tile *getTile() const;
+	const bool hasTile() const;
 
 	friend class Floor;
 	friend class Tile;

@@ -10,87 +10,92 @@
 #include "quad_tree.h"
 #include "position.h"
 
-class Map;
-
-class MapIterator
-{
-public:
-	MapIterator();
-	~MapIterator();
-
-	MapIterator begin() const
-	{
-		return *this;
-	}
-
-	MapIterator end() const
-	{
-		MapIterator iterator;
-		iterator.localI = -1;
-		iterator.localZ = -1;
-		return iterator;
-	}
-
-	void pushNode(quadtree::Node *node)
-	{
-		stack.emplace_back<MapIterator::NodeIndex>(node);
-	}
-
-	TileLocation *operator*();
-	TileLocation *operator->();
-	MapIterator &operator++();
-
-	bool operator==(const MapIterator &other) const
-	{
-		// Check for end
-		// if (localZ == -1 && localI == -1 && other.localZ == -1 && other.localI == -1)
-		// return true;
-
-		return other.localZ == localZ &&
-					 other.localI == localI &&
-					 other.stack == stack &&
-					 other.currentTile == currentTile;
-	}
-
-	bool operator!=(const MapIterator &other) const
-	{
-		return !(other == *this);
-	}
-
-	struct NodeIndex
-	{
-		NodeIndex(quadtree::Node *node) : index(0), node(node) {}
-		NodeIndex(const NodeIndex &other) : index(other.index), node(other.node) {}
-
-		int index;
-		quadtree::Node *node;
-
-		bool operator==(const NodeIndex &n) const
-		{
-			return n.node == node && n.index == index;
-		}
-	};
-
-	friend class Map;
-
-private:
-	const bool isEnd() const
-	{
-		return localI == -1 && localZ == -1 && stack.empty() && currentTile == nullptr;
-	}
-	std::vector<NodeIndex> stack;
-	int localI;
-	int localZ;
-	TileLocation *currentTile = nullptr;
-};
+#include <stack>
 
 class Map
 {
+private:
+	class Iterator
+	{
+	public:
+		Iterator();
+		~Iterator();
+
+		Iterator begin() const
+		{
+			return *this;
+		}
+
+		Iterator *nextFromLeaf();
+
+		Iterator end()
+		{
+			Iterator iterator;
+			return iterator;
+		}
+
+		// Mark the iterator as finished
+		void finish();
+
+		void push(quadtree::Node &node)
+		{
+			stack.push({node});
+		}
+
+		TileLocation *operator*();
+		TileLocation *operator->();
+		Iterator &operator++();
+
+		bool operator==(const Iterator &other) const
+		{
+			return other.floorIndex == floorIndex &&
+						 other.tileIndex == tileIndex &&
+						 other.value == value;
+		}
+
+		bool operator!=(const Iterator &other) const
+		{
+			return !(other == *this);
+		}
+
+		struct NodeIndex
+		{
+			uint32_t cursor = 0;
+			quadtree::Node &node;
+
+			bool operator==(const NodeIndex &other)
+			{
+				return other.cursor == cursor && &other.node == &node;
+			}
+			bool operator==(NodeIndex &other)
+			{
+				return other.cursor == cursor && &other.node == &node;
+			}
+
+			NodeIndex(quadtree::Node &node) : cursor(0), node(node) {}
+		};
+
+		friend class Map;
+
+	private:
+		const bool isEnd() const
+		{
+			return value == nullptr;
+		}
+
+		std::stack<NodeIndex> stack;
+		uint32_t tileIndex = 0;
+		uint32_t floorIndex = 0;
+		TileLocation *value = nullptr;
+	};
+
 public:
 	Map();
 
-	MapIterator begin();
-	MapIterator end();
+	void printTiles();
+
+	Iterator begin();
+	Iterator end();
 
 	Tile &getOrCreateTile(int x, int y, int z);
 	Tile &getOrCreateTile(Position &pos);

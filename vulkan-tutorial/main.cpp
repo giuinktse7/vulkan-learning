@@ -86,19 +86,19 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
 	if (key == GLFW_KEY_RIGHT)
 	{
-		delta.x = -step;
+		delta.x = +step;
 	}
 	else if (key == GLFW_KEY_LEFT)
 	{
-		delta.x = step;
+		delta.x = -step;
 	}
 	else if (key == GLFW_KEY_UP)
 	{
-		delta.y = step;
+		delta.y = -step;
 	}
 	else if (key == GLFW_KEY_DOWN)
 	{
-		delta.y = -step;
+		delta.y = step;
 	}
 
 	g_engine->translateCamera(delta);
@@ -187,34 +187,23 @@ private:
 void populateTestMap()
 {
 	auto &map = *g_engine->getMapRenderer()->map;
-	Tile &tile1 = map.getOrCreateTile(2, 1, 7);
-	Tile &tile2 = map.getOrCreateTile(1, 1, 7);
-	Tile &tile3 = map.getOrCreateTile(3, 1, 7);
-	Tile &tile4 = map.getOrCreateTile(4, 1, 7);
+	// Tile &tile1 = map.getOrCreateTile(17, 1, 7);
+	// Tile &tile2 = map.getOrCreateTile(1, 1, 7);
+	// Tile &tile3 = map.getOrCreateTile(3, 1, 7);
+	// Tile &tile4 = map.getOrCreateTile(4, 1, 7);
 	// Tile &tile4 = map.createTile(4, 4, 7);
 
 	// // auto shovel = Item::create(2554);
 	auto shovel = Item::create(2554);
 	auto tree = Item::create(2706);
 	auto grass = Item::create(103);
-	auto waterBorder = Item::create(6643);
-	auto border = Item::create(6565);
-	auto border2 = Item::create(6565);
-	auto border3 = Item::create(6565);
 
-	tile4.addItem(std::move(tree));
+	// tile1.addItem(std::move(shovel));
 
-	tile3.addItem(std::move(Item::create(104)));
-	tile3.addItem(std::move(Item::create(2155)));
-	tile4.addItem(std::move(Item::create(2155)));
-
-	// tile1.addItem(std::move(Item::create(103)));
-	tile1.addItem(std::move(shovel));
-	tile1.addItem(std::move(Item::create(103)));
-	tile2.addItem(std::move(border2));
-
-	tile3.addItem(std::move(grass));
-	tile3.addItem(std::move(border3));
+	for (const auto &tile : map.begin())
+	{
+		std::cout << tile->getPosition() << std::endl;
+	}
 }
 
 class X
@@ -252,7 +241,7 @@ int main()
 		mapRenderer = new MapRenderer(std::make_unique<Map>());
 		g_engine->setMapRenderer(mapRenderer);
 
-		populateTestMap();
+		// populateTestMap();
 
 		// return 0;
 

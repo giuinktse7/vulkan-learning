@@ -22,3 +22,8 @@ Tile *TileLocation::getTile() const
 {
   return tile ? tile.get() : nullptr;
 }
+
+const bool TileLocation::hasTile() const
+{
+  return getTile() != nullptr;
+}
