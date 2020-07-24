@@ -469,14 +469,14 @@ void Engine::recreateSwapChain()
   setFrameIndex(0);
 }
 
-const int Engine::gameToWorldPos(int gamePosition) const
+const uint32_t Engine::gameToWorldPos(uint32_t gamePosition) const
 {
   return gamePosition * TILE_SIZE;
 }
 
-const int Engine::worldToGamePos(float worldPos) const
+const uint32_t Engine::worldToGamePos(float worldPos) const
 {
-  return static_cast<int>(worldPos / TILE_SIZE);
+  return worldPos / TILE_SIZE;
 }
 
 const Position Engine::screenToGamePos(glm::vec2 pos) const
@@ -488,8 +488,8 @@ const Position Engine::screenToGamePos(float screenX, float screenY) const
 {
   auto camera = mapRenderer->camera;
 
-  int x = worldToGamePos(-camera.position.x + screenX / camera.zoomFactor);
-  int y = worldToGamePos(-camera.position.y + screenY / camera.zoomFactor);
+  uint32_t x = worldToGamePos(camera.position.x + screenX / camera.zoomFactor);
+  uint32_t y = worldToGamePos(camera.position.y + screenY / camera.zoomFactor);
 
   return {x, y, 7};
 }

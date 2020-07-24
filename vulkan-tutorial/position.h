@@ -22,7 +22,7 @@ enum Direction : uint8_t
 
 struct Position
 {
-	int x, y, z;
+	uint32_t x, y, z;
 };
 
 inline bool operator==(const Position &pos1, const Position &pos2)

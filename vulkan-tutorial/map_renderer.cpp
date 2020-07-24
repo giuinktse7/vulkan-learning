@@ -396,6 +396,7 @@ void MapRenderer::recordFrame(uint32_t currentFrame)
 
 void MapRenderer::drawMap()
 {
+  uint32_t i = 0;
   for (const auto &tileLocation : map->begin())
   {
     auto position = tileLocation->getPosition();
@@ -418,7 +419,7 @@ void MapRenderer::updateUniformBuffer()
   float zoom = 1 / camera.zoomFactor;
   auto translated = glm::translate(
       glm::mat4(1),
-      glm::vec3(std::floor(camera.position.x), std::floor(camera.position.y), 0.0f));
+      glm::vec3(std::floor(-camera.position.x), std::floor(-camera.position.y), 0.0f));
   uniformBufferObject.projection = glm::ortho(0.0f, width * zoom, height * zoom, 0.0f) * translated;
 
   void *data;

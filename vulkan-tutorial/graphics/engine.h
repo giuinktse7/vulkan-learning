@@ -137,8 +137,8 @@ public:
 		currentCommandBuffer = nullptr;
 	}
 
-	const int gameToWorldPos(int gamePos) const;
-	const int worldToGamePos(float worldPos) const;
+	const uint32_t gameToWorldPos(uint32_t gamePos) const;
+	const uint32_t worldToGamePos(float worldPos) const;
 	const Position screenToGamePos(float screenX, float screenY) const;
 	const Position screenToGamePos(glm::vec2 pos) const;
 
