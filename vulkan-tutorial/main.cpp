@@ -82,11 +82,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = static_cast<float>(Engine::TILE_SIZE) * 11 / (g_engine->getCameraZoomStep() + 1);
+	float step = Engine::TILE_SIZE / std::pow(g_engine->getMapRenderer()->camera.zoomFactor);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
-		delta.x = +step;
+		delta.x = step;
 	}
 	else if (key == GLFW_KEY_LEFT)
 	{
@@ -187,7 +187,7 @@ private:
 void populateTestMap()
 {
 	auto &map = *g_engine->getMapRenderer()->map;
-	// Tile &tile1 = map.getOrCreateTile(17, 1, 7);
+	Tile &tile1 = map.getOrCreateTile(17, 1, 7);
 	// Tile &tile2 = map.getOrCreateTile(1, 1, 7);
 	// Tile &tile3 = map.getOrCreateTile(3, 1, 7);
 	// Tile &tile4 = map.getOrCreateTile(4, 1, 7);
@@ -198,7 +198,7 @@ void populateTestMap()
 	auto tree = Item::create(2706);
 	auto grass = Item::create(103);
 
-	// tile1.addItem(std::move(shovel));
+	tile1.addItem(std::move(shovel));
 
 	for (const auto &tile : map.begin())
 	{

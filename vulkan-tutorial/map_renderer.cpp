@@ -282,6 +282,9 @@ void MapRenderer::drawBatches()
 
   for (auto &batch : frame->batchDraw.batches)
   {
+    // std::cout << "\n\n" << std::endl;
+    // std::cout << "Batch size: " << std::to_string(batch.vertexCount) << std::endl;
+
     buffers[0] = batch.buffer.buffer;
     vkCmdBindVertexBuffers(frame->commandBuffer, 0, 1, buffers, offsets);
 
@@ -396,9 +399,11 @@ void MapRenderer::recordFrame(uint32_t currentFrame)
 
 void MapRenderer::drawMap()
 {
+  // std::cout << "drawMap()" << std::endl;
   uint32_t i = 0;
   for (const auto &tileLocation : map->begin())
   {
+    // std::cout << tileLocation->getPosition() << std::endl;
     auto position = tileLocation->getPosition();
     auto tile = tileLocation->getTile();
 

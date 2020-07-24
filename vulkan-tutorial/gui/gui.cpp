@@ -129,8 +129,8 @@ void GUI::recordFrame(uint32_t currentFrame)
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 
-  bool open = true;
-  ImGui::ShowDemoWindow(&open);
+  // bool open = true;
+  // ImGui::ShowDemoWindow(&open);
 
   // ImGui::Begin("My First Tool", &testOpen, ImGuiWindowFlags_MenuBar);
   // if (ImGui::BeginMenuBar())
