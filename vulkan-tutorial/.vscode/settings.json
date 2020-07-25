@@ -89,5 +89,14 @@
     "stack": "cpp",
     "valarray": "cpp",
     "*.inc": "cpp"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Debug": true,
+    "**/Release": true
   }
 }
