@@ -13,7 +13,8 @@
 #include "../item.h"
 #include "../position.h"
 
-constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
+constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 128 * sizeof(Vertex);
+// constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
 
 struct Batch
 {
@@ -27,6 +28,28 @@ struct Batch
 	~Batch();
 	BoundBuffer buffer;
 	BoundBuffer stagingBuffer;
+
+	Batch(Batch &&other)
+	{
+		this->valid = other.valid;
+		this->isCopiedToDevice = other.isCopiedToDevice;
+		this->buffer = other.buffer;
+		this->stagingBuffer = other.stagingBuffer;
+		this->descriptorIndices = other.descriptorIndices;
+		this->descriptorSet = other.descriptorSet;
+		this->vertexCount = other.vertexCount;
+		this->vertices = other.vertices;
+		this->current = other.current;
+
+		other.vertexCount = 0;
+		other.stagingBuffer.buffer = nullptr;
+		other.stagingBuffer.deviceMemory = nullptr;
+		other.buffer.buffer = nullptr;
+		other.buffer.deviceMemory = nullptr;
+		other.descriptorSet = nullptr;
+		other.vertices = nullptr;
+		other.current = nullptr;
+	}
 
 	Vertex *vertices = nullptr;
 	Vertex *current = nullptr;
@@ -49,6 +72,11 @@ struct Batch
 
 	void mapStagingBuffer();
 	void unmapStagingBuffer();
+
+	const bool isValid() const
+	{
+		return this->valid;
+	}
 
 	void copyStagingToDevice(VkCommandBuffer commandBuffer);
 

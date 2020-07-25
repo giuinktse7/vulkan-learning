@@ -1,6 +1,7 @@
 #include "batch_item_draw.h"
 
 #include "engine.h"
+#include <ios>
 
 constexpr glm::vec4 DEFAULT_COLOR{1.0f, 1.0f, 1.0f, 1.0f};
 
@@ -11,8 +12,12 @@ BatchDraw::BatchDraw()
 
 Batch::~Batch()
 {
-  vkDestroyBuffer(g_engine->getDevice(), stagingBuffer.buffer, nullptr);
-  vkFreeMemory(g_engine->getDevice(), stagingBuffer.deviceMemory, nullptr);
+  if (stagingBuffer.buffer != VK_NULL_HANDLE)
+  {
+    DEBUG_ASSERT(stagingBuffer.deviceMemory != VK_NULL_HANDLE, "Non-null buffer with null deviceMemory. This should not happen.");
+    vkDestroyBuffer(g_engine->getDevice(), stagingBuffer.buffer, nullptr);
+    vkFreeMemory(g_engine->getDevice(), stagingBuffer.deviceMemory, nullptr);
+  }
 }
 
 Batch::Batch()
@@ -22,6 +27,8 @@ Batch::Batch()
       BATCH_DEVICE_SIZE,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  // std::cout << "Creating buffer at 0x" << std::hex << this->stagingBuffer.deviceMemory << std::endl;
 
   this->buffer = Buffer::create(
       BATCH_DEVICE_SIZE,
@@ -130,6 +137,7 @@ Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
   }
 
   Batch &batch = batches.at(batchIndex);
+  size_t amount = batches.size();
 
   if (!batch.valid)
   {
@@ -148,9 +156,15 @@ Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
       batches.emplace_back();
   }
 
-  batch = batches.at(batchIndex);
+  Batch &resultBatch = batches.at(batchIndex);
 
-  return batch;
+  if (!resultBatch.valid)
+  {
+    resultBatch.reset();
+    resultBatch.mapStagingBuffer();
+  }
+
+  return resultBatch;
 }
 
 void BatchDraw::reset()
@@ -177,6 +191,7 @@ void Batch::setDescriptor(VkDescriptorSet descriptor)
 
 void BatchDraw::prepareDraw()
 {
+  // std::cout << "prepareDraw() batches: " << batchIndex << std::endl;
   Batch &latestBatch = getBatch();
   if (latestBatch.descriptorIndices.empty() || latestBatch.descriptorIndices.back().descriptor != latestBatch.descriptorSet)
   {
@@ -188,4 +203,6 @@ void BatchDraw::prepareDraw()
     latestBatch.copyStagingToDevice(commandBuffer);
     latestBatch.unmapStagingBuffer();
   }
+
+  this->batchIndex = 0;
 }

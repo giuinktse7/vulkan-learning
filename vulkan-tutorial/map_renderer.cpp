@@ -282,6 +282,8 @@ void MapRenderer::drawBatches()
 
   for (auto &batch : frame->batchDraw.batches)
   {
+    if (!batch.isValid())
+      break;
     // std::cout << "\n\n" << std::endl;
     // std::cout << "Batch size: " << std::to_string(batch.vertexCount) << std::endl;
 
@@ -374,7 +376,7 @@ void MapRenderer::recordFrame(uint32_t currentFrame)
     startCommandBuffer();
   }
 
-  vkResetCommandBuffer(frame->commandBuffer, 0);
+  vkResetCommandBuffer(frame->commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -390,8 +392,6 @@ void MapRenderer::recordFrame(uint32_t currentFrame)
   vkCmdBindPipeline(frame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
   updateUniformBuffer();
-
-  frame->batchDraw.reset();
 
   drawMap();
   frame->batchDraw.prepareDraw();

@@ -97,7 +97,7 @@ Map::Iterator Map::begin()
       return next ? *next : end();
     }
 
-    uint32_t size = current.node->nodes.size();
+    uint32_t size = static_cast<uint32_t>(current.node->nodes.size());
     for (uint32_t i = current.cursor; i < size; ++i)
     {
       if (auto &child = current.node->nodes[i])
