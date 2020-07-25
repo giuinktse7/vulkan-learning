@@ -476,7 +476,7 @@ const uint32_t Engine::gameToWorldPos(uint32_t gamePosition) const
 
 const uint32_t Engine::worldToGamePos(float worldPos) const
 {
-  return worldPos / TILE_SIZE;
+  return static_cast<uint32_t>(std::floor(worldPos / TILE_SIZE));
 }
 
 const Position Engine::screenToGamePos(glm::vec2 pos) const
