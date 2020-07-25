@@ -82,7 +82,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	}
 
 	glm::vec2 delta(0.0f, 0.0f);
-	float step = Engine::TILE_SIZE / std::pow(g_engine->getMapRenderer()->camera.zoomFactor);
+	float step = Engine::TILE_SIZE / std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 2);
 
 	if (key == GLFW_KEY_RIGHT)
 	{
