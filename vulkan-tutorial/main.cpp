@@ -231,7 +231,6 @@ int main()
 		engine::create();
 
 		Appearances::loadFromFile("data/appearances.dat");
-		std::cout << "Loaded appearances.dat." << std::endl;
 		Appearances::loadCatalog("data/catalog-content.json");
 		std::cout << "Loaded catalog-content.json." << std::endl;
 

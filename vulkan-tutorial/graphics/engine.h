@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include <imgui_impl_vulkan.h>
+#include "../gui/imgui_impl_vulkan.h"
 
 #include <unordered_set>
 #include <mutex>
@@ -175,8 +175,6 @@ public:
 
 	uint32_t getMaxFramesInFlight();
 
-	std::shared_ptr<Texture> CreateTexture(const std::string &filename);
-
 	void endFrame();
 
 	bool isValidWindowSize();
@@ -330,8 +328,6 @@ private:
 
 	VkDescriptorSetLayout perTextureDescriptorSetLayout;
 	VkDescriptorSetLayout perFrameDescriptorSetLayout;
-
-	int currentBufferIndex = 0;
 
 	VkCommandBuffer currentCommandBuffer;
 

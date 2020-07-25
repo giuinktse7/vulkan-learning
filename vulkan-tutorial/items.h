@@ -172,6 +172,19 @@ public:
   ItemType() {}
   ~ItemType();
 
+  bool hasSprites()
+  {
+    return this->clientId != 0;
+  }
+
+  uint32_t textureAtlasOffset()
+  {
+    uint32_t spriteId = this->appearance->frame_group().at(0).sprite_info().sprite_id(0);
+    return spriteId - getTextureAtlas()->firstSpriteId;
+  }
+
+  TextureAtlas *getTextureAtlas();
+
   bool isGroundTile() const
   {
     return group == ITEM_GROUP_GROUND;

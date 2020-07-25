@@ -8,6 +8,7 @@
 #include "util.h"
 
 #include "graphics/appearances.h"
+#include "graphics/engine.h"
 
 using tl::unexpected;
 
@@ -548,7 +549,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		// store the found item
 		if (serverId >= itemTypes.size())
 		{
-			itemTypes.resize(serverId + 1);
+			itemTypes.resize(static_cast<size_t>(serverId) + 1);
 		}
 		ItemType &iType = itemTypes[serverId];
 
@@ -610,10 +611,10 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		iType.wareId = wareId;
 		iType.alwaysOnTopOrder = alwaysOnTopOrder;
 
-		if (Appearances::contains(clientId))
+		if (Appearances::hasObject(clientId))
 		{
-			iType.name = Appearances::getById(clientId).name();
-			iType.appearance = &Appearances::getById(clientId);
+			iType.name = Appearances::getObjectById(clientId).name();
+			iType.appearance = &Appearances::getObjectById(clientId);
 		}
 	}
 
@@ -622,4 +623,14 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 	Items::items = Items(itemTypes, clientIdToServerIdMap, versionInfo);
 
 	return {};
+}
+
+TextureAtlas *ItemType::getTextureAtlas()
+{
+	if (this->textureAtlas == nullptr)
+	{
+		this->textureAtlas = g_engine->getMapRenderer()->getTextureAtlas(*this);
+	}
+
+	return this->textureAtlas;
 }

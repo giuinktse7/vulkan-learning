@@ -79,7 +79,7 @@ Floor &Node::getOrCreateFloor(int x, int y, int z)
 
 Floor::Floor(int x, int y, int z)
 {
-  cout << "Floor()" << endl;
+  // cout << "Floor()" << endl;
   // Since the map is chunked into 4x4, the first two bytes do not matter here
   // for x and y
   x &= ~3;
@@ -101,7 +101,7 @@ Floor::Floor(int x, int y, int z)
 
 Floor::~Floor()
 {
-  cout << "~Floor()" << endl;
+  // cout << "~Floor()" << endl;
 }
 
 Floor *Node::getFloor(uint32_t z) const

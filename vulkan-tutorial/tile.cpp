@@ -5,12 +5,12 @@ using namespace std;
 Tile::Tile(TileLocation &tileLocation)
     : tileLocation(tileLocation)
 {
-  cout << "Tile()" << endl;
+  // cout << "Tile()" << endl;
 }
 
 Tile::~Tile()
 {
-  cout << "~Tile()" << endl;
+  // cout << "~Tile()" << endl;
 }
 
 Item *Tile::getGround() const

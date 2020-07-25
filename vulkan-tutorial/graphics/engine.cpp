@@ -13,7 +13,7 @@
 #include "../file.h"
 #include "vertex.h"
 
-#include <imgui_impl_glfw.h>
+#include "../gui/imgui_impl_glfw.h"
 
 constexpr uint32_t TILE_SIZE = 32;
 
@@ -444,11 +444,6 @@ VkShaderModule Engine::createShaderModule(const std::vector<uint8_t> &code)
   }
 
   return shaderModule;
-}
-
-std::shared_ptr<Texture> Engine::CreateTexture(const std::string &filename)
-{
-  return std::make_shared<Texture>(filename);
 }
 
 void Engine::setFrameIndex(uint32_t index)
