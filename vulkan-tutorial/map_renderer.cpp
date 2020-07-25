@@ -472,7 +472,7 @@ void MapRenderer::endFrame()
   }
 }
 
-TextureAtlas &MapRenderer::getTextureAtlas(const uint32_t spriteId)
+TextureAtlas *MapRenderer::getTextureAtlas(const uint32_t spriteId)
 {
   std::cout << spriteId << std::endl;
   auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
@@ -484,26 +484,24 @@ TextureAtlas &MapRenderer::getTextureAtlas(const uint32_t spriteId)
 
   uint32_t lastSpriteId = *found;
 
-  return *textureAtlases.at(lastSpriteId);
+  return textureAtlases.at(lastSpriteId).get();
 }
 
-TextureAtlas &MapRenderer::getTextureAtlas(ItemType &itemType)
+TextureAtlas *MapRenderer::getTextureAtlas(ItemType &itemType)
 {
   if (itemType.textureAtlas == nullptr)
   {
-    auto appearance = Appearances::getById(itemType.clientId);
+    auto appearance = Appearances::getObjectById(itemType.clientId);
     auto fg = appearance.frame_group().at(0);
     auto firstSpriteId = fg.sprite_info().sprite_id().at(0);
-    itemType.textureAtlas = &getTextureAtlas(firstSpriteId);
+    itemType.textureAtlas = getTextureAtlas(firstSpriteId);
   }
 
-  return *itemType.textureAtlas;
+  return itemType.textureAtlas;
 }
 
 void MapRenderer::drawItem(Item &item, Position position)
 {
-  auto &atlas = getTextureAtlas(*item.itemType);
-
   frame->batchDraw.push(item, position);
 }
 

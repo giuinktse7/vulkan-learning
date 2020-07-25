@@ -113,8 +113,7 @@ public:
 
 	void drawItem(Item &item, Position position);
 
-	TextureAtlas &getTextureAtlas(const uint32_t spriteId);
-	TextureAtlas &getTextureAtlas(ItemType &itemType);
+	TextureAtlas *getTextureAtlas(ItemType &itemType);
 
 private:
 	std::array<FrameData, 3> frames;
@@ -144,23 +143,7 @@ private:
 	*/
 	std::set<uint32_t> textureAtlasIds;
 
-	struct DrawCommand
-	{
-		DrawCommand(VkDescriptorSet descriptorSet, uint16_t baseIndex, uint16_t indexCount, int bufferIndex)
-				: descriptorSet(descriptorSet),
-					baseIndex(baseIndex),
-					numIndices(indexCount),
-					bufferIndex(bufferIndex)
-		{
-		}
-		VkDescriptorSet descriptorSet;
-		uint16_t baseIndex;
-		uint16_t numIndices;
-		int bufferIndex;
-	};
-
-	std::vector<DrawCommand> drawCommands;
-	int currentBufferIndex = 0;
+	TextureAtlas *getTextureAtlas(const uint32_t spriteId);
 
 	void createGraphicsPipeline();
 	void createCommandPool();
