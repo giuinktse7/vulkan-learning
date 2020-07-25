@@ -39,19 +39,15 @@ class Appearances
 public:
   static void loadFromFile(const std::filesystem::path path);
   static void loadCatalog(const std::filesystem::path path);
-  static void loadTextureAtlases();
 
-  //static std::vector<std::vector<uint8_t>> getSprites(uint16_t serverId);
-  //static std::vector<std::vector<uint8_t>> getSprites(Item &item);
-
-  static bool contains(AppearanceId id)
+  static bool hasObject(AppearanceId id)
   {
-    return appearances.find(id) != appearances.end();
+    return objects.find(id) != objects.end();
   }
 
-  static tibia::protobuf::appearances::Appearance &getById(AppearanceId id)
+  static tibia::protobuf::appearances::Appearance &getObjectById(AppearanceId id)
   {
-    return appearances.at(id);
+    return objects.at(id);
   }
 
   static CatalogInfo getCatalogInfo(uint32_t spriteId);
@@ -64,7 +60,8 @@ public:
 private:
   static void addSpriteSheetInfo(CatalogInfo &info);
 
-  static std::unordered_map<AppearanceId, tibia::protobuf::appearances::Appearance> appearances;
+  static std::unordered_map<AppearanceId, tibia::protobuf::appearances::Appearance> objects;
+  static std::unordered_map<AppearanceId, tibia::protobuf::appearances::Appearance> outfits;
 
   // Catalog content stuff
 

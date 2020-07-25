@@ -11,10 +11,13 @@
 #include "../items.h"
 #include "engine.h"
 
+#include <set>
+
 using namespace std;
 using namespace tibia::protobuf;
 
-std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::appearances;
+std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::objects;
+std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::outfits;
 
 std::set<uint32_t> Appearances::catalogIndex;
 std::unordered_map<uint32_t, CatalogInfo> Appearances::catalogInfo;
@@ -23,6 +26,8 @@ bool Appearances::isLoaded;
 
 void Appearances::loadFromFile(const std::filesystem::path path)
 {
+    auto start = std::chrono::high_resolution_clock::now();
+
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     appearances::Appearances parsed;
@@ -42,10 +47,20 @@ void Appearances::loadFromFile(const std::filesystem::path path)
     for (int i = 0; i < parsed.object_size(); ++i)
     {
         const appearances::Appearance &object = parsed.object(i);
-        Appearances::appearances[object.id()] = object;
+        Appearances::objects[object.id()] = object;
+    }
+
+    for (int i = 0; i < parsed.outfit_size(); ++i)
+    {
+        const appearances::Appearance &outfit = parsed.outfit(i);
+        Appearances::outfits[outfit.id()] = outfit;
     }
 
     Appearances::isLoaded = true;
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+    std::cout << "Loaded appearances.dat in " << duration << " milliseconds." << std::endl;
 }
 
 void Appearances::addSpriteSheetInfo(CatalogInfo &info)
@@ -82,6 +97,8 @@ void Appearances::loadCatalog(const std::filesystem::path path)
 
     std::filesystem::path basepath("C:/Users/giuin/AppData/Local/Tibia11/packages/Tibia/assets");
 
+    std::set<std::string> types;
+
     for (const auto &x : *json)
     {
         if (x.at("type") == "sprite")
@@ -97,5 +114,16 @@ void Appearances::loadCatalog(const std::filesystem::path path)
             info.lastSpriteId = x.at("lastspriteid");
             addSpriteSheetInfo(info);
         }
+        else
+        {
+            std::string s = x.at("type");
+            types.insert(s);
+        }
+    }
+
+    std::cout << "Types: " << std::endl;
+    for (const auto &t : types)
+    {
+        std::cout << t << std::endl;
     }
 }
