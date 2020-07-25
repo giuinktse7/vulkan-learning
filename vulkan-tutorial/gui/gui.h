@@ -12,6 +12,8 @@ public:
 	void updateCommandPool(uint32_t currentFrame);
 	void captureIO();
 
+	void renderItem(uint32_t serverId);
+
 	/* Data */
 	uint32_t selectedServerId = 100;
 	/* End data */
