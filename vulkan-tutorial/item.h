@@ -5,6 +5,8 @@
 #include "graphics/appearances.h"
 #include <glm/glm.hpp>
 
+#include "item_attribute.h"
+
 #include "items.h"
 #include "graphics/texture_atlas.h"
 
@@ -63,6 +65,18 @@ public:
 
 	const bool isGround() const;
 
+	uint16_t getSubtype() const;
+
+	bool hasAttributes() const
+	{
+		return !attributes.isEmpty();
+	}
+
+	ItemAttributes &getAttributes()
+	{
+		return attributes;
+	}
+
 	const inline int getTopOrder() const
 	{
 		return itemType->alwaysOnTopOrder;
@@ -71,6 +85,7 @@ public:
 	ItemType *itemType;
 
 private:
+	ItemAttributes attributes;
 	// Subtype is either fluid type, count, subtype, or charges.
 	uint16_t subtype = 1;
 

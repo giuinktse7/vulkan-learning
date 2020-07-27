@@ -11,60 +11,44 @@
 #include "../graphics/engine.h"
 #include "../graphics/vulkan_helpers.h"
 
+#include "../graphics/texture.h"
+
 #include "../item.h"
 
-// ImTextureID GUI::ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout)
-// {
-//   VkResult err;
+#include <stack>
 
-//   ImGui_ImplVulkan_InitInfo *v = desc;
-//   VkDescriptorSet descriptor_set;
-//   // Create Descriptor Set:
-//   {
-//     VkDescriptorSetAllocateInfo alloc_info = {};
-//     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-//     alloc_info.descriptorPool = v->DescriptorPool;
-//     alloc_info.descriptorSetCount = 1;
-//     alloc_info.pSetLayouts = &g_DescriptorSetLayout;
-//     err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
-//     check_vk_result(err);
-//   }
+// #include <imgui_internal.h>
 
-//   // Update the Descriptor Set:
-//   {
-//     VkDescriptorImageInfo desc_image[1] = {};
-//     desc_image[0].sampler = sampler;
-//     desc_image[0].imageView = image_view;
-//     desc_image[0].imageLayout = image_layout;
-//     VkWriteDescriptorSet write_desc[1] = {};
-//     write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//     write_desc[0].dstSet = descriptor_set;
-//     write_desc[0].descriptorCount = 1;
-//     write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//     write_desc[0].pImageInfo = desc_image;
-//     vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, NULL);
-//   }
+#include <algorithm>
 
-//   return (ImTextureID)descriptor_set;
-// }
-
-void GUI::renderItem(uint32_t serverId)
+void GUI::renderItem(ItemType *itemType)
 {
-  auto &itemType = Items::items.getItemType(serverId);
-  if (!itemType.hasSprites()) {
-      return;
+  if (itemType == nullptr || !itemType->isValid())
+  {
+    ImGui::Image(
+        (ImTextureID)Texture::getBlackTexture()->getDescriptorSet(),
+        {static_cast<float>(32), static_cast<float>(32)});
   }
+  else
+  {
 
-  auto atlas = itemType.getTextureAtlas();
-  auto window = atlas->getTextureWindow(itemType.textureAtlasOffset());
+    auto atlas = itemType->getTextureAtlas();
+    auto window = atlas->getTextureWindow(itemType->textureAtlasOffset());
 
-  ImTextureID texture = (ImTextureID)atlas->getDescriptorSet();
+    ImTextureID texture = (ImTextureID)atlas->getDescriptorSet();
 
-  ImGui::Image(
-      texture,
-      {static_cast<float>(atlas->spriteWidth), static_cast<float>(atlas->spriteHeight)},
-      {window.x0, window.y0},
-      {window.x1, window.y1});
+    ImGui::PushID((int)itemType->id);
+    if (ImGui::ImageButton(
+            texture,
+            {static_cast<float>(32), static_cast<float>(32)},
+            {window.x0, window.y0},
+            {window.x1, window.y1},
+            0))
+    {
+      this->brushServerId = itemType->id;
+    }
+    ImGui::PopID();
+  }
 }
 
 void GUI::initialize()
@@ -142,7 +126,7 @@ void GUI::createTopMenuBar()
   windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
   windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5.0f, 5.0f));
   ImGui::SetNextWindowSizeConstraints({-1, menuHeight}, {-1, menuHeight});
   ImGui::Begin("Top menu bar", nullptr, windowFlags);
   ImGui::PopStyleVar(3);
@@ -165,17 +149,95 @@ void GUI::createTopMenuBar()
     }
 
     HelpMarker("Map editor. Repository: https://github.com/giuinktse7/vulkan-learning");
-    int selectedId = static_cast<int>(this->selectedServerId);
-    if (ImGui::InputInt("serverIdInput", &selectedId, 1, 20) && selectedId >= 100)
+    if (ImGui::InputInt("serverIdInput", (int *)&selectedServerId, 1, 20))
     {
-      this->selectedServerId = static_cast<uint32_t>(std::max(100, selectedId));
+      if (selectedServerId < 100)
+        selectedServerId = 100;
+      // uint16_t currentId = static_cast<uint16_t>(std::max((uint32_t)100, this->selectedServerId));
+      // if (!Items::items.getItemType(selectedServerId)->isValid())
+      // {
+      //   if (this->selectedServerId <= prevId)
+      //   {
+      //     ItemType *prevType = Items::items.getPreviousValidItemType(currentId);
+
+      //     this->prevId = this->selectedServerId;
+      //     this->selectedServerId = prevType == nullptr ? 100 : prevType->id;
+      //   }
+      //   else
+      //   {
+      //     this->prevId = this->selectedServerId;
+      //     this->selectedServerId = Items::items.getNextValidItemType(currentId)->id;
+      //   }
+      // }
+    }
+    else
+    {
+      // if (selectedServerId >= 100)
+      // {
+      //   // std::cout << selectedServerId << std::endl;
+      //   if (selectedServerId > prevId)
+      //   {
+      //     this->prevId = this->selectedServerId;
+      //     this->selectedServerId = Items::items.getNextValidItemType(selectedServerId)->id;
+      //   }
+
+      //   prevId = selectedServerId;
+      // }
     }
 
     ImGui::EndMenuBar();
 
-    renderItem(this->selectedServerId);
+    renderN(4);
   }
   ImGui::End();
+}
+
+void GUI::renderN(uint32_t n)
+{
+  for (uint32_t i = 0; i < n; ++i)
+  {
+    renderItem(Items::items.getItemType(this->selectedServerId - n + i));
+    ImGui::SameLine();
+  }
+
+  for (uint32_t i = 0; i <= n; ++i)
+  {
+    renderItem(Items::items.getItemType(this->selectedServerId + i));
+    if (i < n)
+    {
+      ImGui::SameLine();
+    }
+  }
+
+  // std::stack<ItemType *> toBeRendered;
+  // ItemType *item = Items::items.getNextValidItemType(this->selectedServerId);
+  // for (uint32_t i = 0; i < n; ++i)
+  // {
+  //   item = item == nullptr ? nullptr : Items::items.getPreviousValidItemType(item->id - 1);
+  //   toBeRendered.push(item);
+  // }
+
+  // while (!toBeRendered.empty())
+  // {
+  //   renderItem(toBeRendered.top());
+  //   ImGui::SameLine();
+
+  //   toBeRendered.pop();
+  // }
+
+  // item = Items::items.getNextValidItemType(this->selectedServerId);
+  // renderItem(item);
+  // ImGui::SameLine();
+
+  // for (uint32_t i = 0; i < n; ++i)
+  // {
+  //   item = item == nullptr ? nullptr : Items::items.getNextValidItemType(item->id + 1);
+  //   renderItem(item);
+  //   if (i < n)
+  //   {
+  //     ImGui::SameLine();
+  //   }
+  // }
 }
 
 constexpr uint32_t DEFAULT_PADDING = 4.0f;

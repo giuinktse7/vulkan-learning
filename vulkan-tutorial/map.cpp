@@ -192,3 +192,13 @@ TileLocation *Map::Iterator::operator->()
 {
   return value;
 }
+
+MapVersion Map::getMapVersion()
+{
+  return mapVersion;
+}
+
+std::string &Map::getDescription()
+{
+  return description;
+}

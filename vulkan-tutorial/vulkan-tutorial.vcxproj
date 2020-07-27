@@ -186,6 +186,7 @@
     <ClCompile Include="items.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="map.cpp" />
+    <ClCompile Include="map_io.cpp" />
     <ClCompile Include="map_renderer.cpp" />
     <ClCompile Include="graphics\swapchain.cpp" />
     <ClCompile Include="graphics\texture.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="items.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="map.h" />
+    <ClInclude Include="map_io.h" />
     <ClInclude Include="map_renderer.h" />
     <ClInclude Include="graphics\swapchain.h" />
     <ClInclude Include="graphics\texture.h" />

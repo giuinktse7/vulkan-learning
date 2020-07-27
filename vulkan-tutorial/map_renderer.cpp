@@ -474,7 +474,6 @@ void MapRenderer::endFrame()
 
 TextureAtlas *MapRenderer::getTextureAtlas(const uint32_t spriteId)
 {
-  std::cout << spriteId << std::endl;
   auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
   if (found == textureAtlasIds.end())
   {

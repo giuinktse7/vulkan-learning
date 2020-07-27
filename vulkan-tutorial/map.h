@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_map>
 #include <iostream>
+#include <string>
 
 #include "debug.h"
 
@@ -12,11 +13,15 @@
 #include "quad_tree.h"
 #include "position.h"
 
+#include "town.h"
+
+#include "version.h"
+
 #include <stack>
 
 class Map
 {
-private:
+public:
 	class Iterator
 	{
 	public:
@@ -88,7 +93,6 @@ private:
 		TileLocation *value = nullptr;
 	};
 
-public:
 	Map();
 
 	Iterator begin();
@@ -98,6 +102,23 @@ public:
 	Tile &getOrCreateTile(Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
 
+	MapVersion getMapVersion();
+	std::string &getDescription();
+
+	uint16_t getWidth();
+	uint16_t getHeight();
+
+	Towns &getTowns()
+	{
+		return towns;
+	}
+
 private:
+	Towns towns;
+	MapVersion mapVersion;
+	std::string description;
+
+	uint16_t width, height;
+
 	quadtree::Node root;
 };

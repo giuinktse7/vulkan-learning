@@ -4,7 +4,7 @@
 Item::Item(ItemTypeId itemTypeId)
 		: subtype(1)
 {
-	this->itemType = &Items::items.getItemType(itemTypeId);
+	this->itemType = Items::items.getItemType(itemTypeId);
 }
 Item::~Item()
 {
@@ -31,4 +31,14 @@ const glm::vec2 Item::getTextureAtlasSize() const
 const bool Item::isGround() const
 {
 	return itemType->isGroundTile();
+}
+
+uint16_t Item::getSubtype() const
+{
+	if (itemType->hasSubType())
+	{
+		return subtype;
+	}
+
+	return 0;
 }

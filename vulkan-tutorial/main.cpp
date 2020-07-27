@@ -19,6 +19,8 @@
 #include <array>
 #include <cassert>
 
+#include "map_io.h"
+
 #include "quad_tree.h"
 #include "tile_location.h"
 
@@ -147,6 +149,11 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 	{
+		auto &map = *g_engine->getMapRenderer()->map;
+		auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
+
+		auto item = Item::create(g_engine->getSelectedServerId());
+		map.getOrCreateTile(pos).addItem(std::move(item));
 	}
 }
 
@@ -167,22 +174,6 @@ GLFWwindow *initWindow()
 
 	return window;
 }
-
-class TestX
-{
-public:
-	TestX()
-	{
-		std::cout << "Constructed." << std::endl;
-	}
-	~TestX()
-	{
-		std::cout << "Destroyed." << std::endl;
-	}
-
-private:
-	uint16_t x = 0;
-};
 
 void populateTestMap()
 {
@@ -206,25 +197,12 @@ void populateTestMap()
 	}
 }
 
-class X
-{
-public:
-	X()
-	{
-		std::cout << "..............Construct X.............." << std::endl;
-	}
-
-	~X()
-	{
-		std::cout << "..............Destruct X.............." << std::endl;
-	}
-};
-
-X x;
-
 int main()
 {
 	MapRenderer *mapRenderer;
+
+	std::cout << "Saving.. " << std::endl;
+	MapIO::saveMap();
 
 	try
 	{

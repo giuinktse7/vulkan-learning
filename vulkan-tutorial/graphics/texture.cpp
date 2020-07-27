@@ -6,11 +6,14 @@
 #include <algorithm>
 #include <string>
 #include <stdexcept>
+#include <ostream>
 
 #include "engine.h"
 #include "vulkan_helpers.h"
 
 #include "buffer.h"
+
+std::unique_ptr<Texture> Texture::blackSquare;
 
 Texture::Texture(uint32_t width, uint32_t height, std::vector<uint8_t> pixels)
 {
@@ -218,4 +221,16 @@ VkDescriptorSet Texture::getDescriptorSet()
 TextureWindow Texture::getTextureWindow()
 {
   return TextureWindow{0.0f, 0.0f, 1.0f, 1.0f};
+}
+
+Texture *Texture::getBlackTexture()
+{
+    if (!Texture::blackSquare) {
+        std::vector<uint32_t> buffer(32 * 32);
+        std::fill(buffer.begin(), buffer.end(), 0xFF000000);
+
+        Texture::blackSquare = std::make_unique<Texture>(32, 32, (uint8_t*)buffer.data());
+    }
+  
+    return Texture::blackSquare.get();
 }

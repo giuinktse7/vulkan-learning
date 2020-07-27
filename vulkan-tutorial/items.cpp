@@ -3,7 +3,9 @@
 #include <iostream>
 #include <utility>
 #include <memory>
+#include <algorithm>
 
+#include "version.h"
 #include "otb.h"
 #include "util.h"
 
@@ -26,8 +28,7 @@ using std::string;
 
 constexpr auto OTBI = OTB::Identifier{{'O', 'T', 'B', 'I'}};
 
-Items::Items(std::vector<ItemType> &items, std::unordered_map<ClientID, ServerID> clientIdToServerIdMap, OTB::VersionInfo otbVersionInfo)
-		: itemTypes(std::move(items)), clientIdToServerIdMap(clientIdToServerIdMap), otbVersionInfo(otbVersionInfo)
+Items::Items()
 {
 }
 
@@ -36,9 +37,12 @@ ItemType::~ItemType()
 	// Empty
 }
 
-ItemType &Items::getItemType(size_t id)
+ItemType *Items::getItemType(uint16_t id)
 {
-	return itemTypes.at(id);
+	if (id >= itemTypes.size())
+		return nullptr;
+
+	return &itemTypes.at(id);
 }
 
 tl::expected<void, std::string> unexpecting(const std::string s)
@@ -122,7 +126,7 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 		return unexpecting("There is no itemType with server ID " + std::to_string(id));
 	}
 
-	ItemType &it = Items::items.getItemType(id);
+	ItemType &it = *Items::items.getItemType(id);
 
 	it.name = itemNode.attribute("name").as_string();
 	it.editorsuffix = itemNode.attribute("editorsuffix").as_string();
@@ -335,21 +339,20 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		throw std::runtime_error("Appearances must be loaded before loading items.otb.");
 	}
 
+	Items &items = Items::items;
+	uint16_t mapId = 0;
+
 	// OTB::Loader loader{file, OTBI};
 	std::unique_ptr<OTB::Loader> loader = std::make_unique<OTB::Loader>(file, OTBI);
 
 	auto &root = loader->parseTree();
 
 	PropStream props;
-	OTB::VersionInfo versionInfo;
-	std::unordered_map<ClientID, ServerID> clientIdToServerIdMap;
-	std::unordered_multimap<std::string, ServerID> nameToItems;
 
-	std::vector<ItemType> itemTypes;
-
-	itemTypes.reserve(RESERVED_ITEM_COUNT);
-	clientIdToServerIdMap.reserve(RESERVED_ITEM_COUNT);
-	nameToItems.reserve(RESERVED_ITEM_COUNT);
+	items.itemTypes.reserve(RESERVED_ITEM_COUNT);
+	items.clientIdToServerId.reserve(RESERVED_ITEM_COUNT);
+	// items.serverIdToMapId.reserve(RESERVED_ITEM_COUNT);
+	items.nameToItems.reserve(RESERVED_ITEM_COUNT);
 
 	if (loader->getProps(root, props))
 	{
@@ -381,23 +384,23 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 				return unexpecting("The length of the version info is incorrect.");
 			}
 
-			if (!props.read(versionInfo))
+			if (!props.read(items.otbVersionInfo))
 			{
 				return unexpecting("Could not read OTB version information.");
 			}
 		}
 	}
 
-	if (versionInfo.majorVersion == 0xFFFFFFFF)
+	if (items.otbVersionInfo.majorVersion == 0xFFFFFFFF)
 	{
 		std::cout << "[Warning - Items::loadFromOtb] items.otb using generic client version." << std::endl;
 	}
-	else if (versionInfo.majorVersion != 3)
+	else if (items.otbVersionInfo.majorVersion != 3)
 	{
 		std::cout << "Old version detected, a newer version of items.otb is required." << std::endl;
 		return unexpecting("Old version detected, a newer version of items.otb is required.");
 	}
-	else if (versionInfo.minorVersion < to_underlying(OTB::ClientVersion::CLIENT_VERSION_1098))
+	else if (items.otbVersionInfo.minorVersion < to_underlying(OTB::ClientVersion::CLIENT_VERSION_1098))
 	{
 		std::cout << "A newer version of items.otb is required." << std::endl;
 		return unexpecting("A newer version of items.otb is required.");
@@ -455,6 +458,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 				{
 					serverId -= 30000;
 				}
+
 				break;
 			}
 
@@ -544,14 +548,41 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			}
 		}
 
-		clientIdToServerIdMap.emplace(clientId, serverId);
+		// if (items.itemTypes[serverId - 1].clientId == 0)
+		// {
+		// 	items.validItemTypeStartId.emplace(serverId);
+		// }
+
+		items.clientIdToServerId.emplace(clientId, serverId);
 
 		// store the found item
-		if (serverId >= itemTypes.size())
+		if (serverId >= items.itemTypes.size())
 		{
-			itemTypes.resize(static_cast<size_t>(serverId) + 1);
+			size_t arbitrarySizeIncrease = 2000;
+			items.itemTypes.resize(static_cast<size_t>(serverId) + arbitrarySizeIncrease);
 		}
-		ItemType &iType = itemTypes[serverId];
+
+		ItemType &iType = items.itemTypes[serverId];
+
+		if (!Appearances::hasObject(clientId))
+		{
+			/*
+				if (items.itemTypes[serverId - 1].clientId != 0)
+			{
+				items.validItemTypeEndId.emplace(serverId - 1);
+			}
+			iType.clientId = 0;
+			continue;
+			*/
+			iType.clientId = 0;
+
+			continue;
+		}
+
+		// items.serverIdToMapId.emplace(serverId, mapId);
+
+		iType.name = Appearances::getObjectById(clientId).name();
+		iType.appearance = &Appearances::getObjectById(clientId);
 
 		iType.group = static_cast<itemgroup_t>(itemNode.type);
 		switch (itemNode.type)
@@ -610,17 +641,9 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		iType.lightColor = lightColor;
 		iType.wareId = wareId;
 		iType.alwaysOnTopOrder = alwaysOnTopOrder;
-
-		if (Appearances::hasObject(clientId))
-		{
-			iType.name = Appearances::getObjectById(clientId).name();
-			iType.appearance = &Appearances::getObjectById(clientId);
-		}
 	}
 
-	itemTypes.shrink_to_fit();
-
-	Items::items = Items(itemTypes, clientIdToServerIdMap, versionInfo);
+	items.itemTypes.shrink_to_fit();
 
 	return {};
 }
@@ -633,4 +656,43 @@ TextureAtlas *ItemType::getTextureAtlas()
 	}
 
 	return this->textureAtlas;
+}
+
+ItemType *Items::getNextValidItemType(uint16_t serverId)
+{
+	ABORT_PROGRAM("Unimplemented! validItemTypeStartId has to be populated.");
+	auto itemType = getItemType(serverId);
+	if (itemType->isValid())
+	{
+		return itemType;
+	}
+
+	auto found = std::lower_bound(validItemTypeStartId.begin(), validItemTypeStartId.end(), serverId);
+
+	if (found == validItemTypeStartId.end())
+	{
+		return nullptr;
+	}
+
+	return getItemType(*found);
+}
+
+ItemType *Items::getPreviousValidItemType(uint16_t serverId)
+{
+	ABORT_PROGRAM("Unimplemented! validItemTypeEndId has to be populated.");
+
+	auto itemType = getItemType(serverId);
+	if (itemType->isValid())
+	{
+		return itemType;
+	}
+
+	auto found = std::lower_bound(validItemTypeEndId.begin(), validItemTypeEndId.end(), serverId);
+
+	if (found == validItemTypeEndId.begin())
+	{
+		return nullptr;
+	}
+
+	return getItemType(*(--found));
 }

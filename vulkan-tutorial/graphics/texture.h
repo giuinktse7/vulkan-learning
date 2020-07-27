@@ -6,6 +6,8 @@
 #include <vector>
 #include <filesystem>
 
+#include <memory>
+
 #include "device_manager.h"
 
 struct TextureWindow
@@ -40,8 +42,12 @@ public:
     return sampler;
   }
 
+  static Texture *getBlackTexture();
+
 private:
   void init(uint32_t width, uint32_t height, uint8_t *pixels);
+
+  static std::unique_ptr<Texture> blackSquare;
 
   uint32_t width;
   uint32_t height;

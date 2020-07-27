@@ -281,7 +281,7 @@ public:
 
 	const uint32_t getSelectedServerId() const
 	{
-		return gui.selectedServerId;
+		return gui.brushServerId;
 	}
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};

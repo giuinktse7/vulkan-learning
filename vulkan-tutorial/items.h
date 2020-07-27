@@ -172,11 +172,6 @@ public:
   ItemType() {}
   ~ItemType();
 
-  bool hasSprites()
-  {
-    return this->clientId != 0;
-  }
-
   uint32_t textureAtlasOffset()
   {
     uint32_t spriteId = this->appearance->frame_group().at(0).sprite_info().sprite_id(0);
@@ -234,6 +229,7 @@ public:
   {
     return (type == ITEM_TYPE_BED);
   }
+
   bool isRune() const
   {
     return (type == ITEM_TYPE_RUNE);
@@ -249,6 +245,24 @@ public:
   bool hasSubType() const
   {
     return (isFluidContainer() || isSplash() || stackable || charges != 0);
+  }
+
+  bool usesSubType() const
+  {
+    return isStackable() || isSplash() || isFluidContainer();
+  }
+
+  bool isStackable() const { return stackable; }
+
+  /*
+    The items.otb may report a client ID that is incorrect. One such example
+    is server ID 2812 that according to the items.otb has client ID 395.
+    But there is no object with client ID 395.
+    If the client ID is incorrect, it is set to 0.
+  */
+  bool isValid() const
+  {
+    return clientId != 0;
   }
 
   // Abilities &getAbilities()
@@ -379,12 +393,13 @@ public:
   tibia::protobuf::appearances::Appearance *appearance = nullptr;
 
 private:
+  // This item's index in the itemtype vector
+  uint16_t internalMapId = 0;
 };
 
 class Items
 {
 public:
-  Items() {}
   static tl::expected<void, std::string> loadFromOtb(const std::string &file);
 
   static tl::expected<void, std::string> loadFromXml(const std::filesystem::path path);
@@ -392,22 +407,13 @@ public:
   bool reload();
   void clear();
 
-  const ItemType &operator[](size_t id)
-  {
-    return getItemType(id);
-  }
-
   const bool hasItemType(size_t id) const
   {
     return itemTypes.size() > id;
   }
 
-  ItemType &getItemType(size_t id);
+  ItemType *getItemType(uint16_t id);
   const ItemType &getItemIdByClientId(uint16_t spriteId) const;
-  const uint16_t getClientId(uint16_t serverId)
-  {
-    return getItemType(serverId).clientId;
-  }
 
   uint16_t getItemIdByName(const std::string &name);
 
@@ -418,17 +424,29 @@ public:
 
   static Items items;
 
+  ItemType *getNextValidItemType(uint16_t serverId);
+  ItemType *getPreviousValidItemType(uint16_t serverId);
+
+  OTB::VersionInfo getOtbVersionInfo();
+
 private:
+  Items();
   using ServerID = uint16_t;
   using ClientID = uint16_t;
-
-  Items(std::vector<ItemType> &items, std::unordered_map<ClientID, ServerID> clientIdToServerIdMap, OTB::VersionInfo otbVersionInfo);
+  // MapID is used to filter out ItemTypes that do not have an appearance (e.g. invalid ItemTypes).
+  // using MapID = uint16_t;
 
   static tl::expected<void, std::string> loadItemFromXml(pugi::xml_node itemNode, uint32_t id);
 
   std::vector<ItemType> itemTypes;
-  std::unordered_map<ClientID, ServerID> clientIdToServerIdMap;
+  std::unordered_map<ClientID, ServerID> clientIdToServerId;
+  // std::unordered_map<ServerID, MapID> serverIdToMapId;
   std::unordered_multimap<std::string, ServerID> nameToItems;
 
   OTB::VersionInfo otbVersionInfo;
+
+  /* Used to hide invalid item ids */
+  // TODO Neither are used right now
+  std::set<uint16_t> validItemTypeStartId;
+  std::set<uint16_t> validItemTypeEndId;
 };

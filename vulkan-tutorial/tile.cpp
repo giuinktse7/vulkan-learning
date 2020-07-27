@@ -74,3 +74,34 @@ const Position &Tile::getPosition() const
 {
   return tileLocation.position;
 }
+
+const uint32_t &Tile::getX() const
+{
+  return tileLocation.position.x;
+}
+const uint32_t &Tile::getY() const
+{
+  return tileLocation.position.y;
+}
+const uint32_t &Tile::getZ() const
+{
+  return tileLocation.position.z;
+}
+
+size_t Tile::getEntityCount()
+{
+  size_t result = items.size();
+  if (ground)
+    ++result;
+
+  return result;
+}
+
+inline uint16_t Tile::getMapFlags() const
+{
+  return mapflags;
+}
+inline uint16_t Tile::getStatFlags() const
+{
+  return statflags;
+}
