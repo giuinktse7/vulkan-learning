@@ -10,13 +10,6 @@
 class MapIterator;
 class Map;
 
-enum class NodeType
-{
-	Root,
-	Node,
-	Leaf
-};
-
 class Floor
 {
 public:
@@ -38,6 +31,13 @@ namespace quadtree
 {
 	class Node
 	{
+		enum class NodeType
+		{
+			Root,
+			Node,
+			Leaf
+		};
+
 	public:
 		Node(NodeType nodeType);
 		Node(NodeType nodeType, int level);
@@ -64,7 +64,8 @@ namespace quadtree
 
 	protected:
 		NodeType nodeType = NodeType::Root;
-		union {
+		union
+		{
 			std::array<std::unique_ptr<Node>, MAP_TREE_CHILDREN_COUNT> nodes{};
 			std::array<std::unique_ptr<Floor>, MAP_TREE_CHILDREN_COUNT> children;
 		};

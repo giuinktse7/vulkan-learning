@@ -16,13 +16,13 @@ constexpr uint32_t LEVELS_IN_QUAD_TREE = (16 - 4) / 2;
 
 // The implementation assumes a map in the range [-65535, 65535]
 
-Node::Node(NodeType nodeType)
+Node::Node(Node::NodeType nodeType)
     : nodeType(nodeType)
 {
   // cout << "Construct node" << endl;
 }
 
-Node::Node(NodeType nodeType, int level)
+Node::Node(Node::NodeType nodeType, int level)
     : nodeType(nodeType), level(level)
 {
   // cout << "Construct node" << endl;
@@ -45,12 +45,12 @@ Node::~Node()
 
 bool Node::isLeaf() const
 {
-  return nodeType == NodeType::Leaf;
+  return nodeType == Node::NodeType::Leaf;
 }
 
 bool Node::isRoot() const
 {
-  return nodeType == NodeType::Root;
+  return nodeType == Node::NodeType::Root;
 }
 
 TileLocation &Floor::getTileLocation(int x, int y)
@@ -179,13 +179,13 @@ Node &Node::getLeafWithCreate(int x, int y)
     {
       if (level == 0)
       {
-        child = make_unique<Node>(NodeType::Leaf, 0);
+        child = make_unique<Node>(Node::NodeType::Leaf, 0);
         leaf = child.get();
         break;
       }
       else
       {
-        child = make_unique<Node>(NodeType::Node, level);
+        child = make_unique<Node>(Node::NodeType::Node, level);
       }
     }
 

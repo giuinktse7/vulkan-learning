@@ -10,7 +10,7 @@
 #include <stack>
 
 Map::Map()
-    : root(NodeType::Root)
+    : root(quadtree::Node::NodeType::Root)
 {
 }
 

@@ -105,8 +105,8 @@ public:
 	MapVersion getMapVersion();
 	std::string &getDescription();
 
-	uint16_t getWidth();
-	uint16_t getHeight();
+	uint16_t getWidth() const;
+	uint16_t getHeight() const;
 
 	Towns &getTowns()
 	{
@@ -122,3 +122,12 @@ private:
 
 	quadtree::Node root;
 };
+
+inline uint16_t Map::getWidth() const
+{
+	return width;
+}
+inline uint16_t Map::getHeight() const
+{
+	return height;
+}
