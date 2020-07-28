@@ -105,7 +105,7 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 	// TODO Fix versioning
 	// TODO Why do we skip these in these cases?
 	uint32_t clientVersion = 52;
-	if (clientVersion < to_underlying(OTB::ClientVersion::CLIENT_VERSION_980) && id > 20000 && id < 20100)
+	if (clientVersion < to_underlying(ClientVersion::CLIENT_VERSION_980) && id > 20000 && id < 20100)
 	{
 		itemNode = itemNode.next_sibling();
 		return {};
@@ -400,7 +400,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		std::cout << "Old version detected, a newer version of items.otb is required." << std::endl;
 		return unexpecting("Old version detected, a newer version of items.otb is required.");
 	}
-	else if (items.otbVersionInfo.minorVersion < to_underlying(OTB::ClientVersion::CLIENT_VERSION_1098))
+	else if (items.otbVersionInfo.minorVersion < to_underlying(ClientVersion::CLIENT_VERSION_1098))
 	{
 		std::cout << "A newer version of items.otb is required." << std::endl;
 		return unexpecting("A newer version of items.otb is required.");
@@ -695,4 +695,9 @@ ItemType *Items::getPreviousValidItemType(uint16_t serverId)
 	}
 
 	return getItemType(*(--found));
+}
+
+OTB::VersionInfo Items::getOtbVersionInfo()
+{
+	return otbVersionInfo;
 }

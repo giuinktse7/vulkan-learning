@@ -77,7 +77,7 @@ enum class ClientVersion
 
 struct MapVersion
 {
-  MapVersion() : otbmVersion(MAP_OTBM_4), clientVersion(ClientVersion::CLIENT_VERSION_NONE) {}
+  MapVersion() : otbmVersion(OTBMVersion::MAP_OTBM_4), clientVersion(ClientVersion::CLIENT_VERSION_NONE) {}
   MapVersion(OTBMVersion otbmVersion, ClientVersion clientVersion) : otbmVersion(otbmVersion), clientVersion(clientVersion) {}
   OTBMVersion otbmVersion;
   ClientVersion clientVersion;

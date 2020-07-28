@@ -184,6 +184,11 @@ ItemAttribute::ItemAttribute(const ItemAttribute &o) : type(ItemAttribute::NONE)
   }
 }
 
+ItemAttribute::~ItemAttribute()
+{
+  clear();
+}
+
 ItemAttribute &ItemAttribute::operator=(const ItemAttribute &o)
 {
   if (&o == this)

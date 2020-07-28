@@ -78,7 +78,7 @@ public:
 
   bool isEmpty() const
   {
-    return attributes && attributes->size() != 0;
+      return size() == 0;
   }
 
   void clearAllAttributes();

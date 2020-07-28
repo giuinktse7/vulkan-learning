@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "../map_io.h"
+
 #include <imgui.h>
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
@@ -140,6 +142,10 @@ void GUI::createTopMenuBar()
       //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
       ImGui::MenuItem("Ponko", "");
       ImGui::Separator();
+      if (ImGui::MenuItem("Save", "Ctrl+S"))
+      {
+        MapIO::saveMap(*g_engine->getMapRenderer()->map);
+      }
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Edit"))

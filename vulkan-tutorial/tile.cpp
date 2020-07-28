@@ -96,12 +96,3 @@ size_t Tile::getEntityCount()
 
   return result;
 }
-
-inline uint16_t Tile::getMapFlags() const
-{
-  return mapflags;
-}
-inline uint16_t Tile::getStatFlags() const
-{
-  return statflags;
-}

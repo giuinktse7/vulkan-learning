@@ -1,5 +1,7 @@
 #include "map_io.h"
 
+#include <iostream>
+
 #include "debug.h"
 #include "version.h"
 #include "definitions.h"
@@ -7,7 +9,7 @@
 
 #include <string>
 
-enum NodeType : uint8_t
+enum NodeType
 {
   NODE_START = 0xFE,
   NODE_END = 0xFF,
@@ -33,6 +35,7 @@ void SaveBuffer::writeBytes(const uint8_t *cursor, size_t amount)
         flushToFile();
       }
       buffer.emplace_back(ESCAPE_CHAR);
+      std::cout << std::hex << static_cast<int>(buffer.back()) << std::endl;
     }
 
     if (buffer.size() + 1 >= maxBufferSize)
@@ -40,40 +43,56 @@ void SaveBuffer::writeBytes(const uint8_t *cursor, size_t amount)
       flushToFile();
     }
     buffer.emplace_back(*cursor);
+    std::cout << std::hex << static_cast<int>(buffer.back()) << std::endl;
 
     ++cursor;
     --amount;
   }
 }
 
-void SaveBuffer::writeU8(uint8_t value)
+void SaveBuffer::startNode(OTBM_NodeTypes_t nodeType)
 {
-  writeBytes(&value, sizeof(uint8_t));
-}
+  if (buffer.size() + 2 >= maxBufferSize)
+  {
+    flushToFile();
+  }
 
-void SaveBuffer::startNode(OTBM_NodeTypes_t value)
-{
-  writeBytes(reinterpret_cast<uint8_t *>(&value), sizeof(uint8_t));
+  buffer.emplace_back(NODE_START);
+  std::cout << std::hex << static_cast<int>(NODE_START) << std::endl;
+
+  buffer.emplace_back(nodeType);
+  std::cout << std::hex << static_cast<int>(nodeType) << std::endl;
 }
 
 void SaveBuffer::endNode()
 {
-  writeU8(NODE_END);
+  if (buffer.size() + 1 >= maxBufferSize)
+  {
+    flushToFile();
+  }
+
+  buffer.emplace_back(NODE_END);
+  std::cout << std::hex << static_cast<int>(NODE_END) << std::endl;
+}
+
+void SaveBuffer::writeU8(uint8_t value)
+{
+  writeBytes(&value, 1);
 }
 
 void SaveBuffer::writeU16(uint16_t value)
 {
-  writeBytes(reinterpret_cast<uint8_t *>(&value), sizeof(uint16_t));
+  writeBytes(reinterpret_cast<uint8_t *>(&value), 2);
 }
 
 void SaveBuffer::writeU32(uint32_t value)
 {
-  writeBytes(reinterpret_cast<uint8_t *>(&value), sizeof(uint32_t));
+  writeBytes(reinterpret_cast<uint8_t *>(&value), 4);
 }
 
 void SaveBuffer::writeU64(uint64_t value)
 {
-  writeBytes(reinterpret_cast<uint8_t *>(&value), sizeof(uint64_t));
+  writeBytes(reinterpret_cast<uint8_t *>(&value), 8);
 }
 
 void SaveBuffer::writeString(const std::string &s)
@@ -87,6 +106,11 @@ void SaveBuffer::writeString(const std::string &s)
   writeBytes(reinterpret_cast<uint8_t *>(const_cast<char *>(s.data())), s.size());
 }
 
+void SaveBuffer::writeRawString(const std::string &s)
+{
+  writeBytes(reinterpret_cast<uint8_t *>(const_cast<char *>(s.data())), s.size());
+}
+
 void SaveBuffer::writeLongString(const std::string &s)
 {
   writeU32(s.size());
@@ -95,6 +119,7 @@ void SaveBuffer::writeLongString(const std::string &s)
 
 void SaveBuffer::flushToFile()
 {
+  std::cout << "flushToFile()" << std::endl;
   stream.write(reinterpret_cast<const char *>(buffer.data()), buffer.size());
   buffer.clear();
 }
@@ -109,9 +134,11 @@ void MapIO::saveMap(Map &map)
   std::ofstream stream;
   SaveBuffer buffer = SaveBuffer(stream);
 
-  stream.open("map.otbm", std::ofstream::out | std::ofstream::trunc);
+  stream.open("map2.otbm", std::ofstream::out | std::ios::binary | std::ofstream::trunc);
 
-  buffer.writeU8(NODE_START);
+  buffer.writeRawString("OTBM");
+
+  buffer.startNode(OTBM_ROOT);
   {
     OTBMVersion otbmVersion = map.getMapVersion().otbmVersion;
     buffer.writeU32(static_cast<uint32_t>(otbmVersion));

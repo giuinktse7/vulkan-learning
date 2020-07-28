@@ -36,8 +36,8 @@ public:
 	const uint32_t &getY() const;
 	const uint32_t &getZ() const;
 
-	inline uint16_t Tile::getMapFlags() const;
-	inline uint16_t Tile::getStatFlags() const;
+	uint16_t getMapFlags() const;
+	uint16_t getStatFlags() const;
 
 private:
 	TileLocation &tileLocation;
@@ -55,3 +55,12 @@ private:
 		uint32_t flags;
 	};
 };
+
+inline uint16_t Tile::getMapFlags() const
+{
+	return mapflags;
+}
+inline uint16_t Tile::getStatFlags() const
+{
+	return statflags;
+}

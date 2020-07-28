@@ -19,19 +19,19 @@ void Towns::clear()
 
 bool Towns::addTown(Town &town)
 {
-  std::map<uint32_t, Town>::iterator it = find(town.getID());
+  auto it = find(town.getID());
   if (it != end())
   {
     return false;
   }
-  towns[town.getID()] = town;
+  towns.insert(std::pair<uint32_t, Town>(town.getID(), town));
   return true;
 }
 
 uint32_t Towns::getEmptyID()
 {
   uint32_t empty = 0;
-  for (std::map<uint32_t, Town>::iterator it = begin(); it != end(); ++it)
+  for (auto it = begin(); it != end(); ++it)
   {
     if (it->second.getID() > empty)
     {
@@ -43,7 +43,7 @@ uint32_t Towns::getEmptyID()
 
 Town *Towns::getTown(std::string &name)
 {
-  for (std::map<uint32_t, Town>::iterator it = begin(); it != end(); ++it)
+  for (auto it = begin(); it != end(); ++it)
   {
     if (it->second.getName() == name)
     {
@@ -55,7 +55,7 @@ Town *Towns::getTown(std::string &name)
 
 Town *Towns::getTown(uint32_t id)
 {
-  std::map<uint32_t, Town>::iterator it = find(id);
+  auto it = find(id);
   if (it != end())
   {
     return &it->second;

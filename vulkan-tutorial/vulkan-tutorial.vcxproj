@@ -184,6 +184,7 @@
     <ClCompile Include="gui\imgui_impl_vulkan.cpp" />
     <ClCompile Include="gui\imgui_widgets.cpp" />
     <ClCompile Include="items.cpp" />
+    <ClCompile Include="item_attribute.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="map_io.cpp" />
@@ -194,12 +195,14 @@
     <ClCompile Include="quad_tree.cpp" />
     <ClCompile Include="tile.cpp" />
     <ClCompile Include="tile_location.cpp" />
+    <ClCompile Include="town.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="graphics\resource-descriptor.cpp" />
     <ClCompile Include="graphics\vulkan_debug.cpp" />
     <ClCompile Include="graphics\vulkan_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="definitions.h" />
     <ClInclude Include="graphics\batch_item_draw.h" />
     <ClInclude Include="chunk.h" />
     <ClInclude Include="debug.h" />
@@ -218,6 +221,7 @@
     <ClInclude Include="graphics\protobuf\shared.pb.h" />
     <ClInclude Include="gui\gui.h" />
     <ClInclude Include="items.h" />
+    <ClInclude Include="item_attribute.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="map_io.h" />
@@ -229,12 +233,14 @@
     <ClInclude Include="quad_tree.h" />
     <ClInclude Include="tile.h" />
     <ClInclude Include="tile_location.h" />
+    <ClInclude Include="town.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="graphics\validation.h" />
     <ClInclude Include="graphics\vertex.h" />
     <ClInclude Include="graphics\resource-descriptor.h" />
     <ClInclude Include="graphics\vulkan_debug.h" />
     <ClInclude Include="graphics\vulkan_helpers.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.frag" />

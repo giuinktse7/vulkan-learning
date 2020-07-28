@@ -33,9 +33,9 @@ public:
   ~Towns();
 
   void clear();
-  uint32_t count() const { return towns.size(); }
+  size_t count() const { return towns.size(); }
 
-  bool Towns::addTown(Town &town);
+  bool addTown(Town &town);
   uint32_t getEmptyID();
 
   Town *getTown(std::string &townname);
@@ -47,10 +47,6 @@ public:
   std::map<uint32_t, Town>::iterator begin() { return towns.begin(); }
   std::map<uint32_t, Town>::iterator end() { return towns.end(); }
   std::map<uint32_t, Town>::iterator find(uint32_t id) { return towns.find(id); }
-  std::map<uint32_t, Town>::iterator erase(std::map<uint32_t, Town>::iterator iter)
-  {
-    return towns.erase(iter);
-  }
 
 private:
   std::map<uint32_t, Town> towns;

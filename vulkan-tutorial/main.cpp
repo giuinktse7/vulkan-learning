@@ -186,15 +186,15 @@ void populateTestMap()
 
 	// // auto shovel = Item::create(2554);
 	auto shovel = Item::create(2554);
-	auto tree = Item::create(2706);
-	auto grass = Item::create(103);
+	// auto tree = Item::create(2706);
+	// auto grass = Item::create(103);
 
 	tile1.addItem(std::move(shovel));
 
-	for (const auto &tile : map.begin())
-	{
-		std::cout << tile->getPosition() << std::endl;
-	}
+	// for (const auto &tile : map.begin())
+	// {
+	// 	std::cout << tile->getPosition() << std::endl;
+	// }
 }
 
 int main()
@@ -202,7 +202,6 @@ int main()
 	MapRenderer *mapRenderer;
 
 	std::cout << "Saving.. " << std::endl;
-	MapIO::saveMap();
 
 	try
 	{
@@ -219,6 +218,7 @@ int main()
 		g_engine->setMapRenderer(mapRenderer);
 
 		// populateTestMap();
+		// MapIO::saveMap(*mapRenderer->map);
 
 		// return 0;
 

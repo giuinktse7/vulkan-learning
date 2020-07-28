@@ -41,6 +41,7 @@ enum OTBM_ItemAttribute
 
 enum OTBM_NodeTypes_t
 {
+	OTBM_ROOT = 0,
 	OTBM_ROOTV1 = 1,
 	OTBM_MAP_DATA = 2,
 	OTBM_ITEM_DEF = 3,
@@ -118,6 +119,7 @@ public:
 	void writeU64(uint64_t value);
 	void writeString(const std::string &s);
 	void writeLongString(const std::string &s);
+	void writeRawString(const std::string &s);
 
 	void startNode(OTBM_NodeTypes_t value);
 	void endNode();
@@ -136,7 +138,7 @@ private:
 
 namespace MapIO
 {
-	void MapIO::saveMap(Map &map);
+	void saveMap(Map &map);
 
 	class Serializer
 	{
