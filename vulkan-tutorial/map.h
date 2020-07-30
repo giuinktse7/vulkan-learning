@@ -105,6 +105,8 @@ public:
 	MapVersion getMapVersion();
 	std::string &getDescription();
 
+	void createItemAt(Position pos, uint16_t id);
+
 	uint16_t getWidth() const;
 	uint16_t getHeight() const;
 

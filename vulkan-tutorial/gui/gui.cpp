@@ -39,16 +39,48 @@ void GUI::renderItem(ItemType *itemType)
 
     ImTextureID texture = (ImTextureID)atlas->getDescriptorSet();
 
+    ImVec2 imageSize = {32.0f, 32.0f};
+
+    // Adjust for magnification scaling to scale equally in both X and Y.
+    if (atlas->spriteWidth == 64 && atlas->spriteHeight == 32)
+    {
+      imageSize.y = 16.0f;
+    }
+    else if (atlas->spriteWidth == 32 && atlas->spriteHeight == 64)
+    {
+      imageSize.x = 16.0f;
+    }
+
+    std::string childId = "" + std::to_string(itemType->id);
+    ImU32 black = ImColor(0, 0, 0);
+    ImU32 gray = ImColor(0x33, 0x33, 0x33);
+    ImGui::PushID(childId.c_str());
+    // ImGui::BeginChild(childId.c_str(), {32.0f, 32.0f});
+    ImGui::BeginChild(childId.c_str(), {32.0f, 32.0f});
+
+    ImU32 magenta = ImColor(0xFF, 0, 0xFF);
+    ImGui::PushStyleColor(ImGuiCol_Button, black);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, gray);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, black);
+
     ImGui::PushID((int)itemType->id);
+    // ImGui::Image(texture, {32.0f, 32.0f}, {window.x0, window.y0}, {window.x1, window.y1});
     if (ImGui::ImageButton(
-            texture,
-            {static_cast<float>(32), static_cast<float>(32)},
+            texture, imageSize,
             {window.x0, window.y0},
             {window.x1, window.y1},
-            0))
+            0,
+            {0, 0, 0, 0},
+            {1, 1, 1, 1}))
     {
       this->brushServerId = itemType->id;
     }
+    ImGui::PopID();
+    ImGui::PopStyleColor(3);
+
+    ImGui::EndChild();
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::IsItemHovered() ? gray : black);
+    ImGui::PopStyleColor();
     ImGui::PopID();
   }
 }
@@ -111,7 +143,7 @@ static void HelpMarker(const char *desc)
 
 void GUI::createTopMenuBar()
 {
-  float menuHeight = 60.0f;
+  float menuHeight = 90.0f;
 
   ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar;
 

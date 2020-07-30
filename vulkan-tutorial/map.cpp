@@ -202,3 +202,9 @@ std::string &Map::getDescription()
 {
   return description;
 }
+
+void Map::createItemAt(Position pos, uint16_t id)
+{
+  auto item = Item::create(id);
+  getOrCreateTile(pos).addItem(std::move(item));
+}
