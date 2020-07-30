@@ -172,6 +172,7 @@
     <ClCompile Include="graphics\engine.cpp" />
     <ClCompile Include="file.cpp" />
     <ClCompile Include="graphics\texture_atlas.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="item.cpp" />
     <ClCompile Include="graphics\protobuf\appearances.pb.cc" />
     <ClCompile Include="graphics\protobuf\map.pb.cc" />
@@ -215,6 +216,7 @@
     <ClInclude Include="graphics\engine.h" />
     <ClInclude Include="file.h" />
     <ClInclude Include="graphics\texture_atlas.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="item.h" />
     <ClInclude Include="graphics\protobuf\appearances.pb.h" />
     <ClInclude Include="graphics\protobuf\map.pb.h" />
