@@ -630,7 +630,7 @@ void MapRenderer::createDescriptorSets()
   for (size_t i = 0; i < g_engine->getMaxFramesInFlight(); ++i)
   {
     VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = frame->uniformBuffer.buffer;
+    bufferInfo.buffer = frames[i].uniformBuffer.buffer;
     bufferInfo.offset = 0;
     bufferInfo.range = sizeof(ItemUniformBufferObject);
 
