@@ -14,14 +14,6 @@ struct Vertex
 	Offset of this vertex. This is used to get to the center of a texel in the shader.
 	*/
 	glm::vec4 rect;
-	union
-	{
-		struct
-		{
-			int32_t blendMode;
-		};
-		int32_t data[4];
-	};
 
 	static VkVertexInputBindingDescription getBindingDescription()
 	{
@@ -34,9 +26,9 @@ struct Vertex
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions()
+	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions{};
+		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -45,7 +37,7 @@ struct Vertex
 
 		attributeDescriptions[1].binding = 0;
 		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		attributeDescriptions[1].offset = offsetof(Vertex, color);
 
 		attributeDescriptions[2].binding = 0;
@@ -58,10 +50,10 @@ struct Vertex
 		attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		attributeDescriptions[3].offset = offsetof(Vertex, rect);
 
-		attributeDescriptions[4].binding = 0;
-		attributeDescriptions[4].location = 4;
-		attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_SINT;
-		attributeDescriptions[4].offset = offsetof(Vertex, data);
+		// attributeDescriptions[4].binding = 0;
+		// attributeDescriptions[4].location = 4;
+		// attributeDescriptions[4].format = VK_FORMAT_R8_UINT;
+		// attributeDescriptions[4].offset = offsetof(Vertex, useUbo);
 
 		return attributeDescriptions;
 	}
