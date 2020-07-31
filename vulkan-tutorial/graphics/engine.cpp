@@ -53,7 +53,7 @@ VkResult Engine::mapMemory(
 }
 
 Engine::Engine()
-    : frame(&frames[0])
+    : currentFrame(&frames[0])
 {
 }
 
@@ -359,7 +359,7 @@ bool Engine::initFrame()
     recreateSwapChain();
   }
 
-  vkWaitForFences(device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
+  vkWaitForFences(device, 1, &currentFrame->inFlightFence, VK_TRUE, UINT64_MAX);
 
   uint32_t imageIndex;
 
@@ -367,7 +367,7 @@ bool Engine::initFrame()
       device,
       swapChain.get(),
       UINT64_MAX,
-      frame->imageAvailableSemaphore,
+      currentFrame->imageAvailableSemaphore,
       VK_NULL_HANDLE,
       &imageIndex);
 
@@ -386,27 +386,70 @@ bool Engine::initFrame()
     throw std::runtime_error("failed to acquire swap chain image");
   }
 
-  if (imageFences[imageIndex] != VK_NULL_HANDLE)
+  if (swapChainImageInFlight[imageIndex] != VK_NULL_HANDLE)
   {
-    vkWaitForFences(device, 1, &imageFences[imageIndex], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device, 1, &swapChainImageInFlight[imageIndex], VK_TRUE, UINT64_MAX);
   }
 
-  imageFences[imageIndex] = frame->inFlightFence;
-
-  vkResetFences(device, 1, &frame->inFlightFence);
+  // Mark the swapchain image as being in use by this frame
+  swapChainImageInFlight[imageIndex] = currentFrame->inFlightFence;
 
   return true;
 }
 
 void Engine::nextFrame()
 {
-  if (initFrame())
-  {
-    mapRenderer->recordFrame(currentFrameIndex);
-    gui.recordFrame(currentFrameIndex);
+  if (!initFrame())
+    return;
+  mapRenderer->recordFrame(currentFrameIndex);
+  gui.recordFrame(currentFrameIndex);
 
-    endFrame();
+  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+  std::array<VkCommandBuffer, 2> submitCommandBuffers = {
+      mapRenderer->getCommandBuffer(),
+      gui.getCommandBuffer(currentFrameIndex)};
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.waitSemaphoreCount = 1;
+  submitInfo.pWaitSemaphores = &currentFrame->imageAvailableSemaphore;
+  submitInfo.pWaitDstStageMask = waitStages;
+  submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
+  submitInfo.pCommandBuffers = submitCommandBuffers.data();
+  submitInfo.signalSemaphoreCount = 1;
+  submitInfo.pSignalSemaphores = &currentFrame->renderCompleteSemaphore;
+
+  vkResetFences(device, 1, &currentFrame->inFlightFence);
+  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, currentFrame->inFlightFence) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to submit command buffer to the graphics queue");
   }
+
+  VkSwapchainKHR swapChains[] = {swapChain.get()};
+
+  VkPresentInfoKHR presentInfo = {};
+  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.waitSemaphoreCount = 1;
+  presentInfo.pWaitSemaphores = &currentFrame->renderCompleteSemaphore;
+  presentInfo.swapchainCount = 1;
+  presentInfo.pSwapchains = swapChains;
+  presentInfo.pImageIndices = &currentFrameIndex;
+
+  auto result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
+  {
+    Logger::info("recreate in presentFrame");
+    framebufferResized = false;
+    recreateSwapChain();
+  }
+  else if (result != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to present swap chain image");
+  }
+
+  setFrameIndex((currentFrameIndex + 1) % getMaxFramesInFlight());
 }
 
 void Engine::createSyncObjects()
@@ -448,15 +491,14 @@ VkShaderModule Engine::createShaderModule(const std::vector<uint8_t> &code)
 
 void Engine::setFrameIndex(uint32_t index)
 {
-  prevFrame = frame;
-  frame = &frames[index];
+  currentFrame = &frames[index];
   currentFrameIndex = index;
 }
 
 void Engine::recreateSwapChain()
 {
   swapChain.recreate();
-  imageFences.fill(VK_NULL_HANDLE);
+  swapChainImageInFlight.fill(VK_NULL_HANDLE);
 
   mapRenderer->recreate();
   gui.recreate();
@@ -487,64 +529,6 @@ const Position Engine::screenToGamePos(float screenX, float screenY) const
   uint32_t y = worldToGamePos(camera.position.y + screenY / camera.zoomFactor);
 
   return {x, y, 7};
-}
-
-void Engine::endFrame()
-{
-  mapRenderer->endFrame();
-  gui.endFrame(currentFrameIndex);
-
-  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-
-  std::array<VkCommandBuffer, 2> submitCommandBuffers = {
-      mapRenderer->getCommandBuffer(),
-      gui.getCommandBuffer(currentFrameIndex)};
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = &frame->imageAvailableSemaphore;
-  submitInfo.pWaitDstStageMask = waitStages;
-  submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
-  submitInfo.pCommandBuffers = submitCommandBuffers.data();
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = &frame->renderCompleteSemaphore;
-
-  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame->inFlightFence) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to submit command buffer to the graphics queue");
-  }
-
-  presentFrame();
-
-  setFrameIndex((currentFrameIndex + 1) % getMaxFramesInFlight());
-}
-
-void Engine::presentFrame()
-{
-  VkSwapchainKHR swapChains[] = {swapChain.get()};
-  uint32_t imageIndices[] = {currentFrameIndex};
-
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = &frame->renderCompleteSemaphore;
-  presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = swapChains;
-  presentInfo.pImageIndices = imageIndices;
-
-  auto result = vkQueuePresentKHR(*getPresentQueue(), &presentInfo);
-
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
-  {
-    Logger::info("recreate in presentFrame");
-    framebufferResized = false;
-    recreateSwapChain();
-  }
-  else if (result != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to present swap chain image");
-  }
 }
 
 void Engine::WaitUntilDeviceIdle()

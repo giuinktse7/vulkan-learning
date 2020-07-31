@@ -175,8 +175,6 @@ public:
 
 	uint32_t getMaxFramesInFlight();
 
-	void endFrame();
-
 	bool isValidWindowSize();
 
 	void setKeyDown(int key)
@@ -286,12 +284,14 @@ public:
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
+	uint32_t currentFrameIndex;
+
 private:
 	std::array<FrameData, 3> frames;
 	// Fences for vkAcquireNextImageKHR
-	std::array<VkFence, 3> imageFences;
-	FrameData *prevFrame = nullptr;
-	FrameData *frame = nullptr;
+	std::array<VkFence, 3> swapChainImageInFlight;
+	FrameData *currentFrame = nullptr;
+
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
 
@@ -332,7 +332,6 @@ private:
 	VkCommandBuffer currentCommandBuffer;
 
 	uint32_t previousFrame;
-	uint32_t currentFrameIndex;
 
 	std::unordered_set<int> keys;
 
@@ -357,6 +356,5 @@ private:
 		this->window = window;
 	}
 
-	void presentFrame();
 	void recreateSwapChain();
 };
