@@ -10,7 +10,6 @@ class GUI
 public:
 	void initialize();
 	void recordFrame(uint32_t currentFrame);
-	void endFrame(uint32_t currentFrame);
 	void updateCommandPool(uint32_t currentFrame);
 	void captureIO();
 
@@ -19,6 +18,9 @@ public:
 	/* Data */
 	uint32_t prevId = 100;
 	uint32_t selectedServerId = 100;
+
+	uint16_t hoveredId = 0;
+	uint16_t nextHoveredId = 0;
 
 	uint32_t brushServerId = 100;
 	/* End data */
@@ -39,6 +41,7 @@ public:
 
 private:
 	void createTopMenuBar();
+	void createBottomBar();
 
 	// TODO Replace with actual item list
 	void renderN(uint32_t n);

@@ -8,7 +8,7 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
 
-// #include <imgui_internal.h>
+#include "custom_imgui.h"
 
 #include "../graphics/engine.h"
 #include "../graphics/vulkan_helpers.h"
@@ -19,9 +19,9 @@
 
 #include <stack>
 
-// #include <imgui_internal.h>
-
 #include <algorithm>
+
+constexpr uint32_t DEFAULT_PADDING = 4.0f;
 
 void GUI::renderItem(ItemType *itemType)
 {
@@ -33,7 +33,6 @@ void GUI::renderItem(ItemType *itemType)
   }
   else
   {
-
     auto atlas = itemType->getTextureAtlas();
     auto window = atlas->getTextureWindow(itemType->textureAtlasOffset());
 
@@ -51,37 +50,35 @@ void GUI::renderItem(ItemType *itemType)
       imageSize.x = 16.0f;
     }
 
+    // ImU32 color = this->hoveredId == itemType->id ? ImColor(0x33, 0x33, 0x33) : ImColor(0, 0, 0);
+    ImU32 color = ImColor(0, 0, 0);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
+
     std::string childId = "" + std::to_string(itemType->id);
-    ImU32 black = ImColor(0, 0, 0);
-    ImU32 gray = ImColor(0x33, 0x33, 0x33);
-    ImGui::PushID(childId.c_str());
-    // ImGui::BeginChild(childId.c_str(), {32.0f, 32.0f});
     ImGui::BeginChild(childId.c_str(), {32.0f, 32.0f});
 
-    ImU32 magenta = ImColor(0xFF, 0, 0xFF);
-    ImGui::PushStyleColor(ImGuiCol_Button, black);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, gray);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, black);
-
-    ImGui::PushID((int)itemType->id);
-    // ImGui::Image(texture, {32.0f, 32.0f}, {window.x0, window.y0}, {window.x1, window.y1});
-    if (ImGui::ImageButton(
-            texture, imageSize,
-            {window.x0, window.y0},
-            {window.x1, window.y1},
-            0,
-            {0, 0, 0, 0},
-            {1, 1, 1, 1}))
-    {
-      this->brushServerId = itemType->id;
-    }
-    ImGui::PopID();
-    ImGui::PopStyleColor(3);
+    ImGui::Image(texture, imageSize, {window.x0, window.y0}, {window.x1, window.y1});
 
     ImGui::EndChild();
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::IsItemHovered() ? gray : black);
     ImGui::PopStyleColor();
-    ImGui::PopID();
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && this->hoveredId == itemType->id)
+    {
+      ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+      this->nextHoveredId = itemType->id;
+    }
+
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+    {
+      this->nextHoveredId = itemType->id;
+      this->brushServerId = itemType->id;
+    }
+    if (ImGui::IsItemHovered())
+    {
+      ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+      this->nextHoveredId = itemType->id;
+    }
   }
 }
 
@@ -143,6 +140,8 @@ static void HelpMarker(const char *desc)
 
 void GUI::createTopMenuBar()
 {
+  this->hoveredId = this->nextHoveredId;
+  this->nextHoveredId = 0;
   float menuHeight = 90.0f;
 
   ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar;
@@ -191,36 +190,6 @@ void GUI::createTopMenuBar()
     {
       if (selectedServerId < 100)
         selectedServerId = 100;
-      // uint16_t currentId = static_cast<uint16_t>(std::max((uint32_t)100, this->selectedServerId));
-      // if (!Items::items.getItemType(selectedServerId)->isValid())
-      // {
-      //   if (this->selectedServerId <= prevId)
-      //   {
-      //     ItemType *prevType = Items::items.getPreviousValidItemType(currentId);
-
-      //     this->prevId = this->selectedServerId;
-      //     this->selectedServerId = prevType == nullptr ? 100 : prevType->id;
-      //   }
-      //   else
-      //   {
-      //     this->prevId = this->selectedServerId;
-      //     this->selectedServerId = Items::items.getNextValidItemType(currentId)->id;
-      //   }
-      // }
-    }
-    else
-    {
-      // if (selectedServerId >= 100)
-      // {
-      //   // std::cout << selectedServerId << std::endl;
-      //   if (selectedServerId > prevId)
-      //   {
-      //     this->prevId = this->selectedServerId;
-      //     this->selectedServerId = Items::items.getNextValidItemType(selectedServerId)->id;
-      //   }
-
-      //   prevId = selectedServerId;
-      // }
     }
 
     ImGui::EndMenuBar();
@@ -228,6 +197,11 @@ void GUI::createTopMenuBar()
     renderN(4);
   }
   ImGui::End();
+
+  if (this->nextHoveredId == 0)
+  {
+    this->hoveredId = 0;
+  }
 }
 
 void GUI::renderN(uint32_t n)
@@ -246,39 +220,84 @@ void GUI::renderN(uint32_t n)
       ImGui::SameLine();
     }
   }
-
-  // std::stack<ItemType *> toBeRendered;
-  // ItemType *item = Items::items.getNextValidItemType(this->selectedServerId);
-  // for (uint32_t i = 0; i < n; ++i)
-  // {
-  //   item = item == nullptr ? nullptr : Items::items.getPreviousValidItemType(item->id - 1);
-  //   toBeRendered.push(item);
-  // }
-
-  // while (!toBeRendered.empty())
-  // {
-  //   renderItem(toBeRendered.top());
-  //   ImGui::SameLine();
-
-  //   toBeRendered.pop();
-  // }
-
-  // item = Items::items.getNextValidItemType(this->selectedServerId);
-  // renderItem(item);
-  // ImGui::SameLine();
-
-  // for (uint32_t i = 0; i < n; ++i)
-  // {
-  //   item = item == nullptr ? nullptr : Items::items.getNextValidItemType(item->id + 1);
-  //   renderItem(item);
-  //   if (i < n)
-  //   {
-  //     ImGui::SameLine();
-  //   }
-  // }
 }
 
-constexpr uint32_t DEFAULT_PADDING = 4.0f;
+void GUI::createBottomBar()
+{
+
+  float padding = DEFAULT_PADDING;
+  float bottomBarHeight = 20 + padding * 2;
+
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
+                                  ImGuiWindowFlags_NoCollapse |
+                                  ImGuiWindowFlags_NoResize |
+                                  ImGuiWindowFlags_NoMove |
+                                  ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                  ImGuiWindowFlags_NoNavFocus;
+  ImGuiViewport *viewport = ImGui::GetMainViewport();
+
+  ImGui::SetNextWindowPos({0, static_cast<float>(g_engine->getHeight() - bottomBarHeight)});
+  ImGui::SetNextWindowSize(viewport->GetWorkSize());
+  ImGui::SetNextWindowViewport(viewport->ID);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSizeConstraints({-1, bottomBarHeight}, {-1, bottomBarHeight});
+  ImGui::Begin("DockSpace Demo", &dockOpened, window_flags);
+  ImGui::PopStyleVar();
+
+  ImGui::PopStyleVar(2);
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {padding, padding});
+  ImGui::PopStyleVar(1);
+
+  ImVec2 bottomSubAreaSize = ImVec2{viewport->GetWorkSize().x / 4, bottomBarHeight + padding * 2};
+
+  ImGui::BeginChild("Bottom1", bottomSubAreaSize, ImGuiWindowFlags_NoResize);
+  {
+    float zoomPercentage = g_engine->getMapRenderer()->camera.zoomFactor * 100;
+    std::ostringstream zoomString;
+    zoomString << std::fixed << std::setprecision(0);
+    zoomString << "Zoom: " << zoomPercentage << "%%";
+    ImGui::Text(zoomString.str().c_str());
+  }
+  ImGui::EndChild();
+
+  ImGui::SameLine();
+  ImGui::BeginChild("Bottom2", bottomSubAreaSize, ImGuiWindowFlags_NoResize);
+  {
+    auto [x, y, z] = g_engine->screenToGamePos(g_engine->getMousePosition());
+
+    std::ostringstream positionString;
+    positionString << "x: " << (x) << " y: " << (y) << " z: " << z;
+    ImGui::Text(positionString.str().c_str());
+  }
+  ImGui::EndChild();
+
+  ImGui::SameLine();
+  ImGui::BeginChild("Bottom3", ImVec2{viewport->GetWorkSize().x / 2, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
+  {
+    Position gameMousePos = g_engine->screenToGamePos(g_engine->getMousePosition());
+
+    Tile *tile = g_engine->getMapRenderer()->map->getTile(gameMousePos);
+    std::ostringstream tileInfoString;
+    if (tile && tile->getTopItem())
+    {
+      Item *topItem = tile->getTopItem();
+      tileInfoString << "Item \"" << tile->getTopItem()->getName() << "\", id: " << topItem->getId() << ", cid: " << topItem->getClientId();
+    }
+    else
+    {
+      tileInfoString << "Nothing";
+    }
+
+    ImGui::Text(tileInfoString.str().c_str());
+  }
+  ImGui::EndChild();
+
+  ImGui::End();
+}
 
 void GUI::recordFrame(uint32_t currentFrame)
 {
@@ -290,102 +309,8 @@ void GUI::recordFrame(uint32_t currentFrame)
   // bool open = true;
   // ImGui::ShowDemoWindow(&open);
 
-  // ImGui::Begin("My First Tool", &testOpen, ImGuiWindowFlags_MenuBar);
-  // if (ImGui::BeginMenuBar())
-  // {
-  //   if (ImGui::BeginMenu("File"))
-  //   {
-  //     if (ImGui::MenuItem("Open..", "Ctrl+O"))
-  //     { /* Do stuff */
-  //     }
-  //     if (ImGui::MenuItem("Save", "Ctrl+S"))
-  //     { /* Do stuff */
-  //     }
-  //     if (ImGui::MenuItem("Close", "Ctrl+W"))
-  //     {
-  //       testOpen = false;
-  //     }
-  //     ImGui::EndMenu();
-  //   }
-  //   ImGui::EndMenuBar();
-  // }
-
-  // // Plot some values
-  // const float my_values[] = {0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f};
-  // ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
-
-  // // Display contents in a scrolling region
-  // ImGui::TextColored(ImVec4(1, 1, 0, 1), "Important Stuff");
-  // ImGui::BeginChild("Scrolling");
-  // for (int n = 0; n < 50; n++)
-  //   ImGui::Text("%04d: Some text", n);
-  // ImGui::EndChild();
-  // ImGui::End();
-
-  static bool opt_fullscreen_persistant = true;
-  bool opt_fullscreen = opt_fullscreen_persistant;
-  static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-  float padding = DEFAULT_PADDING;
-
-  float bottomBarHeight = 20 + padding * 2;
-
-  // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-  // because it would be confusing to have two docking targets within each others.
-  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
-  if (opt_fullscreen)
-  {
-    ImGuiViewport *viewport = ImGui::GetMainViewport();
-
-    ImGui::SetNextWindowPos({0, static_cast<float>(g_engine->getHeight() - bottomBarHeight)});
-    ImGui::SetNextWindowSize(viewport->GetWorkSize());
-    ImGui::SetNextWindowViewport(viewport->ID);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-    window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-  }
-
-  // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-  // and handle the pass-thru hole, so we ask Begin() to not render a background.
-  if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-    window_flags |= ImGuiWindowFlags_NoBackground;
-
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-  ImGui::SetNextWindowSizeConstraints({-1, bottomBarHeight}, {-1, bottomBarHeight});
-  ImGui::Begin("DockSpace Demo", &dockOpened, window_flags);
-  ImGui::PopStyleVar();
-
-  if (opt_fullscreen)
-    ImGui::PopStyleVar(2);
-
-  ImGuiViewport *viewport = ImGui::GetMainViewport();
-
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {padding, padding});
-  ImGui::PopStyleVar(1);
-
-  ImGui::BeginChild("Bottom1", {viewport->GetWorkSize().x / 4, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
-
-  std::string zoom = "Zoom factor: " + std::to_string(g_engine->getMapRenderer()->camera.zoomFactor);
-  ImGui::Text(zoom.c_str());
-
-  ImGui::EndChild();
-
-  ImGui::SameLine();
-
-  ImGui::BeginChild("Bottom2", {viewport->GetWorkSize().x / 4, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
-
-  auto [x, y, z] = g_engine->screenToGamePos(g_engine->getMousePosition());
-
-  std::ostringstream positionString;
-  positionString << "x: " << (x) << " y: " << (y) << " z: " << z;
-  ImGui::Text(positionString.str().c_str());
-
-  ImGui::EndChild();
-
-  ImGui::End();
-
   createTopMenuBar();
+  createBottomBar();
 
   updateCommandPool(currentFrame);
 
@@ -406,6 +331,11 @@ void GUI::recordFrame(uint32_t currentFrame)
 
   ImGui::Render();
   this->captureIO();
+
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
+
+  vkCmdEndRenderPass(commandBuffers[currentFrame]);
+  vkEndCommandBuffer(commandBuffers[currentFrame]);
 }
 
 void GUI::captureIO()
@@ -417,7 +347,6 @@ void GUI::captureIO()
 
 void GUI::createDescriptorPool()
 {
-
   VkDescriptorPoolSize pool_sizes[] =
       {
           {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
@@ -444,18 +373,8 @@ void GUI::createDescriptorPool()
   }
 }
 
-void GUI::endFrame(uint32_t currentFrame)
-{
-  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
-
-  vkCmdEndRenderPass(commandBuffers[currentFrame]);
-
-  vkEndCommandBuffer(commandBuffers[currentFrame]);
-}
-
 void GUI::createFrameBuffers()
 {
-
   frameBuffers.resize(g_engine->getImageCount());
 
   VkImageView attachment[1];
@@ -552,7 +471,6 @@ void GUI::checkVkResult(VkResult err)
 
 void GUI::updateCommandPool(uint32_t currentFrame)
 {
-
   if (vkResetCommandPool(g_engine->getDevice(), commandPools[currentFrame], 0) != VK_SUCCESS)
   {
     throw std::runtime_error("failed to reset GUI command pool!");
@@ -569,7 +487,6 @@ void GUI::updateCommandPool(uint32_t currentFrame)
 
 void GUI::recreate()
 {
-
   cleanup();
 
   ImGui_ImplVulkan_SetMinImageCount(g_engine->getMinImageCount());
@@ -581,7 +498,6 @@ void GUI::recreate()
 
 void GUI::cleanup()
 {
-
   VkDevice device = g_engine->getDevice();
 
   for (auto framebuffer : frameBuffers)
