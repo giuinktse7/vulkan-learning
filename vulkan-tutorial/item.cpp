@@ -18,9 +18,8 @@ std::unique_ptr<Item> Item::create(ItemTypeId serverId)
 
 const TextureWindow Item::getTextureWindow() const
 {
-	uint32_t spriteId = this->itemType->appearance->frame_group().at(0).sprite_info().sprite_id(0);
-	uint32_t baseOffset = spriteId - itemType->getTextureAtlas()->firstSpriteId;
-	return itemType->textureAtlas->getTextureWindow(baseOffset);
+	// TODO get correct texture window based on item offset, subtype, etc.
+	return itemType->getTextureWindow();
 }
 
 const glm::vec2 Item::getTextureAtlasSize() const
