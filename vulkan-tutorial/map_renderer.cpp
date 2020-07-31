@@ -15,6 +15,8 @@
 
 #include "logger.h"
 
+constexpr int GROUND_FLOOR = 7;
+
 MapRenderer::MapRenderer(std::unique_ptr<Map> map)
 {
   this->map = std::move(map);
@@ -60,11 +62,6 @@ void MapRenderer::initialize()
   g_engine->endSingleTimeCommands(commandBuffer);
 
   vkUnmapMemory(g_engine->getDevice(), indexStagingBuffer.deviceMemory);
-
-  auto maxFrames = g_engine->getMaxFramesInFlight();
-
-  uint8_t whitePixel[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  defaultTexture = std::make_shared<Texture>(1, 1, &whitePixel[0]);
 }
 
 void MapRenderer::addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas)
@@ -389,7 +386,7 @@ void MapRenderer::recordFrame(uint32_t frameIndex)
 
   updateUniformBuffer();
 
-  drawMap();
+  drawMap2();
 
   currentFrame->batchDraw.prepareDraw();
 
@@ -403,20 +400,55 @@ void MapRenderer::recordFrame(uint32_t frameIndex)
   }
 }
 
+Viewport::BoundingRect Viewport::getGameBoundingRect()
+{
+  int gameX = static_cast<int>(g_engine->worldToGamePos(offsetX));
+  int gameY = static_cast<int>(g_engine->worldToGamePos(offsetY));
+  int gameWidth = static_cast<int>(g_engine->screenToGamePos(static_cast<float>(width)));
+  int gameHeight = static_cast<int>(g_engine->screenToGamePos(static_cast<float>(height)));
+
+  return Viewport::BoundingRect{gameX, gameY, gameX + gameWidth, gameY + gameHeight};
+}
+
 void MapRenderer::drawMap()
 {
-  uint32_t i = 0;
-  for (const auto &tileLocation : map->begin())
-  {
-    auto position = tileLocation->getPosition();
-    auto tile = tileLocation->getTile();
+  auto mapRect = viewport.getGameBoundingRect();
+  int floor = camera.position.z;
 
-    if (tile->getGround())
+  bool aboveGround = floor <= 7;
+
+  int startZ = aboveGround ? GROUND_FLOOR : MAP_LAYERS - 1;
+  int endZ = aboveGround ? floor : GROUND_FLOOR + 1;
+
+  for (int mapZ = startZ; mapZ >= endZ; --mapZ)
+  {
+    int x1 = mapRect.x1 & ~3;
+    int x2 = (mapRect.x2 & ~3) + 4;
+
+    int y1 = mapRect.y1 & ~3;
+    int y2 = (mapRect.y2 & ~3) + 4;
+
+    for (int mapX = x1; mapX <= x2; mapX += 4)
     {
-      drawItem(*tile->getGround(), position);
+      for (int mapY = y1; mapY <= y2; mapY += 4)
+      {
+        quadtree::Node *node = map->getLeafUnsafe(mapX, mapY);
+        if (!node)
+          continue;
+
+        for (int x = 0; x < 4; ++x)
+        {
+          for (int y = 0; y < 4; ++y)
+          {
+            TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
+            if (tile && tile->hasTile())
+            {
+              drawTile(*tile);
+            }
+          }
+        }
+      }
     }
-    for (const auto &item : tile->getItems())
-      drawItem(*item, position);
   }
 
   // Draw ghost item cursor
@@ -428,6 +460,19 @@ void MapRenderer::drawMap()
 
   Position pos = g_engine->screenToGamePos(g_engine->getMousePosition());
   currentFrame->batchDraw.push(selectedItemType, selectedItemType.getTextureWindow(), pos, {0.5f, 0.5f, 0.5f, 0.7f});
+}
+
+void MapRenderer::drawTile(const TileLocation &tileLocation)
+{
+  auto position = tileLocation.getPosition();
+  auto tile = tileLocation.getTile();
+
+  if (tile->getGround())
+  {
+    drawItem(*tile->getGround(), position);
+  }
+  for (const auto &item : tile->getItems())
+    drawItem(*item, position);
 }
 
 void MapRenderer::updateUniformBuffer()

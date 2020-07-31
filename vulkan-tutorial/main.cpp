@@ -98,8 +98,6 @@ int main()
 {
 	MapRenderer *mapRenderer;
 
-	std::cout << "Saving.. " << std::endl;
-
 	try
 	{
 		engine::create();
@@ -127,6 +125,7 @@ int main()
 		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
+			Input::update(window);
 			g_engine->nextFrame();
 		}
 

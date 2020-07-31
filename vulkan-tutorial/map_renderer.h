@@ -31,13 +31,26 @@
 
 struct Viewport
 {
+	struct BoundingRect
+	{
+		int x1, y1, x2, y2;
+	};
+
 	int width;
 	int height;
 	float zoom;
 
 	uint32_t offsetX;
 	uint32_t offsetY;
+
+	Viewport::BoundingRect getGameBoundingRect();
 };
+
+inline std::ostream &operator<<(std::ostream &os, const Viewport::BoundingRect &rect)
+{
+	os << "{ x1=" << rect.x1 << ", y1=" << rect.y1 << ", x2=" << rect.x2 << ", y2=" << rect.y2 << "}";
+	return os;
+}
 
 struct TextureOffset
 {
@@ -93,6 +106,7 @@ public:
 
 	Camera camera;
 
+	// All sprites are drawn using this index buffer
 	BoundBuffer indexBuffer;
 
 	void initialize();
@@ -118,6 +132,8 @@ public:
 
 	void loadTextureAtlases();
 
+	void drawTile(const TileLocation &tileLocation);
+
 	void drawItem(Item &item, Position position);
 	void drawItem(Item &item, Position position, glm::vec4 color);
 
@@ -140,8 +156,6 @@ private:
 	VkDescriptorSetLayout textureDescriptorSetLayout;
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	std::shared_ptr<Texture> defaultTexture;
 
 	std::unordered_map<uint32_t, std::unique_ptr<TextureAtlas>> textureAtlases;
 
