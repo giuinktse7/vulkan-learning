@@ -7,5 +7,6 @@ namespace Input
 	void handleKeyAction(GLFWwindow *window, int key, int scancode, int action, int mods);
 	void handleCursorPosition(GLFWwindow *window, double x, double y);
 	void handleMouseKeyAction(GLFWwindow *window, int button, int action, int mods);
+	void update(GLFWwindow *window);
 
 }; // namespace Input

@@ -2,32 +2,58 @@
 
 #include "graphics/engine.h"
 
-void updateModifierKey(int key, int action)
+void updateKeyState(int key, int action)
 {
-  if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
+  g_engine->setKeyState(key, action);
+}
+
+bool fastKeyDown(GLFWwindow *window, int key)
+{
+  return g_engine->getKeyState(key) == GLFW_REPEAT && glfwGetKey(window, key) != GLFW_RELEASE;
+}
+
+void Input::update(GLFWwindow *window)
+{
+  glm::vec3 delta{};
+  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 1.5));
+
+  if (fastKeyDown(window, GLFW_KEY_RIGHT))
   {
-    if (action == GLFW_RELEASE)
-    {
-      g_engine->setKeyUp(key);
-    }
-    else if (action == GLFW_PRESS)
-    {
-      g_engine->setKeyDown(key);
-    }
+    delta.x += step;
+  }
+  if (fastKeyDown(window, GLFW_KEY_LEFT))
+  {
+    delta.x -= step;
+  }
+  if (fastKeyDown(window, GLFW_KEY_UP))
+  {
+    delta.y -= step;
+  }
+  if (fastKeyDown(window, GLFW_KEY_DOWN))
+  {
+    delta.y += step;
+  }
+
+  if (delta.x != 0 || delta.y != 0 || delta.z != 0)
+  {
+    g_engine->getMapRenderer()->camera.translate(delta);
   }
 }
 
 void updateCamera(int key)
 {
-  bool ctrlDown = g_engine->isCtrlDown();
 
-  if (ctrlDown && key == GLFW_KEY_0)
+  if (key == GLFW_KEY_KP_ADD)
   {
-    g_engine->resetZoom();
+    g_engine->translateCameraZ(-1);
+  }
+  if (key == GLFW_KEY_KP_SUBTRACT)
+  {
+    g_engine->translateCameraZ(+1);
   }
 
-  glm::vec2 delta(0.0f, 0.0f);
-  float step = Engine::TILE_SIZE / std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 2);
+  glm::vec3 delta(0.0f, 0.0f, 0.0f);
+  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 1.5));
 
   switch (key)
   {
@@ -43,11 +69,16 @@ void updateCamera(int key)
   case GLFW_KEY_DOWN:
     delta.y = step;
     break;
+  case GLFW_KEY_KP_ADD:
+
   default:
     break;
   }
 
-  g_engine->translateCamera(delta);
+  if (delta.x != 0 || delta.y != 0)
+  {
+    g_engine->translateCamera(delta);
+  }
 }
 
 void Input::handleMouseScroll(GLFWwindow *window, double xoffset, double yoffset)
@@ -67,12 +98,26 @@ void Input::handleMouseScroll(GLFWwindow *window, double xoffset, double yoffset
 
 void Input::handleKeyAction(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+  if (key == GLFW_KEY_D && action == GLFW_PRESS)
+  {
+    g_engine->debug = !g_engine->debug;
+  }
   if (!g_engine->captureKeyboard)
     return;
 
-  if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
+  // if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
+  // {
+  updateKeyState(key, action);
+  // }
+
+  if (key == GLFW_KEY_0)
   {
-    updateModifierKey(key, action);
+    bool ctrlDown = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) != GLFW_RELEASE || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) != GLFW_RELEASE;
+    if (ctrlDown)
+    {
+      g_engine->resetZoom();
+      std::cout << "Reset zoom" << std::endl;
+    }
   }
 
   bool keyActive = action == GLFW_PRESS || action == GLFW_REPEAT;
