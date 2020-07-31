@@ -23,7 +23,6 @@ class MapIterator
 {
 public:
 	MapIterator();
-	MapIterator(int lowestZ) : lowestZ(lowestZ) {}
 	~MapIterator();
 
 	MapIterator begin() const
@@ -81,11 +80,9 @@ public:
 	friend class Map;
 
 private:
-	int lowestZ = 0;
-
 	std::stack<NodeIndex> stack{};
 	uint32_t tileIndex = 0;
-	uint32_t floorIndex = MAP_LAYERS - 1;
+	uint32_t floorIndex = 0;
 	TileLocation *value = nullptr;
 };
 
@@ -94,7 +91,6 @@ class Map
 public:
 	Map();
 
-	MapIterator begin(int lowestFloor);
 	MapIterator begin();
 	MapIterator end();
 
@@ -115,6 +111,8 @@ public:
 	{
 		return towns;
 	}
+
+	quadtree::Node *getLeafUnsafe(int x, int y);
 
 private:
 	Towns towns;

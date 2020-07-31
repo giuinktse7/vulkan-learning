@@ -63,12 +63,17 @@ TileLocation *Map::getTileLocation(int x, int y, int z) const
   return nullptr;
 }
 
+quadtree::Node *Map::getLeafUnsafe(int x, int y)
+{
+  return root.getLeafUnsafe(x, y);
+}
+
 MapIterator *MapIterator::nextFromLeaf()
 {
   quadtree::Node *node = stack.top().node;
   DEBUG_ASSERT(node->isLeaf(), "The node must be a leaf node.");
 
-  for (int z = floorIndex; z >= this->lowestZ; --z)
+  for (int z = this->floorIndex; z < MAP_LAYERS; ++z)
   {
     if (Floor *floor = node->getFloor(z))
     {
@@ -98,11 +103,6 @@ void MapIterator::emplace(quadtree::Node *node)
 }
 
 MapIterator Map::begin()
-{
-  return begin(0);
-}
-
-MapIterator Map::begin(int lowestFloor)
 {
   MapIterator iterator;
   iterator.emplace(&this->root);
@@ -163,7 +163,7 @@ MapIterator &MapIterator::operator++()
     }
 
     tileIndex = 0;
-    floorIndex = MAP_LAYERS - 1;
+    floorIndex = 0;
 
     uint32_t size = current.node->nodes.size();
     // This node is finished
