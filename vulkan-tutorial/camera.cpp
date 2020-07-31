@@ -9,7 +9,7 @@ void Camera::updateZoom()
 	float n = 0.1f;
 	float zoomFactor = n * exp(log(1 / n) / 10 * zoomStep);
 
-	glm::vec2 newPos{this->position};
+	glm::vec3 newPos{this->position};
 
 	newPos.x += mousePos.x / this->zoomFactor;
 	newPos.x -= mousePos.x / zoomFactor;
@@ -22,58 +22,41 @@ void Camera::updateZoom()
 	this->zoomFactor = zoomFactor;
 }
 
-bool Camera::isMoving()
+void Camera::setPosition(glm::vec3 position)
 {
-	return keys.left || keys.right || keys.up || keys.down;
+	this->position = glm::vec3(std::max(position.x, 0.0f), std::max(position.y, 0.0f), std::clamp(static_cast<int>(position.z), 0, 15));
 }
 
-void Camera::setPosition(glm::vec2 position)
-{
-	this->position = glm::vec2(std::max(position.x, 0.0f), std::max(position.y, 0.0f));
-}
-
-void Camera::translate(glm::vec2 delta)
+void Camera::translate(glm::vec3 delta)
 {
 	setPosition(this->position + delta);
 }
 
+void Camera::translateZ(int z)
+{
+	this->position.z = std::clamp(static_cast<int>(position.z + z), 0, 15);
+}
+
 void Camera::zoomIn()
 {
-	zoomStep = std::clamp(zoomStep + 1, 0, zoomSteps);
-	updateZoom();
+	setZoomStep(this->zoomStep + 1);
 }
 
 void Camera::zoomOut()
 {
-	zoomStep = std::clamp(zoomStep - 1, 0, zoomSteps);
-	updateZoom();
+	setZoomStep(this->zoomStep - 1);
 }
 
 void Camera::resetZoom()
 {
-	zoomStep = 10;
-	updateZoom();
+	setZoomStep(10);
 }
 
-void Camera::setMovementSpeed(float movementSpeed)
+void Camera::setZoomStep(int zoomStep)
 {
-	this->movementSpeed = movementSpeed;
-}
-
-void Camera::update(float deltaTime)
-{
-	updated = false;
-	if (isMoving())
+	if (this->zoomStep != zoomStep)
 	{
-		float moveSpeed = deltaTime * movementSpeed;
-
-		if (keys.up)
-			position += moveSpeed;
-		if (keys.down)
-			position -= moveSpeed;
-		if (keys.left)
-			position -= moveSpeed;
-		if (keys.right)
-			position += moveSpeed;
+		this->zoomStep = std::clamp(zoomStep, 0, zoomSteps);
+		updateZoom();
 	}
-};
+}

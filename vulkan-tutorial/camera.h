@@ -9,17 +9,11 @@
 
 class Camera
 {
-private:
-  int zoomSteps = 20;
 
 public:
-  glm::vec2 position = glm::vec2();
+  glm::vec3 position = glm::vec3(0 * 32, 0 * 32, 7);
 
   float zoomFactor = 1.0f;
-  int zoomStep = 10;
-
-  float movementSpeed = 1.0f;
-  bool updated = false;
 
   struct
   {
@@ -29,11 +23,10 @@ public:
     bool down = false;
   } keys;
 
-  bool isMoving();
+  void setPosition(glm::vec3 position);
 
-  void setPosition(glm::vec2 position);
-
-  void translate(glm::vec2 delta);
+  void translate(glm::vec3 delta);
+  void translateZ(int z);
 
   void updateZoom();
 
@@ -43,7 +36,12 @@ public:
 
   void resetZoom();
 
-  void setMovementSpeed(float movementSpeed);
+private:
+  // Possible zoom steps, [0, 20]
+  int zoomSteps = 20;
 
-  void update(float deltaTime);
+  // Current zoom step
+  int zoomStep = 10;
+
+  void setZoomStep(int zoomStep);
 };
