@@ -64,8 +64,7 @@ namespace quadtree
 
 	protected:
 		NodeType nodeType = NodeType::Root;
-		union
-		{
+		union {
 			std::array<std::unique_ptr<Node>, MAP_TREE_CHILDREN_COUNT> nodes{};
 			std::array<std::unique_ptr<Floor>, MAP_TREE_CHILDREN_COUNT> children;
 		};
