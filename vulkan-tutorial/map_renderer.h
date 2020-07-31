@@ -29,6 +29,16 @@
 
 #include "map.h"
 
+struct Viewport
+{
+	int width;
+	int height;
+	float zoom;
+
+	uint32_t offsetX;
+	uint32_t offsetY;
+};
+
 struct TextureOffset
 {
 	float x;
@@ -77,25 +87,22 @@ public:
 	static const int TILE_SIZE = 32;
 	static const uint32_t MAX_VERTICES = 64 * 1024;
 
+	Viewport viewport;
+
 	std::unique_ptr<Map> map;
 
 	Camera camera;
 
 	BoundBuffer indexBuffer;
-	ItemUniformBufferObject uniformBufferObject;
 
 	void initialize();
 	void recreate();
 
 	void recordFrame(uint32_t currentFrame);
-	void endFrame();
 
 	void addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas);
 
-	VkCommandBuffer getCommandBuffer()
-	{
-		return frame->commandBuffer;
-	}
+	VkCommandBuffer getCommandBuffer();
 
 	void createRenderPass();
 
@@ -112,13 +119,14 @@ public:
 	void loadTextureAtlases();
 
 	void drawItem(Item &item, Position position);
+	void drawItem(Item &item, Position position, glm::vec4 color);
 
 	TextureAtlas *getTextureAtlas(ItemType &itemType);
 
 private:
 	std::array<FrameData, 3> frames;
 
-	FrameData *frame;
+	FrameData *currentFrame;
 
 	VkRenderPass renderPass;
 
@@ -152,11 +160,12 @@ private:
 	void createDescriptorSetLayouts();
 	void createDescriptorSets();
 	void createFrameBuffers();
+
+	void updateViewport();
 	void updateUniformBuffer();
 
 	void startCommandBuffer();
 	void beginRenderPass();
-	void endRenderPass();
 
 	void drawMap();
 	void drawBatches();
