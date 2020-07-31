@@ -52,6 +52,7 @@ namespace quadtree
 		Node &getLeafWithCreate(int x, int y);
 		Node &getLeaf(int x, int y);
 		Node *getLeafUnsafe(int x, int y) const;
+		TileLocation *getTile(int x, int y, int z) const;
 
 		Floor &getOrCreateFloor(int x, int y, int z);
 		Floor *getFloor(uint32_t z) const;

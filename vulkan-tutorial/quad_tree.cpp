@@ -104,6 +104,17 @@ Floor::~Floor()
   // cout << "~Floor()" << endl;
 }
 
+TileLocation *Node::getTile(int x, int y, int z) const
+{
+  DEBUG_ASSERT(isLeaf(), "Only leaves can contain tiles.");
+
+  Floor *f = getFloor(z);
+  if (!f)
+    return nullptr;
+
+  return &f->getTileLocation(x, y);
+}
+
 Floor *Node::getFloor(uint32_t z) const
 {
   DEBUG_ASSERT(isLeaf(), "Only leaves contain floors.");
