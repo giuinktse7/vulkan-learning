@@ -19,6 +19,19 @@ Tile &Map::getOrCreateTile(Position &pos)
   return getOrCreateTile(pos.x, pos.y, pos.z);
 }
 
+Tile *Map::getTile(Position pos) const
+{
+  auto leaf = root.getLeafUnsafe(pos.x, pos.y);
+  if (!leaf)
+      return nullptr;
+
+  Floor *floor = leaf->getFloor(pos.z);
+  if (!floor)
+    return nullptr;
+
+  return floor->getTileLocation(pos.x, pos.y).getTile();
+}
+
 Tile &Map::getOrCreateTile(int x, int y, int z)
 {
   DEBUG_ASSERT(root.isRoot(), "Only root nodes can create a tile.");

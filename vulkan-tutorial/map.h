@@ -101,6 +101,7 @@ public:
 	Tile &getOrCreateTile(int x, int y, int z);
 	Tile &getOrCreateTile(Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
+	Tile *getTile(Position pos) const;
 
 	MapVersion getMapVersion();
 	std::string &getDescription();
