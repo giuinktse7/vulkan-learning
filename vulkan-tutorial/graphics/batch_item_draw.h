@@ -102,7 +102,11 @@ public:
 
 	BatchDraw();
 
+	void push(Item &item, Position &pos, glm::vec4 color);
 	void push(Item &item, Position &pos);
+
+	void push(ItemType &itemType, TextureWindow textureWindow, Position &pos);
+	void push(ItemType &itemType, TextureWindow window, Position &pos, glm::vec4 color);
 
 	void reset();
 

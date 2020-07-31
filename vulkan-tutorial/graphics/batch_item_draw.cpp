@@ -87,29 +87,48 @@ void Batch::copyStagingToDevice(VkCommandBuffer commandBuffer)
 
 void BatchDraw::push(Item &item, Position &pos)
 {
-  auto drawOffset = item.getDrawOffset();
+  push(*item.itemType, item.getTextureWindow(), pos, DEFAULT_COLOR);
+}
+
+void BatchDraw::push(ItemType &itemType, TextureWindow window, Position &pos)
+{
+  push(itemType, window, pos, DEFAULT_COLOR);
+}
+
+void BatchDraw::push(Item &item, Position &pos, glm::vec4 color)
+{
+  push(*item.itemType, item.getTextureWindow(), pos, color);
+}
+
+void BatchDraw::push(ItemType &itemType, TextureWindow window, Position &pos, glm::vec4 color)
+{
+  TextureAtlas *atlas = itemType.textureAtlas;
+  auto drawOffset = itemType.textureAtlas->drawOffset;
 
   int worldX = g_engine->gameToWorldPos(pos.x + drawOffset.x);
   int worldY = g_engine->gameToWorldPos(pos.y + drawOffset.y);
 
-  uint32_t width = item.getWidth();
-  uint32_t height = item.getHeight();
+  uint32_t width = atlas->spriteWidth;
+  uint32_t height = atlas->spriteHeight;
 
-  auto window = item.getTextureWindow();
-  glm::vec2 atlasSize = item.getTextureAtlasSize();
+  glm::vec2 atlasSize = {atlas->width, atlas->height};
   const float offsetX = 0.5f / atlasSize.x;
   const float offsetY = 0.5f / atlasSize.y;
 
-  const glm::vec4 rect = {window.x0 + offsetX, window.y0 - offsetY, window.x1 - offsetX, window.y1 + offsetY};
+  const glm::vec4 rect = {
+      window.x0 + offsetX,
+      window.y0 - offsetY,
+      window.x1 - offsetX,
+      window.y1 + offsetY};
 
   Batch &batch = getBatch(4);
-  batch.setDescriptor(item.itemType->textureAtlas->getDescriptorSet());
+  batch.setDescriptor(atlas->getDescriptorSet());
 
   std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, DEFAULT_COLOR, {window.x0, window.y0}, rect},
-      {{worldX, worldY + height}, DEFAULT_COLOR, {window.x0, window.y1}, rect},
-      {{worldX + width, worldY + height}, DEFAULT_COLOR, {window.x1, window.y1}, rect},
-      {{worldX + width, worldY}, DEFAULT_COLOR, {window.x1, window.y0}, rect},
+      {{worldX, worldY}, color, {window.x0, window.y0}, rect},
+      {{worldX, worldY + height}, color, {window.x0, window.y1}, rect},
+      {{worldX + width, worldY + height}, color, {window.x1, window.y1}, rect},
+      {{worldX + width, worldY}, color, {window.x1, window.y0}, rect},
   }};
 
   batch.addVertices(vertices);
