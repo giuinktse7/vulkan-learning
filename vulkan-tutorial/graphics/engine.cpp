@@ -91,9 +91,8 @@ void Engine::initialize(GLFWwindow *window)
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
 
-  mapRenderer->camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-
-  mapRenderer->camera.updateZoom();
+  // mapRenderer->camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+  // mapRenderer->camera.resetZoom();
 
   isInitialized = true;
 }
@@ -521,6 +520,8 @@ const Position Engine::screenToGamePos(glm::vec2 pos) const
   return screenToGamePos(pos.x, pos.y);
 }
 
+// TODO Fix these unclear functions.
+// TODO should not use camera.position.x and camera.position.y
 const Position Engine::screenToGamePos(float screenX, float screenY) const
 {
   auto camera = mapRenderer->camera;
@@ -528,7 +529,24 @@ const Position Engine::screenToGamePos(float screenX, float screenY) const
   uint32_t x = worldToGamePos(camera.position.x + screenX / camera.zoomFactor);
   uint32_t y = worldToGamePos(camera.position.y + screenY / camera.zoomFactor);
 
-  return {x, y, 7};
+  return {x, y, static_cast<uint32_t>(camera.position.z)};
+}
+
+const uint32_t Engine::screenToGamePos(float value) const
+{
+  auto camera = mapRenderer->camera;
+
+  return worldToGamePos(value / camera.zoomFactor);
+}
+
+void Engine::translateCamera(glm::vec3 delta)
+{
+  mapRenderer->camera.translate(delta);
+}
+
+void Engine::translateCameraZ(int z)
+{
+  mapRenderer->camera.translateZ(z);
 }
 
 void Engine::WaitUntilDeviceIdle()
@@ -559,4 +577,27 @@ void Engine::shutdown()
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
   vkDestroyDescriptorPool(device, gui.getDescriptorPool(), nullptr);
+}
+
+void Engine::setKeyState(int key, int state)
+{
+  if (keyState.find(key) == keyState.end())
+  {
+    keyState.try_emplace(key, GLFW_PRESS);
+  }
+  else
+  {
+    keyState.at(key) = state;
+  }
+}
+
+int Engine::getKeyState(int key)
+{
+  auto value = keyState.find(key);
+  if (value == keyState.end())
+  {
+    return GLFW_RELEASE;
+  }
+
+  return value->second;
 }

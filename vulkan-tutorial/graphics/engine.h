@@ -41,6 +41,8 @@ public:
 	Engine();
 	~Engine();
 
+	bool debug = false;
+
 	struct FrameData
 	{
 		VkSemaphore imageAvailableSemaphore = nullptr;
@@ -140,6 +142,7 @@ public:
 	const uint32_t gameToWorldPos(uint32_t gamePos) const;
 	const uint32_t worldToGamePos(float worldPos) const;
 	const Position screenToGamePos(float screenX, float screenY) const;
+	const uint32_t screenToGamePos(float value) const;
 	const Position screenToGamePos(glm::vec2 pos) const;
 
 	void createCommandPool();
@@ -177,25 +180,8 @@ public:
 
 	bool isValidWindowSize();
 
-	void setKeyDown(int key)
-	{
-		keys.insert(key);
-	}
-
-	void setKeyUp(int key)
-	{
-		keys.erase(key);
-	}
-
-	bool isKeyDown(int key) const
-	{
-		return keys.find(key) != keys.end();
-	}
-
-	bool isCtrlDown() const
-	{
-		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
-	}
+	void setKeyState(int key, int state);
+	int getKeyState(int key);
 
 	void setMousePosition(float x, float y)
 	{
@@ -252,15 +238,8 @@ public:
 		mapRenderer->camera.zoomOut();
 	}
 
-	int getCameraZoomStep()
-	{
-		return mapRenderer->camera.zoomStep;
-	}
-
-	void translateCamera(glm::vec2 delta)
-	{
-		return mapRenderer->camera.translate(delta);
-	}
+	void translateCamera(glm::vec3 delta);
+	void translateCameraZ(int z);
 
 	VkDescriptorPool &getMapDescriptorPool()
 	{
@@ -333,7 +312,7 @@ private:
 
 	uint32_t previousFrame;
 
-	std::unordered_set<int> keys;
+	std::map<int, int> keyState;
 
 	void createVulkanInstance();
 
