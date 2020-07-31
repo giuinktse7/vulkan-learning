@@ -172,6 +172,9 @@ public:
   ItemType() {}
   ~ItemType();
 
+  void loadTextureAtlas();
+  const TextureWindow getTextureWindow() const;
+
   uint32_t textureAtlasOffset()
   {
     uint32_t spriteId = this->appearance->frame_group().at(0).sprite_info().sprite_id(0);

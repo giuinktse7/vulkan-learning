@@ -651,9 +651,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 TextureAtlas *ItemType::getTextureAtlas()
 {
 	if (this->textureAtlas == nullptr)
-	{
-		this->textureAtlas = g_engine->getMapRenderer()->getTextureAtlas(*this);
-	}
+		loadTextureAtlas();
 
 	return this->textureAtlas;
 }
@@ -700,4 +698,16 @@ ItemType *Items::getPreviousValidItemType(uint16_t serverId)
 OTB::VersionInfo Items::getOtbVersionInfo()
 {
 	return otbVersionInfo;
+}
+
+const TextureWindow ItemType::getTextureWindow() const
+{
+	uint32_t spriteId = appearance->frame_group().at(0).sprite_info().sprite_id(0);
+	uint32_t baseOffset = spriteId - textureAtlas->firstSpriteId;
+	return textureAtlas->getTextureWindow(baseOffset);
+}
+
+void ItemType::loadTextureAtlas()
+{
+	this->textureAtlas = g_engine->getMapRenderer()->getTextureAtlas(*this);
 }
