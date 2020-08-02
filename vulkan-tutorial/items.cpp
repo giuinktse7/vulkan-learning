@@ -45,6 +45,30 @@ ItemType *Items::getItemType(uint16_t id)
 	return &itemTypes.at(id);
 }
 
+ItemType *Items::getItemTypeByClientId(uint16_t clientId)
+{
+	uint16_t id = clientIdToServerId.at(clientId);
+	if (id >= itemTypes.size())
+		return nullptr;
+
+	return &itemTypes.at(id);
+}
+
+std::vector<CatalogInfo> ItemType::catalogInfos() const
+{
+	auto comparator = [](CatalogInfo a, CatalogInfo b) { return a.file.compare(b.file); };
+	std::set<CatalogInfo, decltype(comparator)> paths(comparator);
+
+	auto &info = this->appearance->getSpriteInfo();
+
+	for (const auto id : info.spriteIds)
+	{
+		paths.insert(Appearances::getCatalogInfo(id));
+	}
+
+	return std::vector(paths.begin(), paths.end());
+}
+
 tl::expected<void, std::string> unexpecting(const std::string s)
 {
 	return tl::make_unexpected(s);
@@ -710,4 +734,9 @@ const TextureWindow ItemType::getTextureWindow() const
 void ItemType::loadTextureAtlas()
 {
 	this->textureAtlas = g_engine->getMapRenderer()->getTextureAtlas(*this);
+}
+
+const ItemType &Items::getItemIdByClientId(uint16_t spriteId) const
+{
+	return itemTypes.at(clientIdToServerId.at(spriteId));
 }

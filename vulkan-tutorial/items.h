@@ -6,6 +6,8 @@
 #include <tl/expected.hpp>
 #include <memory>
 #include <pugixml.hpp>
+#include <vector>
+#include <set>
 
 #include "otb.h"
 #include "const.h"
@@ -174,6 +176,8 @@ public:
 
   void loadTextureAtlas();
   const TextureWindow getTextureWindow() const;
+
+  std::vector<CatalogInfo> catalogInfos() const;
 
   uint32_t textureAtlasOffset()
   {
@@ -416,6 +420,8 @@ public:
   }
 
   ItemType *getItemType(uint16_t id);
+  ItemType *getItemTypeByClientId(uint16_t clientId);
+
   const ItemType &getItemIdByClientId(uint16_t spriteId) const;
 
   uint16_t getItemIdByName(const std::string &name);
