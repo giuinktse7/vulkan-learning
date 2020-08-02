@@ -1,13 +1,10 @@
-
-// #include "otpch.h"
-
 #include <stack>
-#include "otb.h"
-#include "file.h"
-
 #include <iostream>
 #include <string>
-#include <chrono>
+
+#include "otb.h"
+#include "file.h"
+#include "util.h"
 
 namespace OTB
 {
@@ -46,7 +43,7 @@ namespace OTB
 
   const Node &Loader::parseTree()
   {
-    auto start = std::chrono::high_resolution_clock::now();
+    auto start = TimeMeasure::start();
 
     auto cursor = fileBuffer.begin() + sizeof(Identifier);
 
@@ -112,9 +109,7 @@ namespace OTB
       throw InvalidOTBFormat{};
     }
 
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-    std::cout << "Loaded items.otb in " << duration << " milliseconds." << std::endl;
+    std::cout << "Loaded items.otb in " << start.elapsedMillis() << " milliseconds." << std::endl;
     return root;
   }
 

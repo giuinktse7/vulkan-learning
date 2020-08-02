@@ -1,7 +1,6 @@
 #include "map_renderer.h"
 
 #include <stdexcept>
-#include <chrono>
 
 #include "file.h"
 #include "graphics/resource-descriptor.h"
@@ -24,7 +23,6 @@ MapRenderer::MapRenderer(std::unique_ptr<Map> map)
 
 void MapRenderer::initialize()
 {
-
   currentFrame = &frames.front();
 
   createRenderPass();
@@ -78,15 +76,13 @@ VkCommandBuffer MapRenderer::getCommandBuffer()
 
 void MapRenderer::loadTextureAtlases()
 {
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start = TimeMeasure::start();
   for (const auto &pair : Appearances::catalogInfo)
   {
     std::unique_ptr<TextureAtlas> atlas = TextureAtlas::fromCatalogInfo(pair.second);
     this->addTextureAtlas(atlas);
   }
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-  std::cout << "Loaded compressed sprites in " << duration << " milliseconds." << std::endl;
+  std::cout << "Loaded compressed sprites in " << start.elapsedMillis() << " milliseconds." << std::endl;
 }
 
 void MapRenderer::createRenderPass()
@@ -386,7 +382,7 @@ void MapRenderer::recordFrame(uint32_t frameIndex)
 
   updateUniformBuffer();
 
-  drawMap2();
+  drawMap();
 
   currentFrame->batchDraw.prepareDraw();
 
