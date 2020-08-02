@@ -527,9 +527,9 @@ TextureAtlas *MapRenderer::getTextureAtlas(ItemType &itemType)
 {
   if (itemType.textureAtlas == nullptr)
   {
-    auto appearance = Appearances::getObjectById(itemType.clientId);
-    auto fg = appearance.frame_group().at(0);
-    auto firstSpriteId = fg.sprite_info().sprite_id().at(0);
+    auto &appearance = Appearances::getObjectById(itemType.clientId);
+
+    auto firstSpriteId = itemType.appearance->getFirstSpriteId();
     itemType.textureAtlas = getTextureAtlas(firstSpriteId);
   }
 

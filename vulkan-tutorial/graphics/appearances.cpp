@@ -7,6 +7,8 @@
 #include <nlohmann/json.hpp>
 #include <memory>
 
+#include "../util.h"
+
 #include "texture_atlas.h"
 #include "../items.h"
 #include "engine.h"
@@ -16,7 +18,7 @@
 using namespace std;
 using namespace tibia::protobuf;
 
-std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::objects;
+std::unordered_map<uint32_t, Appearance> Appearances::objects;
 std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::outfits;
 
 std::set<uint32_t> Appearances::catalogIndex;
@@ -26,7 +28,7 @@ bool Appearances::isLoaded;
 
 void Appearances::loadFromFile(const std::filesystem::path path)
 {
-    auto start = std::chrono::high_resolution_clock::now();
+    TimeMeasure startTime = TimeMeasure::start();
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -44,11 +46,42 @@ void Appearances::loadFromFile(const std::filesystem::path path)
         google::protobuf::ShutdownProtobufLibrary();
     }
 
+    int total = 0;
     for (int i = 0; i < parsed.object_size(); ++i)
     {
         const appearances::Appearance &object = parsed.object(i);
-        Appearances::objects[object.id()] = object;
+        auto info = object.frame_group().at(0).sprite_info();
+        // if (object.id() == 3031 || object.id() == 103)
+        // {
+        //     std::cout << "\n(cid: " << object.id() << "): " << std::endl;
+        //     std::cout << "info: " << info << std::endl;
+        //     if (object.has_flags())
+        //     {
+        //         std::cout << "flags: " << object.flags() << std::endl;
+        //     }
+        // }
+
+        // if (object.has_flags() && object.flags().has_cumulative() && object.flags().cumulative() && info.sprite_id_size() > 1 && info.has_animation())
+        // {
+        //     std::cout << "\n(cid: " << object.id() << "): " << std::endl;
+        //     std::cout << "framegroups: " << object.frame_group_size() << std::endl;
+        //     std::cout << "info: " << info << std::endl;
+        //     if (object.has_flags())
+        //     {
+        //         std::cout << "flags: " << std::endl;
+        //         std::cout << object.flags() << std::endl;
+        //     }
+        //     if (info.has_animation())
+        //     {
+        //         std::cout << "Animation:" << std::endl
+        //                   << info.animation() << std::endl;
+        //     }
+        //     ++total;
+        // }
+        Appearances::objects.emplace(object.id(), object);
     }
+
+    std::cout << "Total: " << total << std::endl;
 
     for (int i = 0; i < parsed.outfit_size(); ++i)
     {
@@ -58,9 +91,7 @@ void Appearances::loadFromFile(const std::filesystem::path path)
 
     Appearances::isLoaded = true;
 
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-    std::cout << "Loaded appearances.dat in " << duration << " milliseconds." << std::endl;
+    std::cout << "Loaded appearances.dat in " << startTime.elapsedMillis() << " milliseconds." << std::endl;
 }
 
 void Appearances::addSpriteSheetInfo(CatalogInfo &info)
@@ -121,9 +152,168 @@ void Appearances::loadCatalog(const std::filesystem::path path)
         }
     }
 
-    std::cout << "Types: " << std::endl;
-    for (const auto &t : types)
+    // std::cout << "Types: " << std::endl;
+    // for (const auto &t : types)
+    // {
+    //     std::cout << t << std::endl;
+    // }
+}
+
+SpriteInfo SpriteInfo::fromProtobufData(tibia::protobuf::appearances::SpriteInfo spriteInfo)
+{
+    SpriteInfo info{};
+    info.animation = std::make_unique<SpriteAnimation>(SpriteAnimation::fromProtobufData(spriteInfo.animation()));
+    info.boundingSquare = spriteInfo.bounding_square();
+    info.isOpaque = spriteInfo.bounding_square();
+    info.layers = spriteInfo.layers();
+    info.patternWidth = spriteInfo.pattern_width();
+    info.patternHeight = spriteInfo.pattern_height();
+    info.patternDepth = spriteInfo.pattern_depth();
+
+    for (auto id : spriteInfo.sprite_id())
     {
-        std::cout << t << std::endl;
+        info.spriteIds.emplace_back<uint32_t &>(id);
     }
+
+    return info;
+}
+
+SpriteAnimation SpriteAnimation::fromProtobufData(tibia::protobuf::appearances::SpriteAnimation animation)
+{
+    SpriteAnimation anim{};
+    anim.defaultStartPhase = animation.default_start_phase();
+    anim.loopCount = animation.loop_count();
+
+    switch (animation.loop_type())
+    {
+    case tibia::protobuf::shared::ANIMATION_LOOP_TYPE::ANIMATION_LOOP_TYPE_PINGPONG:
+        anim.loopType = AnimationLoopType::PingPong;
+        break;
+    case tibia::protobuf::shared::ANIMATION_LOOP_TYPE::ANIMATION_LOOP_TYPE_COUNTED:
+        anim.loopType = AnimationLoopType::Counted;
+        break;
+    case tibia::protobuf::shared::ANIMATION_LOOP_TYPE::ANIMATION_LOOP_TYPE_INFINITE:
+    default:
+        anim.loopType = AnimationLoopType::Infinite;
+        break;
+    }
+
+    for (auto phase : animation.sprite_phase())
+    {
+        anim.phases.push_back({phase.duration_min(), phase.duration_max()});
+    }
+
+    anim.defaultStartPhase = animation.default_start_phase();
+    anim.randomStartPhase = animation.random_start_phase();
+    anim.synchronized = animation.synchronized();
+
+    return anim;
+}
+
+Appearance::Appearance(tibia::protobuf::appearances::Appearance protobufAppearance)
+{
+    this->clientId = protobufAppearance.id();
+    this->name = protobufAppearance.name();
+
+    if (protobufAppearance.frame_group_size() == 1)
+    {
+        this->appearanceData = SpriteInfo::fromProtobufData(protobufAppearance.frame_group().at(0).sprite_info());
+    }
+
+    // Flags
+    {
+        this->flags = static_cast<AppearanceFlags>(0);
+        if (protobufAppearance.has_flags())
+        {
+            auto flags = protobufAppearance.flags();
+
+#define ADD_FLAG_UTIL(flagType, flag) \
+    do                                \
+    {                                 \
+        if (flags.has_##flagType())   \
+        {                             \
+            this->flags |= flag;      \
+        }                             \
+    } while (false)
+
+            ADD_FLAG_UTIL(bank, AppearanceFlags::Bank);
+            ADD_FLAG_UTIL(clip, AppearanceFlags::Clip);
+            ADD_FLAG_UTIL(bottom, AppearanceFlags::Bottom);
+            ADD_FLAG_UTIL(top, AppearanceFlags::Top);
+            ADD_FLAG_UTIL(container, AppearanceFlags::Container);
+            ADD_FLAG_UTIL(cumulative, AppearanceFlags::Cumulative);
+            ADD_FLAG_UTIL(usable, AppearanceFlags::Usable);
+            ADD_FLAG_UTIL(forceuse, AppearanceFlags::Forceuse);
+            ADD_FLAG_UTIL(multiuse, AppearanceFlags::Multiuse);
+            ADD_FLAG_UTIL(write, AppearanceFlags::Write);
+            ADD_FLAG_UTIL(write_once, AppearanceFlags::WriteOnce);
+            ADD_FLAG_UTIL(liquidpool, AppearanceFlags::Liquidpool);
+            ADD_FLAG_UTIL(unpass, AppearanceFlags::Unpass);
+            ADD_FLAG_UTIL(unmove, AppearanceFlags::Unmove);
+            ADD_FLAG_UTIL(unsight, AppearanceFlags::Unsight);
+            ADD_FLAG_UTIL(avoid, AppearanceFlags::Avoid);
+            ADD_FLAG_UTIL(no_movement_animation, AppearanceFlags::NoMovementAnimation);
+            ADD_FLAG_UTIL(take, AppearanceFlags::Take);
+            ADD_FLAG_UTIL(liquidcontainer, AppearanceFlags::LiquidContainer);
+            ADD_FLAG_UTIL(hang, AppearanceFlags::Hang);
+            ADD_FLAG_UTIL(hook, AppearanceFlags::Hook);
+            ADD_FLAG_UTIL(rotate, AppearanceFlags::Rotate);
+            ADD_FLAG_UTIL(light, AppearanceFlags::Light);
+            ADD_FLAG_UTIL(dont_hide, AppearanceFlags::DontHide);
+            ADD_FLAG_UTIL(translucent, AppearanceFlags::Translucent);
+            ADD_FLAG_UTIL(shift, AppearanceFlags::Shift);
+            ADD_FLAG_UTIL(height, AppearanceFlags::Height);
+            ADD_FLAG_UTIL(lying_object, AppearanceFlags::LyingObject);
+            ADD_FLAG_UTIL(animate_always, AppearanceFlags::AnimateAlways);
+            ADD_FLAG_UTIL(automap, AppearanceFlags::Automap);
+            ADD_FLAG_UTIL(lenshelp, AppearanceFlags::Lenshelp);
+            ADD_FLAG_UTIL(fullbank, AppearanceFlags::Fullbank);
+            ADD_FLAG_UTIL(ignore_look, AppearanceFlags::IgnoreLook);
+            ADD_FLAG_UTIL(clothes, AppearanceFlags::Clothes);
+            ADD_FLAG_UTIL(default_action, AppearanceFlags::DefaultAction);
+            ADD_FLAG_UTIL(market, AppearanceFlags::Market);
+            ADD_FLAG_UTIL(wrap, AppearanceFlags::Wrap);
+            ADD_FLAG_UTIL(unwrap, AppearanceFlags::Unwrap);
+            ADD_FLAG_UTIL(topeffect, AppearanceFlags::Topeffect);
+            // TODO npcsaledata flag is not handled right now
+            ADD_FLAG_UTIL(changedtoexpire, AppearanceFlags::ChangedToExpire);
+            ADD_FLAG_UTIL(corpse, AppearanceFlags::Corpse);
+            ADD_FLAG_UTIL(player_corpse, AppearanceFlags::PlayerCorpse);
+            ADD_FLAG_UTIL(cyclopediaitem, AppearanceFlags::CyclopediaItem);
+        }
+
+#undef ADD_FLAG_UTIL
+    }
+}
+
+uint32_t Appearance::getFirstSpriteId() const
+{
+    return getSpriteInfo().spriteIds.at(0);
+}
+
+const SpriteInfo &Appearance::getSpriteInfo(size_t frameGroup) const
+{
+    if (std::holds_alternative<SpriteInfo>(appearanceData))
+    {
+        return std::get<SpriteInfo>(appearanceData);
+    }
+    else
+    {
+        return std::get<std::vector<FrameGroup>>(appearanceData).at(frameGroup).spriteInfo;
+    }
+}
+
+const SpriteInfo &Appearance::getSpriteInfo() const
+{
+    return getSpriteInfo(0);
+}
+
+size_t Appearance::frameGroupCount() const
+{
+    if (std::holds_alternative<SpriteInfo>(appearanceData))
+    {
+        return 1;
+    }
+
+    return std::get<std::vector<FrameGroup>>(appearanceData).size();
 }

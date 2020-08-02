@@ -7,7 +7,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <chrono>
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
@@ -102,12 +101,19 @@ int main()
 	{
 		engine::create();
 
-		Appearances::loadFromFile("data/appearances.dat");
 		Appearances::loadCatalog("data/catalog-content.json");
+		Appearances::loadFromFile("data/appearances.dat");
 		std::cout << "Loaded catalog-content.json." << std::endl;
 
 		Items::loadFromOtb("data/items.otb");
 		Items::loadFromXml("data/items.xml");
+
+		auto itemtype = Items::items.getItemTypeByClientId(32623);
+
+		for (const auto s : itemtype->catalogInfos())
+		{
+			std::cout << "[" << s.firstSpriteId << ", " << s.lastSpriteId << "]: " << s.file << std::endl;
+		}
 
 		mapRenderer = new MapRenderer(std::make_unique<Map>());
 		g_engine->setMapRenderer(mapRenderer);

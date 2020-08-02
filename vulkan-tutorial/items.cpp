@@ -605,7 +605,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 
 		// items.serverIdToMapId.emplace(serverId, mapId);
 
-		iType.name = Appearances::getObjectById(clientId).name();
+		iType.name = Appearances::getObjectById(clientId).name;
 		iType.appearance = &Appearances::getObjectById(clientId);
 
 		iType.group = static_cast<itemgroup_t>(itemNode.type);
@@ -726,7 +726,7 @@ OTB::VersionInfo Items::getOtbVersionInfo()
 
 const TextureWindow ItemType::getTextureWindow() const
 {
-	uint32_t spriteId = appearance->frame_group().at(0).sprite_info().sprite_id(0);
+	uint32_t spriteId = appearance->getFirstSpriteId();
 	uint32_t baseOffset = spriteId - textureAtlas->firstSpriteId;
 	return textureAtlas->getTextureWindow(baseOffset);
 }

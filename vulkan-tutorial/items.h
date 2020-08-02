@@ -181,7 +181,7 @@ public:
 
   uint32_t textureAtlasOffset()
   {
-    uint32_t spriteId = this->appearance->frame_group().at(0).sprite_info().sprite_id(0);
+    uint32_t spriteId = this->appearance->getFirstSpriteId();
     return spriteId - getTextureAtlas()->firstSpriteId;
   }
 
@@ -397,7 +397,7 @@ public:
   bool showCount = true;
 
   TextureAtlas *textureAtlas = nullptr;
-  tibia::protobuf::appearances::Appearance *appearance = nullptr;
+  Appearance *appearance = nullptr;
 
 private:
   // This item's index in the itemtype vector
