@@ -19,12 +19,6 @@ Items Items::items;
 
 constexpr uint32_t RESERVED_ITEM_COUNT = 30000;
 
-template <typename E>
-constexpr auto to_underlying(E e) noexcept
-{
-	return static_cast<std::underlying_type_t<E>>(e);
-}
-
 using std::string;
 
 constexpr auto OTBI = OTB::Identifier{{'O', 'T', 'B', 'I'}};
@@ -443,7 +437,7 @@ void Items::loadFromOtb(const std::string &file)
 
 			switch (attrib)
 			{
-			case itemattribute_t::ITEM_ATTR_SERVERID:
+			case itemproperty_t::ITEM_ATTR_SERVERID:
 			{
 				if (length != sizeof(uint16_t))
 				{
@@ -463,7 +457,7 @@ void Items::loadFromOtb(const std::string &file)
 				break;
 			}
 
-			case itemattribute_t::ITEM_ATTR_CLIENTID:
+			case itemproperty_t::ITEM_ATTR_CLIENTID:
 			{
 				if (length != sizeof(uint16_t))
 				{
@@ -477,7 +471,7 @@ void Items::loadFromOtb(const std::string &file)
 				break;
 			}
 
-			case itemattribute_t::ITEM_ATTR_SPEED:
+			case itemproperty_t::ITEM_ATTR_SPEED:
 			{
 				if (length != sizeof(uint16_t))
 				{
@@ -491,7 +485,7 @@ void Items::loadFromOtb(const std::string &file)
 				break;
 			}
 
-			case itemattribute_t::ITEM_ATTR_LIGHT2:
+			case itemproperty_t::ITEM_ATTR_LIGHT2:
 			{
 				OTB::LightInfo lightInfo;
 				if (length != sizeof(OTB::LightInfo))
@@ -509,7 +503,7 @@ void Items::loadFromOtb(const std::string &file)
 				break;
 			}
 
-			case itemattribute_t::ITEM_ATTR_TOPORDER:
+			case itemproperty_t::ITEM_ATTR_TOPORDER:
 			{
 				if (length != sizeof(uint8_t))
 				{
@@ -523,7 +517,7 @@ void Items::loadFromOtb(const std::string &file)
 				break;
 			}
 
-			case itemattribute_t::ITEM_ATTR_WAREID:
+			case itemproperty_t::ITEM_ATTR_WAREID:
 			{
 				if (length != sizeof(uint16_t))
 				{
