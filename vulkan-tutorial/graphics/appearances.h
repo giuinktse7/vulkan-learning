@@ -203,15 +203,6 @@ inline bool operator>(AppearanceFlag a, uint64_t b)
   return (uint64_t)a > b;
 }
 
-struct CatalogInfo
-{
-  std::filesystem::path file;
-  SpriteLayout spriteType;
-  uint32_t firstSpriteId;
-  uint32_t lastSpriteId;
-  uint8_t area;
-};
-
 struct SpritePhase
 {
   uint32_t minDuration;
@@ -357,18 +348,11 @@ public:
     return objects.at(id);
   }
 
-  static CatalogInfo getCatalogInfo(uint32_t spriteId);
-
   static TextureAtlas *getTextureAtlas(const uint32_t spriteId);
-
-  // Maps the upper sprite id bound to info about the sprite sheet
-  static std::unordered_map<uint32_t, CatalogInfo> catalogInfo;
 
   static bool isLoaded;
 
 private:
-  static void addSpriteSheetInfo(CatalogInfo &info);
-
   static std::unordered_map<AppearanceId, Appearance> objects;
   static std::unordered_map<AppearanceId, tibia::protobuf::appearances::Appearance> outfits;
 
@@ -382,9 +366,9 @@ private:
 
   /* 
 		Used for quick retrieval of a texture atlas given a sprite ID.
-		It stores the upper bound of the sprite ids in the sprite sheet.
+		It stores the start and end sprite id in the sprite sheet.
 	*/
-  static std::set<uint32_t> textureAtlasIds;
+  static std::vector<SpriteRange> textureAtlasSpriteRanges;
 };
 
 inline uint32_t Appearance::getSpriteId(uint32_t frameGroup, Position pos)

@@ -169,7 +169,8 @@ public:
   const TextureInfo getTextureInfo() const;
   const TextureInfo getTextureInfo(const Position &pos) const;
 
-  std::vector<CatalogInfo> catalogInfos() const;
+  // For debugging purposes
+  std::vector<TextureAtlas *> getTextureAtlases() const;
 
   TextureAtlas *getTextureAtlas(uint32_t spriteId) const;
   TextureAtlas *getFirstTextureAtlas() const;

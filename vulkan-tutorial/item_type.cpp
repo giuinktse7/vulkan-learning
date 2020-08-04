@@ -44,19 +44,17 @@ const TextureInfo ItemType::getTextureInfo(const Position &pos) const
   }
 }
 
-std::vector<CatalogInfo> ItemType::catalogInfos() const
+std::vector<TextureAtlas *> ItemType::getTextureAtlases() const
 {
-  auto comparator = [](CatalogInfo a, CatalogInfo b) { return a.file.compare(b.file); };
-  std::set<CatalogInfo, decltype(comparator)> paths(comparator);
+  auto comparator = [](TextureAtlas *a, TextureAtlas *b) { return a->sourceFile.compare(b->sourceFile); };
+  std::set<TextureAtlas *, decltype(comparator)> textureAtlases(comparator);
 
   auto &info = this->appearance->getSpriteInfo();
 
   for (const auto id : info.spriteIds)
-  {
-    paths.insert(Appearances::getCatalogInfo(id));
-  }
+    textureAtlases.insert(getTextureAtlas(id));
 
-  return std::vector(paths.begin(), paths.end());
+  return std::vector(textureAtlases.begin(), textureAtlases.end());
 }
 
 void ItemType::cacheTextureAtlases()
@@ -113,7 +111,7 @@ TextureAtlas *ItemType::getTextureAtlas(uint32_t spriteId) const
     }
   }
 
-  return nullptr;
+  return getTextureAtlas(spriteId);
 }
 
 TextureAtlas *ItemType::getFirstTextureAtlas() const
