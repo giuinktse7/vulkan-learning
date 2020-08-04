@@ -12,6 +12,7 @@
 
 #include "graphics/appearances.h"
 #include "graphics/engine.h"
+#include "item_type.h"
 
 using tl::unexpected;
 
@@ -33,11 +34,6 @@ Items::Items()
 {
 }
 
-ItemType::~ItemType()
-{
-	// Empty
-}
-
 ItemType *Items::getItemType(uint16_t id)
 {
 	if (id >= itemTypes.size())
@@ -53,21 +49,6 @@ ItemType *Items::getItemTypeByClientId(uint16_t clientId)
 		return nullptr;
 
 	return &itemTypes.at(id);
-}
-
-std::vector<CatalogInfo> ItemType::catalogInfos() const
-{
-	auto comparator = [](CatalogInfo a, CatalogInfo b) { return a.file.compare(b.file); };
-	std::set<CatalogInfo, decltype(comparator)> paths(comparator);
-
-	auto &info = this->appearance->getSpriteInfo();
-
-	for (const auto id : info.spriteIds)
-	{
-		paths.insert(Appearances::getCatalogInfo(id));
-	}
-
-	return std::vector(paths.begin(), paths.end());
 }
 
 tl::expected<void, std::string> unexpecting(const std::string s)
@@ -710,68 +691,6 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 	return {};
 }
 
-void ItemType::cacheTextureAtlases()
-{
-	for (int frameGroup = 0; frameGroup < appearance->frameGroupCount(); ++frameGroup)
-	{
-		for (const auto spriteId : appearance->getSpriteInfo(frameGroup).spriteIds)
-		{
-			// Stop if the cache is full
-			if (this->atlases.back() != nullptr)
-			{
-				return;
-			}
-			cacheTextureAtlas(spriteId);
-		}
-	}
-}
-
-void ItemType::cacheTextureAtlas(uint32_t spriteId)
-{
-	// If nothing is cached, cache the TextureAtlas for the first sprite ID in the appearance.
-	if (this->atlases.front() == nullptr)
-		this->atlases.front() = Appearances::getTextureAtlas(this->appearance->getFirstSpriteId());
-
-	for (int i = 0; i < atlases.size(); ++i)
-	{
-		TextureAtlas *&atlas = this->atlases[i];
-		// End of current cache reached, must load the atlas.
-		if (atlas == nullptr)
-		{
-			atlas = Appearances::getTextureAtlas(spriteId);
-		}
-
-		if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
-		{
-			// The TextureAtlas is already cached
-			return;
-		}
-	}
-}
-
-TextureAtlas *ItemType::getTextureAtlas(uint32_t spriteId) const
-{
-	for (const auto atlas : atlases)
-	{
-		if (atlas == nullptr)
-		{
-			return nullptr;
-		}
-
-		if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
-		{
-			return atlas;
-		}
-	}
-
-	return nullptr;
-}
-
-TextureAtlas *ItemType::getFirstTextureAtlas() const
-{
-	return atlases.front();
-}
-
 ItemType *Items::getNextValidItemType(uint16_t serverId)
 {
 	ABORT_PROGRAM("Unimplemented! validItemTypeStartId has to be populated.");
@@ -814,45 +733,6 @@ ItemType *Items::getPreviousValidItemType(uint16_t serverId)
 OTB::VersionInfo Items::getOtbVersionInfo()
 {
 	return otbVersionInfo;
-}
-
-const TextureInfo ItemType::getTextureInfo() const
-{
-	uint32_t spriteId = appearance->getFirstSpriteId();
-	TextureAtlas *atlas = getTextureAtlas(spriteId);
-
-	TextureInfo info;
-	info.atlas = atlas;
-	info.window = atlas->getTextureWindow(spriteId);
-	return info;
-}
-
-const TextureInfo ItemType::getTextureInfo(const Position &pos) const
-{
-	if (!appearance->hasFlag(AppearanceFlag::Take) && appearance->hasFlag(AppearanceFlag::Unmove))
-	{
-		const SpriteInfo &spriteInfo = appearance->getSpriteInfo();
-		if (spriteInfo.hasAnimation())
-		{
-			// TODO Handle animated un-takeable, un-movable tiles
-			return getTextureInfo();
-		}
-
-		uint32_t width = spriteInfo.patternWidth;
-		uint32_t height = spriteInfo.patternHeight;
-		uint32_t depth = spriteInfo.patternDepth;
-
-		uint32_t spriteIndex = (pos.x % width) + (pos.y % height) * width + (pos.z % depth) * height * width;
-
-		uint32_t spriteId = spriteInfo.spriteIds.at(spriteIndex);
-		TextureAtlas *atlas = getTextureAtlas(spriteId);
-
-		return TextureInfo{atlas, atlas->getTextureWindow(spriteId)};
-	}
-	else
-	{
-		return getTextureInfo();
-	}
 }
 
 const ItemType &Items::getItemIdByClientId(uint16_t spriteId) const

@@ -102,9 +102,6 @@
     <ClCompile Include="graphics\texture_atlas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="chunk.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="tile_location.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -133,6 +130,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gui\custom_imgui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="item_type.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -221,9 +221,6 @@
     <ClInclude Include="map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="chunk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="tile_location.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -258,6 +255,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gui\custom_imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="item_type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
