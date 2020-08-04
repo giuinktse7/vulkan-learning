@@ -21,12 +21,6 @@ constexpr uint8_t BI_BITFIELDS = 0x03;
 // See https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
 constexpr uint32_t OFFSET_OF_BMP_START_OFFSET = 10;
 
-std::unique_ptr<TextureAtlas> TextureAtlas::fromCatalogInfo(CatalogInfo catalogInfo)
-{
-  std::vector<uint8_t> buffer = File::read(catalogInfo.file.string());
-  return std::make_unique<TextureAtlas>(catalogInfo.lastSpriteId, buffer, TEXTURE_ATLAS_WIDTH, TEXTURE_ATLAS_HEIGHT, catalogInfo.firstSpriteId, catalogInfo.spriteType, catalogInfo.file);
-}
-
 TextureAtlas::TextureAtlas(uint32_t id, CompressedBytes &buffer, uint32_t width, uint32_t height, uint32_t firstSpriteId, SpriteLayout spriteLayout, std::filesystem::path sourceFile)
     : texture(buffer), id(id), width(width), height(height), firstSpriteId(firstSpriteId), lastSpriteId(id), sourceFile(sourceFile)
 {
@@ -77,8 +71,12 @@ TextureAtlas::TextureAtlas(uint32_t id, CompressedBytes &buffer, uint32_t width,
   assert(id == lastSpriteId);
 }
 
-const TextureWindow TextureAtlas::getTextureWindow(uint32_t offset) const
+const TextureWindow TextureAtlas::getTextureWindow(uint32_t spriteId) const
 {
+  DEBUG_ASSERT(firstSpriteId <= spriteId && spriteId <= lastSpriteId, "The TextureAtlas does not contain that sprite ID.");
+
+  uint32_t offset = spriteId - this->firstSpriteId;
+
   auto row = offset / columns;
   auto col = offset % columns;
 

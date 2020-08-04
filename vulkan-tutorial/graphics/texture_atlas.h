@@ -4,9 +4,17 @@
 #include <memory>
 #include <variant>
 
+#include "../const.h"
 #include "compression.h"
 #include "texture.h"
-#include "appearances.h"
+
+struct TextureAtlas;
+
+struct TextureInfo
+{
+	TextureAtlas *atlas;
+	TextureWindow window;
+};
 
 struct DrawOffset
 {
@@ -18,7 +26,6 @@ struct TextureAtlas
 {
 	using CompressedBytes = std::vector<uint8_t>;
 	TextureAtlas(uint32_t id, CompressedBytes &buffer, uint32_t width, uint32_t height, uint32_t firstSpriteId, SpriteLayout spriteLayout, std::filesystem::path sourceFile);
-	static std::unique_ptr<TextureAtlas> fromCatalogInfo(CatalogInfo catalogInfo);
 
 	std::filesystem::path sourceFile;
 
@@ -38,7 +45,7 @@ struct TextureAtlas
 
 	DrawOffset drawOffset;
 
-	const TextureWindow getTextureWindow(uint32_t offset) const;
+	const TextureWindow getTextureWindow(uint32_t spriteId) const;
 
 	Texture &getTexture();
 
