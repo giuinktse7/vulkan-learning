@@ -126,8 +126,24 @@ CatalogInfo Appearances::getCatalogInfo(uint32_t spriteId)
     return catalogInfo.at(lastSpriteId);
 }
 
+TextureAtlas *Appearances::getTextureAtlas(const uint32_t spriteId)
+{
+    auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
+    if (found == textureAtlasIds.end())
+    {
+        std::cout << "Could not find a sprite sheet for sprite ID " << spriteId << "." << std::endl;
+        exit(1);
+    }
+
+    uint32_t lastSpriteId = *found;
+
+    return textureAtlases.at(lastSpriteId).get();
+}
+
 void Appearances::loadCatalog(const std::filesystem::path path)
 {
+    auto start = TimeMeasure::start();
+
     if (!filesystem::exists(path))
     {
         cout << "Could not locate the catalog JSON file. Failed to find file at path: " + filesystem::absolute(path).u8string() << endl;
@@ -156,6 +172,19 @@ void Appearances::loadCatalog(const std::filesystem::path path)
             info.firstSpriteId = x.at("firstspriteid");
             info.lastSpriteId = x.at("lastspriteid");
             addSpriteSheetInfo(info);
+
+            std::vector<uint8_t> buffer = File::read(info.file.string());
+
+            Appearances::textureAtlases[info.lastSpriteId] = std::make_unique<TextureAtlas>(
+                info.lastSpriteId,
+                buffer,
+                TextureAtlasSize.width,
+                TextureAtlasSize.height,
+                info.firstSpriteId,
+                info.spriteType,
+                info.file);
+            Appearances::textureAtlasIds.insert(info.lastSpriteId);
+            ;
         }
         else
         {
@@ -439,4 +468,15 @@ size_t Appearance::frameGroupCount() const
     }
 
     return std::get<std::vector<FrameGroup>>(appearanceData).size();
+}
+
+const uint32_t Appearance::getSpriteId(int index) const
+{
+    return getSpriteId(0, index);
+}
+
+const uint32_t Appearance::getSpriteId(uint32_t frameGroup, int index) const
+{
+    const SpriteInfo &info = getSpriteInfo(frameGroup);
+    return info.spriteIds.at(index);
 }

@@ -114,8 +114,6 @@ public:
 
 	void recordFrame(uint32_t currentFrame);
 
-	void addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas);
-
 	VkCommandBuffer getCommandBuffer();
 
 	void createRenderPass();
@@ -130,14 +128,10 @@ public:
 		return textureDescriptorSetLayout;
 	}
 
-	void loadTextureAtlases();
-
 	void drawTile(const TileLocation &tileLocation);
 
 	void drawItem(Item &item, Position position);
 	void drawItem(Item &item, Position position, glm::vec4 color);
-
-	TextureAtlas *getTextureAtlas(ItemType &itemType);
 
 private:
 	std::array<FrameData, 3> frames;
@@ -156,16 +150,6 @@ private:
 	VkDescriptorSetLayout textureDescriptorSetLayout;
 
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	std::unordered_map<uint32_t, std::unique_ptr<TextureAtlas>> textureAtlases;
-
-	/* 
-		Used for quick retrieval of a texture atlas given a sprite ID.
-		It stores the upper bound of the sprite ids in the sprite sheet.
-	*/
-	std::set<uint32_t> textureAtlasIds;
-
-	TextureAtlas *getTextureAtlas(const uint32_t spriteId);
 
 	void createGraphicsPipeline();
 	void createCommandPool();

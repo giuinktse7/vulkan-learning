@@ -345,6 +345,7 @@ class Appearances
 public:
   static void loadFromFile(const std::filesystem::path path);
   static void loadCatalog(const std::filesystem::path path);
+  static void loadTextureAtlases();
 
   static bool hasObject(AppearanceId id)
   {
@@ -358,6 +359,8 @@ public:
 
   static CatalogInfo getCatalogInfo(uint32_t spriteId);
 
+  static TextureAtlas *getTextureAtlas(const uint32_t spriteId);
+
   // Maps the upper sprite id bound to info about the sprite sheet
   static std::unordered_map<uint32_t, CatalogInfo> catalogInfo;
 
@@ -369,13 +372,19 @@ private:
   static std::unordered_map<AppearanceId, Appearance> objects;
   static std::unordered_map<AppearanceId, tibia::protobuf::appearances::Appearance> outfits;
 
-  // Catalog content stuff
-
   /* 
 		Used for quick retrieval of the correct spritesheet given a sprite ID.
 		It stores the upper bound of the sprite ids in the sprite sheet.
 	*/
   static std::set<uint32_t> catalogIndex;
+
+  static std::unordered_map<uint32_t, std::unique_ptr<TextureAtlas>> textureAtlases;
+
+  /* 
+		Used for quick retrieval of a texture atlas given a sprite ID.
+		It stores the upper bound of the sprite ids in the sprite sheet.
+	*/
+  static std::set<uint32_t> textureAtlasIds;
 };
 
 inline uint32_t Appearance::getSpriteId(uint32_t frameGroup, Position pos)

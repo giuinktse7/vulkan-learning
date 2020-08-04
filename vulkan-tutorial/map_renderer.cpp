@@ -69,27 +69,10 @@ void MapRenderer::initialize()
   vkUnmapMemory(g_engine->getDevice(), indexStagingBuffer.deviceMemory);
 }
 
-void MapRenderer::addTextureAtlas(std::unique_ptr<TextureAtlas> &atlas)
-{
-  textureAtlasIds.insert(atlas->lastSpriteId);
-  textureAtlases[atlas->id] = std::move(atlas);
-}
-
 VkCommandBuffer MapRenderer::getCommandBuffer()
 {
 
   return currentFrame->commandBuffer;
-}
-
-void MapRenderer::loadTextureAtlases()
-{
-  auto start = TimeMeasure::start();
-  for (const auto &pair : Appearances::catalogInfo)
-  {
-    std::unique_ptr<TextureAtlas> atlas = TextureAtlas::fromCatalogInfo(pair.second);
-    this->addTextureAtlas(atlas);
-  }
-  std::cout << "Loaded compressed sprites in " << start.elapsedMillis() << " milliseconds." << std::endl;
 }
 
 void MapRenderer::createRenderPass()
@@ -415,6 +398,7 @@ Viewport::BoundingRect Viewport::getGameBoundingRect()
 
 void MapRenderer::drawMap()
 {
+  // std::cout << std::endl << "drawMap()" << std::endl;
   auto mapRect = viewport.getGameBoundingRect();
   int floor = camera.position.z;
 
