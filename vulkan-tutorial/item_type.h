@@ -64,7 +64,7 @@ enum itemgroup_t : uint8_t
   ITEM_GROUP_LAST
 };
 
-enum itemattribute_t : uint8_t
+enum itemproperty_t : uint8_t
 {
   ITEM_ATTR_FIRST = 0x10,
   ITEM_ATTR_SERVERID = ITEM_ATTR_FIRST,

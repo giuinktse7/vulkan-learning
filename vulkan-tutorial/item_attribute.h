@@ -1,91 +1,83 @@
 #pragma once
 
-#include <map>
 #include <string>
-#include <memory>
+#include <variant>
+#include <optional>
+
+#include "logger.h"
+#include "util.h"
+
+enum class ItemAttribute_t
+{
+  UniqueId = 1,
+  ActionId = 2,
+  Text = 3,
+  Description = 4
+};
 
 class ItemAttribute
 {
 public:
-  ItemAttribute();
-  ItemAttribute(const std::string &str);
-  ItemAttribute(int32_t i);
-  ItemAttribute(double f);
-  ItemAttribute(bool b);
-  ItemAttribute(const ItemAttribute &o);
-  ItemAttribute &operator=(const ItemAttribute &o);
-  ~ItemAttribute();
+  ItemAttribute(ItemAttribute_t type);
+  const ItemAttribute_t type;
 
-  enum Type
+  template <typename T>
+  bool holds() const
   {
-    STRING = 1,
-    INTEGER = 2,
-    FLOAT = 3,
-    BOOLEAN = 4,
-    DOUBLE = 5,
-    NONE = 0
-  } type;
+    return std::holds_alternative<T>(value);
+  }
 
-  void clear();
+  template <typename T>
+  std::optional<T> get()
+  {
+    if (std::holds_alternative<T>(value))
+    {
+      return std::get<T>(value);
+    }
+    else
+    {
+      return {};
+    }
+  }
 
-  void set(const std::string &str);
-  void set(int32_t i);
-  void set(double f);
-  void set(bool b);
-
-  const std::string *getString() const;
-  const int32_t *getInteger() const;
-  const double *getFloat() const;
-  const bool *getBoolean() const;
+protected:
+  void setBool(bool value);
+  void setInt(int value);
+  void setDouble(double value);
+  void setString(std::string &value);
 
 private:
-  char data[sizeof(std::string) > sizeof(double) ? sizeof(std::string) : sizeof(double)];
+  std::variant<bool, int, double, std::string> value;
 };
 
-class ItemAttributes
+template <typename T, typename... Ts>
+inline std::ostream &operator<<(std::ostream &os, const std::variant<T, Ts...> &v)
 {
-public:
-  ItemAttributes();
-  ItemAttributes(const ItemAttributes &i);
-  virtual ~ItemAttributes();
+  std::visit([&os](auto &&arg) { os << arg; }, v);
+  return os;
+}
 
-  void setAttribute(const std::string &key, const ItemAttribute &attr);
-  void setAttribute(const std::string &key, const std::string &value);
-  void setAttribute(const std::string &key, int32_t value);
-  void setAttribute(const std::string &key, double value);
-  void setAttribute(const std::string &key, bool set);
-
-  // returns nullptr if the attribute is not set
-  const std::string *getStringAttribute(const std::string &key) const;
-  const int32_t *getIntegerAttribute(const std::string &key) const;
-  const double *getFloatAttribute(const std::string &key) const;
-  const bool *getBooleanAttribute(const std::string &key) const;
-
-  // Returns true if the attribute (of that type) exists
-  bool hasStringAttribute(const std::string &key) const;
-  bool hasIntegerAttribute(const std::string &key) const;
-  bool hasFloatAttribute(const std::string &key) const;
-  bool hasBooleanAttribute(const std::string &key) const;
-
-  void eraseAttribute(const std::string &key);
-
-  size_t size() const
+inline std::ostream &operator<<(std::ostream &os, ItemAttribute_t type)
+{
+  switch (type)
   {
-    if (!attributes)
-      return 0;
-    return attributes->size();
+  case ItemAttribute_t::UniqueId:
+    os << "UniqueId";
+    break;
+  case ItemAttribute_t::ActionId:
+    os << "ActionId";
+    break;
+  case ItemAttribute_t::Text:
+    os << "Text";
+    break;
+  case ItemAttribute_t::Description:
+    os << "Description";
+    break;
+  default:
+    Logger::error() << "Could not convert ItemAttribute_t '" << to_underlying(type) << "' to a string.";
+    os << "Unknown ItemAttribute";
+    break;
   }
 
-  bool isEmpty() const
-  {
-      return size() == 0;
-  }
-
-  void clearAllAttributes();
-  std::map<std::string, ItemAttribute> &getAttributes();
-
-private:
-  std::unique_ptr<std::map<std::string, ItemAttribute>> attributes;
-
-  void createAttributes();
-};
+  return os;
+}

@@ -319,55 +319,55 @@ void MapIO::Serializer::serializeItemAttributes(Item *item)
     if (item->hasAttributes())
     {
       buffer.writeU8(OTBM_ATTR_ATTRIBUTE_MAP);
-      serializeItemAttributeMap(&item->getAttributes());
+      serializeItemAttributeMap(item->getAttributes());
     }
   }
 }
 
-void MapIO::Serializer::serializeItemAttributeMap(ItemAttributes *attributes)
+void MapIO::Serializer::serializeItemAttributeMap(const std::unordered_map<ItemAttribute_t, ItemAttribute> &attributes)
 {
   // Can not have more than UINT16_MAX items
-  buffer.writeU16(std::min((size_t)UINT16_MAX, attributes->size()));
+  buffer.writeU16(std::min((size_t)UINT16_MAX, attributes.size()));
 
-  auto attributeMap = attributes->getAttributes();
-  auto attribute = attributeMap.begin();
+  auto entry = attributes.begin();
 
   int i = 0;
-  while (attribute != attributeMap.end() && i <= UINT16_MAX)
+  while (entry != attributes.end() && i <= UINT16_MAX)
   {
-    const std::string &key = attribute->first;
-    if (key.size() > UINT16_MAX)
+    const ItemAttribute_t &attributeType = entry->first;
+    std::stringstream attributeTypeString;
+    attributeTypeString << attributeType;
+    std::string s = attributeTypeString.str();
+    if (s.size() > UINT16_MAX)
     {
-      buffer.writeString(key.substr(0, UINT16_MAX));
+      buffer.writeString(s.substr(0, UINT16_MAX));
     }
     else
     {
-      buffer.writeString(key);
+      buffer.writeString(s);
     }
 
-    serializeItemAttribute(&attribute->second);
-    ++attribute;
+    auto attribute = entry->second;
+    serializeItemAttribute(attribute);
+    ++entry;
     ++i;
   }
 }
 
-void MapIO::Serializer::serializeItemAttribute(ItemAttribute *attribute)
+void MapIO::Serializer::serializeItemAttribute(ItemAttribute &attribute)
 {
-  buffer.writeU8(static_cast<uint8_t>(attribute->type));
+  buffer.writeU8(static_cast<uint8_t>(attribute.type));
 
-  switch (attribute->type)
+  if (attribute.holds<std::string>())
   {
-  case ItemAttribute::Type::STRING:
-    buffer.writeLongString(*attribute->getString());
-    break;
-  case ItemAttribute::Type::INTEGER:
-    buffer.writeU32(*(uint32_t *)attribute->getInteger());
-    break;
-  case ItemAttribute::Type::DOUBLE:
-    buffer.writeU64(*(uint64_t *)attribute->getFloat());
-    break;
-  case ItemAttribute::Type::BOOLEAN:
-    buffer.writeU8(*(uint8_t *)attribute->getBoolean());
-    break;
+    buffer.writeLongString(attribute.get<std::string>().value());
+  }
+  else if (attribute.holds<int>())
+  {
+    buffer.writeU32(static_cast<uint32_t>(attribute.get<int>().value()));
+  }
+  else if (attribute.holds<double>())
+  {
+    buffer.writeU64(static_cast<uint64_t>(attribute.get<double>().value()));
   }
 }

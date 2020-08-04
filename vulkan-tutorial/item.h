@@ -11,6 +11,8 @@
 #include "graphics/texture_atlas.h"
 #include "position.h"
 
+#include <unordered_map>
+
 class Appearances;
 
 class Item
@@ -54,12 +56,7 @@ public:
 
 	bool hasAttributes() const
 	{
-		return !attributes.isEmpty();
-	}
-
-	ItemAttributes &getAttributes()
-	{
-		return attributes;
+		return attributes.size() > 0;
 	}
 
 	const inline int getTopOrder() const
@@ -67,10 +64,15 @@ public:
 		return itemType->alwaysOnTopOrder;
 	}
 
+	const std::unordered_map<ItemAttribute_t, ItemAttribute> &getAttributes()
+	{
+		return attributes;
+	}
+
 	ItemType *itemType;
 
 private:
-	ItemAttributes attributes;
+	std::unordered_map<ItemAttribute_t, ItemAttribute> attributes;
 	// Subtype is either fluid type, count, subtype, or charges.
 	uint16_t subtype = 1;
 

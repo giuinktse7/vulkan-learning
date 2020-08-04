@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <vector>
+#include <unordered_map>
 
 #include "map.h"
 #include "item.h"
@@ -147,8 +148,8 @@ namespace MapIO
 				: buffer(buffer), mapVersion(mapVersion) {}
 		void serializeItem(Item *item);
 		void serializeItemAttributes(Item *item);
-		void serializeItemAttributeMap(ItemAttributes *attributes);
-		void serializeItemAttribute(ItemAttribute *attribute);
+		void serializeItemAttributeMap(const std::unordered_map<ItemAttribute_t, ItemAttribute> &attributes);
+		void serializeItemAttribute(ItemAttribute &attribute);
 
 	private:
 		MapVersion &mapVersion;

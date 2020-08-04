@@ -113,7 +113,6 @@ int main()
 		// populateTestMap();
 		// MapIO::saveMap(*mapRenderer->map);
 
-
 		GLFWwindow *window = initWindow();
 		g_engine->initialize(window);
 		Logger::info() << "Loading finished in " << g_engine->clock.elapsedMillis() << " ms." << std::endl;
