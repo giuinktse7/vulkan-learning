@@ -5,6 +5,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "../random.h"
+
 #include "../gui/imgui_impl_vulkan.h"
 
 #include <unordered_set>
@@ -23,6 +25,8 @@
 #include "../map.h"
 
 #include "../gui/gui.h"
+
+#include "../util.h"
 
 class Engine;
 
@@ -264,6 +268,10 @@ public:
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 	uint32_t currentFrameIndex;
+
+	TimeMeasure clock;
+
+	Random random;
 
 private:
 	std::array<FrameData, 3> frames;

@@ -135,6 +135,12 @@
     <ClCompile Include="item_type.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="item_animator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="random.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h">
@@ -258,6 +264,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="item_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="item_animator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="random.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -185,6 +185,7 @@
     <ClCompile Include="gui\imgui_impl_vulkan.cpp" />
     <ClCompile Include="gui\imgui_widgets.cpp" />
     <ClCompile Include="items.cpp" />
+    <ClCompile Include="item_animator.cpp" />
     <ClCompile Include="item_attribute.cpp" />
     <ClCompile Include="item_type.cpp" />
     <ClCompile Include="main.cpp" />
@@ -195,6 +196,7 @@
     <ClCompile Include="graphics\texture.cpp" />
     <ClCompile Include="otb.cpp" />
     <ClCompile Include="quad_tree.cpp" />
+    <ClCompile Include="random.cpp" />
     <ClCompile Include="tile.cpp" />
     <ClCompile Include="tile_location.cpp" />
     <ClCompile Include="town.cpp" />
@@ -224,6 +226,7 @@
     <ClInclude Include="graphics\protobuf\shared.pb.h" />
     <ClInclude Include="gui\gui.h" />
     <ClInclude Include="items.h" />
+    <ClInclude Include="item_animator.h" />
     <ClInclude Include="item_attribute.h" />
     <ClInclude Include="item_type.h" />
     <ClInclude Include="logger.h" />
@@ -235,6 +238,7 @@
     <ClInclude Include="otb.h" />
     <ClInclude Include="position.h" />
     <ClInclude Include="quad_tree.h" />
+    <ClInclude Include="random.h" />
     <ClInclude Include="tile.h" />
     <ClInclude Include="tile_location.h" />
     <ClInclude Include="town.h" />

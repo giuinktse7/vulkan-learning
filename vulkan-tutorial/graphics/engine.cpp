@@ -55,6 +55,11 @@ VkResult Engine::mapMemory(
 Engine::Engine()
     : currentFrame(&frames[0])
 {
+  uint32_t seed = 1234;
+  this->random = Random(seed);
+
+  // Uncomment below for a random seed each run
+  // random = Random();
 }
 
 Engine::~Engine()
