@@ -257,10 +257,7 @@ struct SpriteInfo
     return animation != nullptr;
   }
 
-  SpriteAnimation *getAnimation()
-  {
-    return animation.get();
-  }
+  SpriteAnimation *getAnimation() const;
 
   friend class Appearance;
 

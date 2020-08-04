@@ -43,7 +43,6 @@ namespace OTB
 
   const Node &Loader::parseTree()
   {
-    auto start = TimeMeasure::start();
 
     auto cursor = fileBuffer.begin() + sizeof(Identifier);
 
@@ -109,7 +108,6 @@ namespace OTB
       throw InvalidOTBFormat{};
     }
 
-    std::cout << "Loaded items.otb in " << start.elapsedMillis() << " milliseconds." << std::endl;
     return root;
   }
 

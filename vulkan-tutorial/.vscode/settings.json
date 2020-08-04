@@ -88,7 +88,8 @@
     "forward_list": "cpp",
     "stack": "cpp",
     "valarray": "cpp",
-    "*.inc": "cpp"
+    "*.inc": "cpp",
+    "random": "cpp"
   },
   "files.exclude": {
     "**/.git": true,

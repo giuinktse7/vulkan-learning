@@ -16,33 +16,22 @@
 #include "../items.h"
 #include "engine.h"
 
+#include <algorithm>
 #include <set>
 
-using namespace std;
+constexpr size_t ReservedTextureAtlasCount = 5000;
 
 std::unordered_map<uint32_t, Appearance> Appearances::objects;
 std::unordered_map<uint32_t, tibia::protobuf::appearances::Appearance> Appearances::outfits;
 
-std::set<uint32_t> Appearances::catalogIndex;
-std::unordered_map<uint32_t, CatalogInfo> Appearances::catalogInfo;
-
-std::set<uint32_t> Appearances::textureAtlasIds;
+std::vector<SpriteRange> Appearances::textureAtlasSpriteRanges;
 std::unordered_map<uint32_t, std::unique_ptr<TextureAtlas>> Appearances::textureAtlases;
 
 bool Appearances::isLoaded;
 
-/*
-	The width and height of a texture atlas in pixels
-*/
-constexpr struct
+void Appearances::loadAppearanceData(const std::filesystem::path path)
 {
-    uint16_t width = 384;
-    uint16_t height = 384;
-} TextureAtlasSize;
-
-void Appearances::loadFromFile(const std::filesystem::path path)
-{
-    TimeMeasure startTime = TimeMeasure::start();
+    TimeMeasure start;
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -50,11 +39,13 @@ void Appearances::loadFromFile(const std::filesystem::path path)
 
     {
         std::fstream input(path, std::ios::in | std::ios::binary);
-        std::cout << path << std::endl;
         if (!parsed.ParseFromIstream(&input))
         {
-            auto absolutePath = filesystem::absolute(filesystem::path(path));
-            std::cerr << "Failed to parse appearances file at " << absolutePath << "." << endl;
+            auto absolutePath = std::filesystem::absolute(std::filesystem::path(path));
+
+            std::stringstream s;
+            s << "Failed to parse appearances file at " << absolutePath << "." << std::endl;
+            ABORT_PROGRAM(s.str());
         }
 
         google::protobuf::ShutdownProtobufLibrary();
@@ -95,7 +86,7 @@ void Appearances::loadFromFile(const std::filesystem::path path)
         Appearances::objects.emplace(object.id(), object);
     }
 
-    std::cout << "Total: " << total << std::endl;
+    // std::cout << "Total: " << total << std::endl;
 
     for (int i = 0; i < parsed.outfit_size(); ++i)
     {
@@ -218,6 +209,11 @@ SpriteInfo SpriteInfo::fromProtobufData(tibia::protobuf::appearances::SpriteInfo
     }
 
     return info;
+}
+
+SpriteAnimation *SpriteInfo::getAnimation() const
+{
+    return animation.get();
 }
 
 SpriteAnimation SpriteAnimation::fromProtobufData(tibia::protobuf::appearances::SpriteAnimation animation)
@@ -429,7 +425,7 @@ Appearance::Appearance(tibia::protobuf::appearances::Appearance protobufAppearan
 
 #undef MAP_MARKET_FLAG
         }
-        // We don't need this flag in a map editor
+        // This flag is probably not necessary in a map editor
         // if (hasFlag(AppearanceFlag::NpcSaleData))
         // {
         // }

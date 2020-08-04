@@ -188,6 +188,7 @@
     <ClCompile Include="item_animator.cpp" />
     <ClCompile Include="item_attribute.cpp" />
     <ClCompile Include="item_type.cpp" />
+    <ClCompile Include="logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="map_io.cpp" />

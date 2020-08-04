@@ -49,6 +49,11 @@ TimeMeasure::TimeMeasure()
   startTime = std::chrono::high_resolution_clock::now();
 }
 
+void TimeMeasure::setStartNow()
+{
+  startTime = std::chrono::high_resolution_clock::now();
+}
+
 long long TimeMeasure::elapsedMillis()
 {
   auto stopTime = std::chrono::high_resolution_clock::now();

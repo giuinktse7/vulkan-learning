@@ -75,7 +75,9 @@ void Engine::initialize(GLFWwindow *window)
 
   this->window = window;
 
+  TimeMeasure start;
   createVulkanInstance();
+  Logger::info() << "Created vulkan instance in " << start.elapsedMillis() << " ms." << std::endl;
 
   VulkanDebug::setupDebugMessenger(instance, debugMessenger);
 
@@ -444,7 +446,7 @@ void Engine::nextFrame()
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
   {
-    Logger::info("recreate in presentFrame");
+    Logger::info() << "recreate in presentFrame" << std::endl;
     framebufferResized = false;
     recreateSwapChain();
   }

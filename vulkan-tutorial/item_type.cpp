@@ -82,16 +82,19 @@ void ItemType::cacheTextureAtlas(uint32_t spriteId)
   for (int i = 0; i < atlases.size(); ++i)
   {
     TextureAtlas *&atlas = this->atlases[i];
-    // End of current cache reached, must load the atlas.
+    // End of current cache reached, caching the atlas
     if (atlas == nullptr)
     {
       atlas = Appearances::getTextureAtlas(spriteId);
-    }
-
-    if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
-    {
-      // The TextureAtlas is already cached
       return;
+    }
+    else
+    {
+      if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
+      {
+        // The TextureAtlas is already cached
+        return;
+      }
     }
   }
 }

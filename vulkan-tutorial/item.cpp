@@ -21,7 +21,11 @@ std::unique_ptr<Item> Item::create(ItemTypeId serverId)
 const TextureInfo Item::getTextureInfo(const Position &pos) const
 {
 	// TODO Add more pattern checks like hanging or cumulative item types
-
+	const SpriteInfo &spriteInfo = itemType->appearance->getSpriteInfo();
+	if (spriteInfo.hasAnimation())
+	{
+		// spriteInfo.getAnimation().
+	}
 	return itemType->getTextureInfo(pos);
 }
 

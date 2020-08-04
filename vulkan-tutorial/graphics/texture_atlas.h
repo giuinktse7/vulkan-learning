@@ -10,6 +10,15 @@
 
 struct TextureAtlas;
 
+/*
+	The width and height of a texture atlas in pixels
+*/
+constexpr struct
+{
+	uint16_t width = 384;
+	uint16_t height = 384;
+} TextureAtlasSize;
+
 struct TextureInfo
 {
 	TextureAtlas *atlas;

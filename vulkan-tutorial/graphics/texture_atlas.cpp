@@ -3,6 +3,8 @@
 #include "../file.h"
 #include "compression.h"
 
+#include "../logger.h"
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
@@ -12,8 +14,6 @@
 #include "../debug.h"
 
 constexpr uint32_t SPRITE_SIZE = 32;
-constexpr uint32_t TEXTURE_ATLAS_WIDTH = 384;
-constexpr uint32_t TEXTURE_ATLAS_HEIGHT = 384;
 
 // Signifies that the BMP is uncompressed.
 constexpr uint8_t BI_BITFIELDS = 0x03;
@@ -117,15 +117,15 @@ uint32_t readU32(std::vector<uint8_t> &buffer, uint32_t offset)
 void TextureAtlas::validateBmp(std::vector<uint8_t> decompressed)
 {
   uint32_t width = readU32(decompressed, 0x12);
-  if (width != TEXTURE_ATLAS_WIDTH)
+  if (width != TextureAtlasSize.width)
   {
-    throw std::runtime_error("Texture atlas has incorrect width. Expected " + std::to_string(TEXTURE_ATLAS_WIDTH) + " but received " + std::to_string(width) + ".");
+    throw std::runtime_error("Texture atlas has incorrect width. Expected " + std::to_string(TextureAtlasSize.width) + " but received " + std::to_string(width) + ".");
   }
 
   uint32_t height = readU32(decompressed, 0x16);
-  if (height != TEXTURE_ATLAS_HEIGHT)
+  if (height != TextureAtlasSize.height)
   {
-    throw std::runtime_error("Texture atlas has incorrect width. Expected " + std::to_string(TEXTURE_ATLAS_HEIGHT) + " but received " + std::to_string(height) + ".");
+    throw std::runtime_error("Texture atlas has incorrect width. Expected " + std::to_string(TextureAtlasSize.height) + " but received " + std::to_string(height) + ".");
   }
 
   uint32_t compression = readU32(decompressed, 0x1E);
@@ -139,7 +139,6 @@ void fixMagenta(std::vector<uint8_t> &buffer, uint32_t offset)
 {
   for (auto cursor = 0; cursor < buffer.size() - 4 - offset; cursor += 4)
   {
-
     if (readU32(buffer, offset + cursor) == 0xFF00FF)
     {
       std::fill(buffer.begin() + offset + cursor, buffer.begin() + offset + cursor + 3, 0);
@@ -149,10 +148,9 @@ void fixMagenta(std::vector<uint8_t> &buffer, uint32_t offset)
 
 Texture &TextureAtlas::getTexture()
 {
-  // std::cout << this->sourceFile << std::endl;
   if (std::holds_alternative<CompressedBytes>(texture))
   {
-    std::cout << "[" << this->sourceFile << "]" << std::endl;
+    Logger::debug("Decompressed " + this->sourceFile.string());
 
     std::vector<uint8_t> decompressed = LZMA::decompress(std::get<CompressedBytes>(this->texture));
 
