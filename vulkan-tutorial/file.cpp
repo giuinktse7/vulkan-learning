@@ -18,9 +18,8 @@ std::vector<uint8_t> File::read(const std::string &filepath)
 		return {};
 
 	std::vector<uint8_t> buffer(size);
-	uint32_t offset = 0;
 
-	if (!ifs.read((char *)buffer.data(), buffer.size()))
+	if (!ifs.read((char *)buffer.data(), size))
 		throw std::runtime_error("Could not read file: " + filepath);
 
 	return buffer;
