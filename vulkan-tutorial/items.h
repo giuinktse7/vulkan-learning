@@ -8,13 +8,21 @@
 #include <pugixml.hpp>
 #include <vector>
 #include <set>
+#include <array>
 
 #include "otb.h"
 #include "const.h"
 
 #include "position.h"
 #include "graphics/texture_atlas.h"
-#include "graphics/protobuf/appearances.pb.h"
+#include "graphics/appearances.h"
+
+/* Amount of cached texture atlas pointers that an ItemType can store.
+  If the appearance of an ItemType has more than this amount of texture atlases,
+  each lookup of the extra texture atlases will be O(log n), where n is the total
+  amount of texture atlases.
+*/
+constexpr size_t CACHED_TEXTURE_ATLAS_AMOUNT = 5;
 
 class Appearances;
 
@@ -174,18 +182,15 @@ public:
   ItemType() {}
   ~ItemType();
 
-  void loadTextureAtlas();
-  const TextureWindow getTextureWindow() const;
+  void cacheTextureAtlases();
+
+  const TextureInfo getTextureInfo() const;
+  const TextureInfo getTextureInfo(const Position &pos) const;
 
   std::vector<CatalogInfo> catalogInfos() const;
 
-  uint32_t textureAtlasOffset()
-  {
-    uint32_t spriteId = this->appearance->getFirstSpriteId();
-    return spriteId - getTextureAtlas()->firstSpriteId;
-  }
-
-  TextureAtlas *getTextureAtlas();
+  TextureAtlas *getTextureAtlas(uint32_t spriteId) const;
+  TextureAtlas *getFirstTextureAtlas() const;
 
   bool isGroundTile() const
   {
@@ -396,12 +401,15 @@ public:
   bool stopTime = false;
   bool showCount = true;
 
-  TextureAtlas *textureAtlas = nullptr;
   Appearance *appearance = nullptr;
 
 private:
+  std::array<TextureAtlas *, CACHED_TEXTURE_ATLAS_AMOUNT> atlases = {};
+
   // This item's index in the itemtype vector
   uint16_t internalMapId = 0;
+
+  void cacheTextureAtlas(uint32_t spriteId);
 };
 
 class Items

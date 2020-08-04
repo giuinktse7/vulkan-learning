@@ -9,6 +9,7 @@
 
 #include "items.h"
 #include "graphics/texture_atlas.h"
+#include "position.h"
 
 class Appearances;
 
@@ -45,23 +46,7 @@ public:
 		return itemType->weight;
 	}
 
-	const DrawOffset getDrawOffset()
-	{
-		return itemType->textureAtlas->drawOffset;
-	}
-
-	const uint32_t getWidth() const
-	{
-		return itemType->textureAtlas->spriteWidth;
-	}
-
-	const uint32_t getHeight() const
-	{
-		return itemType->textureAtlas->spriteHeight;
-	}
-
-	const TextureWindow getTextureWindow() const;
-	const glm::vec2 getTextureAtlasSize() const;
+	const TextureInfo getTextureInfo(const Position &pos) const;
 
 	const bool isGround() const;
 

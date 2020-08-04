@@ -33,10 +33,11 @@ void GUI::renderItem(ItemType *itemType)
   }
   else
   {
-    auto atlas = itemType->getTextureAtlas();
-    auto window = atlas->getTextureWindow(itemType->textureAtlasOffset());
+    TextureAtlas *atlas = itemType->getFirstTextureAtlas();
+    uint32_t spriteId = itemType->appearance->getFirstSpriteId();
+    auto window = atlas->getTextureWindow(spriteId);
 
-    ImTextureID texture = (ImTextureID)atlas->getDescriptorSet();
+    VkDescriptorSet descriptorSet = atlas->getDescriptorSet();
 
     ImVec2 imageSize = {32.0f, 32.0f};
 
@@ -57,7 +58,7 @@ void GUI::renderItem(ItemType *itemType)
     std::string childId = "" + std::to_string(itemType->id);
     ImGui::BeginChild(childId.c_str(), {32.0f, 32.0f});
 
-    ImGui::Image(texture, imageSize, {window.x0, window.y0}, {window.x1, window.y1});
+    ImGui::Image(static_cast<ImTextureID>(descriptorSet), imageSize, {window.x0, window.y0}, {window.x1, window.y1});
 
     ImGui::EndChild();
     ImGui::PopStyleColor();

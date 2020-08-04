@@ -126,7 +126,6 @@ int main()
 		GLFWwindow *window = initWindow();
 		g_engine->initialize(window);
 
-		g_engine->getMapRenderer()->loadTextureAtlases();
 
 		while (!glfwWindowShouldClose(window))
 		{

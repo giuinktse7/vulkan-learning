@@ -4,6 +4,7 @@
 #include <utility>
 #include <memory>
 #include <algorithm>
+#include <bitset>
 
 #include "version.h"
 #include "otb.h"
@@ -76,6 +77,8 @@ tl::expected<void, std::string> unexpecting(const std::string s)
 
 tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path path)
 {
+	auto start = TimeMeasure::start();
+
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(path.c_str());
 
@@ -120,7 +123,7 @@ tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path p
 		}
 	}
 
-	std::cout << "Loaded items.xml." << std::endl;
+	std::cout << "Loaded items.xml in " << start.elapsedMillis() << " milliseconds." << std::endl;
 	return {};
 }
 
@@ -605,8 +608,10 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 
 		// items.serverIdToMapId.emplace(serverId, mapId);
 
-		iType.name = Appearances::getObjectById(clientId).name;
-		iType.appearance = &Appearances::getObjectById(clientId);
+		auto &appearance = Appearances::getObjectById(clientId);
+		iType.appearance = &appearance;
+		iType.cacheTextureAtlases();
+		iType.name = appearance.name;
 
 		iType.group = static_cast<itemgroup_t>(itemNode.type);
 		switch (itemNode.type)
@@ -637,11 +642,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			return DEFAULT_ERROR;
 		}
 
+		// TODO: Check for items that do not have matching flags in .otb and appearances.dat
 		iType.blockSolid = hasBitSet(FLAG_BLOCK_SOLID, flags);
 		iType.blockProjectile = hasBitSet(FLAG_BLOCK_PROJECTILE, flags);
 		iType.blockPathFind = hasBitSet(FLAG_BLOCK_PATHFIND, flags);
 		iType.hasHeight = hasBitSet(FLAG_HAS_HEIGHT, flags);
-		iType.useable = hasBitSet(FLAG_USEABLE, flags);
+		iType.useable = hasBitSet(FLAG_USEABLE, flags) || appearance.hasFlag(AppearanceFlag::Usable);
 		iType.pickupable = hasBitSet(FLAG_PICKUPABLE, flags);
 		iType.moveable = hasBitSet(FLAG_MOVEABLE, flags);
 		iType.stackable = hasBitSet(FLAG_STACKABLE, flags);
@@ -665,6 +671,38 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		iType.lightColor = lightColor;
 		iType.wareId = wareId;
 		iType.alwaysOnTopOrder = alwaysOnTopOrder;
+
+		// #define CHECK_ITEM_FLAG(flag, prop)                                                                          \
+// 	do                                                                                                         \
+// 	{                                                                                                          \
+// 		if (appearance.hasFlag(flag) != prop)                                                                    \
+// 		{                                                                                                        \
+// 			std::cout << "Here:" << std::endl                                                                      \
+// 								<< serverId << #flag << "[" << appearance.hasFlag(flag) << ", " << prop << "]" << std::endl; \
+// 			std::cout << std::bitset<32>(flags) << std::endl;                                                      \
+// 		}                                                                                                        \
+// 	} while (false)
+
+		// 		CHECK_ITEM_FLAG(AppearanceFlag::Height, iType.hasHeight);
+		// 		CHECK_ITEM_FLAG(AppearanceFlag::Usable, iType.useable);
+		// 		CHECK_ITEM_FLAG(AppearanceFlag::Take, iType.pickupable);
+
+		// #undef CHECK_ITEM_FLAG
+
+		// if (appearance.hasFlag(AppearanceFlag::Shift))
+		// {
+		// 	std::cout << serverId << ": (x=" << appearance.flagData.shiftX << ", y=" << appearance.flagData.shiftY << ")" << std::endl;
+		// }
+
+		auto catalogs = iType.catalogInfos();
+		if (catalogs.size() > 4)
+		{
+			std::cout << serverId << ":" << std::endl;
+			for (const auto c : catalogs)
+			{
+				std::cout << "\t" << c.file << ", " << std::endl;
+			}
+		}
 	}
 
 	items.itemTypes.shrink_to_fit();
@@ -672,12 +710,66 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 	return {};
 }
 
-TextureAtlas *ItemType::getTextureAtlas()
+void ItemType::cacheTextureAtlases()
 {
-	if (this->textureAtlas == nullptr)
-		loadTextureAtlas();
+	for (int frameGroup = 0; frameGroup < appearance->frameGroupCount(); ++frameGroup)
+	{
+		for (const auto spriteId : appearance->getSpriteInfo(frameGroup).spriteIds)
+		{
+			// Stop if the cache is full
+			if (this->atlases.back() != nullptr)
+			{
+				return;
+			}
+			cacheTextureAtlas(spriteId);
+		}
+	}
+}
 
-	return this->textureAtlas;
+void ItemType::cacheTextureAtlas(uint32_t spriteId)
+{
+	// If nothing is cached, cache the TextureAtlas for the first sprite ID in the appearance.
+	if (this->atlases.front() == nullptr)
+		this->atlases.front() = Appearances::getTextureAtlas(this->appearance->getFirstSpriteId());
+
+	for (int i = 0; i < atlases.size(); ++i)
+	{
+		TextureAtlas *&atlas = this->atlases[i];
+		// End of current cache reached, must load the atlas.
+		if (atlas == nullptr)
+		{
+			atlas = Appearances::getTextureAtlas(spriteId);
+		}
+
+		if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
+		{
+			// The TextureAtlas is already cached
+			return;
+		}
+	}
+}
+
+TextureAtlas *ItemType::getTextureAtlas(uint32_t spriteId) const
+{
+	for (const auto atlas : atlases)
+	{
+		if (atlas == nullptr)
+		{
+			return nullptr;
+		}
+
+		if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
+		{
+			return atlas;
+		}
+	}
+
+	return nullptr;
+}
+
+TextureAtlas *ItemType::getFirstTextureAtlas() const
+{
+	return atlases.front();
 }
 
 ItemType *Items::getNextValidItemType(uint16_t serverId)
@@ -724,16 +816,43 @@ OTB::VersionInfo Items::getOtbVersionInfo()
 	return otbVersionInfo;
 }
 
-const TextureWindow ItemType::getTextureWindow() const
+const TextureInfo ItemType::getTextureInfo() const
 {
 	uint32_t spriteId = appearance->getFirstSpriteId();
-	uint32_t baseOffset = spriteId - textureAtlas->firstSpriteId;
-	return textureAtlas->getTextureWindow(baseOffset);
+	TextureAtlas *atlas = getTextureAtlas(spriteId);
+
+	TextureInfo info;
+	info.atlas = atlas;
+	info.window = atlas->getTextureWindow(spriteId);
+	return info;
 }
 
-void ItemType::loadTextureAtlas()
+const TextureInfo ItemType::getTextureInfo(const Position &pos) const
 {
-	this->textureAtlas = g_engine->getMapRenderer()->getTextureAtlas(*this);
+	if (!appearance->hasFlag(AppearanceFlag::Take) && appearance->hasFlag(AppearanceFlag::Unmove))
+	{
+		const SpriteInfo &spriteInfo = appearance->getSpriteInfo();
+		if (spriteInfo.hasAnimation())
+		{
+			// TODO Handle animated un-takeable, un-movable tiles
+			return getTextureInfo();
+		}
+
+		uint32_t width = spriteInfo.patternWidth;
+		uint32_t height = spriteInfo.patternHeight;
+		uint32_t depth = spriteInfo.patternDepth;
+
+		uint32_t spriteIndex = (pos.x % width) + (pos.y % height) * width + (pos.z % depth) * height * width;
+
+		uint32_t spriteId = spriteInfo.spriteIds.at(spriteIndex);
+		TextureAtlas *atlas = getTextureAtlas(spriteId);
+
+		return TextureInfo{atlas, atlas->getTextureWindow(spriteId)};
+	}
+	else
+	{
+		return getTextureInfo();
+	}
 }
 
 const ItemType &Items::getItemIdByClientId(uint16_t spriteId) const

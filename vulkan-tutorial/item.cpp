@@ -1,6 +1,8 @@
 #include "item.h"
 
 #include "items.h"
+
+#include "graphics/engine.h"
 Item::Item(ItemTypeId itemTypeId)
 		: subtype(1)
 {
@@ -16,15 +18,11 @@ std::unique_ptr<Item> Item::create(ItemTypeId serverId)
 	return std::make_unique<Item>(serverId);
 }
 
-const TextureWindow Item::getTextureWindow() const
+const TextureInfo Item::getTextureInfo(const Position &pos) const
 {
-	// TODO get correct texture window based on item offset, subtype, etc.
-	return itemType->getTextureWindow();
-}
+	// TODO Add more pattern checks like hanging or cumulative item types
 
-const glm::vec2 Item::getTextureAtlasSize() const
-{
-	return {itemType->getTextureAtlas()->width, itemType->getTextureAtlas()->height};
+	return itemType->getTextureInfo(pos);
 }
 
 const bool Item::isGround() const
