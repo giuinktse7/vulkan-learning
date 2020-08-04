@@ -7,6 +7,8 @@
 #include <nlohmann/json.hpp>
 #include <memory>
 
+#include "../logger.h"
+
 #include "../util.h"
 #include "../file.h"
 
@@ -103,97 +105,97 @@ void Appearances::loadFromFile(const std::filesystem::path path)
 
     Appearances::isLoaded = true;
 
-    std::cout << "Loaded appearances.dat in " << startTime.elapsedMillis() << " milliseconds." << std::endl;
-}
-
-void Appearances::addSpriteSheetInfo(CatalogInfo &info)
-{
-    Appearances::catalogIndex.insert(info.lastSpriteId);
-    Appearances::catalogInfo[info.lastSpriteId] = info;
-}
-
-CatalogInfo Appearances::getCatalogInfo(uint32_t spriteId)
-{
-    auto found = lower_bound(catalogIndex.begin(), catalogIndex.end(), spriteId);
-    if (found == catalogIndex.end())
-    {
-        cout << "Could not find a sprite sheet for sprite ID " << spriteId << "." << endl;
-        exit(1);
-    }
-
-    uint32_t lastSpriteId = *found;
-
-    return catalogInfo.at(lastSpriteId);
+    Logger::info() << "Loaded appearances.dat in " << start.elapsedMillis() << " ms." << std::endl;
 }
 
 TextureAtlas *Appearances::getTextureAtlas(const uint32_t spriteId)
 {
-    auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
-    if (found == textureAtlasIds.end())
+    size_t i = textureAtlasSpriteRanges.size() >> 1;
+    SpriteRange range = textureAtlasSpriteRanges[i];
+    size_t change = (textureAtlasSpriteRanges.size() >> 2) + (textureAtlasSpriteRanges.size() & 1);
+
+    while (change != 0)
     {
-        std::cout << "Could not find a sprite sheet for sprite ID " << spriteId << "." << std::endl;
-        exit(1);
-    }
-
-    uint32_t lastSpriteId = *found;
-
-    return textureAtlases.at(lastSpriteId).get();
-}
-
-void Appearances::loadCatalog(const std::filesystem::path path)
-{
-    auto start = TimeMeasure::start();
-
-    if (!filesystem::exists(path))
-    {
-        cout << "Could not locate the catalog JSON file. Failed to find file at path: " + filesystem::absolute(path).u8string() << endl;
-        exit(1);
-    }
-
-    std::ifstream fileStream(path);
-    auto json = make_unique<nlohmann::json>();
-    fileStream >> (*json);
-
-    std::filesystem::path basepath("C:/Users/giuin/AppData/Local/Tibia11/packages/Tibia/assets");
-
-    std::set<std::string> types;
-
-    for (const auto &x : *json)
-    {
-        if (x.at("type") == "sprite")
+        if (range.start > spriteId)
         {
-            std::string file = x.at("file");
-            std::filesystem::path filePath(file);
-
-            CatalogInfo info{};
-            info.area = x.at("area");
-            info.file = basepath / filePath;
-            info.spriteType = x.at("spritetype");
-            info.firstSpriteId = x.at("firstspriteid");
-            info.lastSpriteId = x.at("lastspriteid");
-            addSpriteSheetInfo(info);
-
-            std::vector<uint8_t> buffer = File::read(info.file.string());
-
-            Appearances::textureAtlases[info.lastSpriteId] = std::make_unique<TextureAtlas>(
-                info.lastSpriteId,
-                buffer,
-                TextureAtlasSize.width,
-                TextureAtlasSize.height,
-                info.firstSpriteId,
-                info.spriteType,
-                info.file);
-            Appearances::textureAtlasIds.insert(info.lastSpriteId);
-            ;
+            i -= change;
+        }
+        else if (range.end < spriteId)
+        {
+            i += change;
         }
         else
         {
-            std::string s = x.at("type");
-            types.insert(s);
+            return textureAtlases.at(range.end).get();
+        }
+
+        range = textureAtlasSpriteRanges[i];
+        change = (change >> 1) + (change & 1);
+    }
+
+    ABORT_PROGRAM("There is no sprite with ID " + std::to_string(spriteId));
+}
+
+void Appearances::loadTextureAtlases(const std::filesystem::path catalogContentsPath)
+{
+    auto start = TimeMeasure::start();
+
+    if (!std::filesystem::exists(catalogContentsPath))
+    {
+        std::stringstream s;
+        s << "Could not locate the catalog JSON file. Failed to find file at path: " + std::filesystem::absolute(catalogContentsPath).u8string() << std::endl;
+        ABORT_PROGRAM(s.str());
+    }
+
+    std::ifstream fileStream(catalogContentsPath);
+    nlohmann::json catalogJson;
+    fileStream >> catalogJson;
+    fileStream.close();
+
+    std::filesystem::path basepath("C:/Users/giuin/AppData/Local/Tibia11/packages/Tibia/assets");
+
+    textureAtlasSpriteRanges.reserve(5000);
+
+    for (const auto &entry : catalogJson)
+    {
+        if (entry.at("type") == "sprite")
+        {
+            std::string filename = entry.at("file");
+            SpriteLayout spriteType = entry.at("spritetype");
+            uint32_t firstSpriteId = entry.at("firstspriteid");
+            uint32_t lastSpriteId = entry.at("lastspriteid");
+            uint8_t area = entry.at("area");
+
+            std::filesystem::path filePath(filename);
+            std::filesystem::path absolutePath = basepath / filePath;
+
+            std::vector<uint8_t> buffer = File::read(absolutePath.string());
+
+            Appearances::textureAtlases[lastSpriteId] = std::make_unique<TextureAtlas>(
+                lastSpriteId,
+                buffer,
+                TextureAtlasSize.width,
+                TextureAtlasSize.height,
+                firstSpriteId,
+                spriteType,
+                filename);
+
+            Appearances::textureAtlasSpriteRanges.emplace_back<SpriteRange>({firstSpriteId, lastSpriteId});
         }
     }
 
-    std::cout << "Loaded compressed sprites in " << start.elapsedMillis() << " milliseconds." << std::endl;
+    textureAtlasSpriteRanges.shrink_to_fit();
+
+    /*
+        This sort is necessary! It enables lower_bound in getTextureAtlas()
+        to have complexity O(lg n).
+    */
+    std::sort(
+        Appearances::textureAtlasSpriteRanges.begin(),
+        Appearances::textureAtlasSpriteRanges.end(),
+        [](SpriteRange a, SpriteRange b) { return a.start < b.start; });
+
+    Logger::info() << "Loaded compressed sprites in " << start.elapsedMillis() << " ms." << std::endl;
 }
 
 SpriteInfo SpriteInfo::fromProtobufData(tibia::protobuf::appearances::SpriteInfo spriteInfo)

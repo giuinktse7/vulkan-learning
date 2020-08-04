@@ -4,6 +4,7 @@
 #include <memory>
 #include <filesystem>
 #include <unordered_map>
+#include <array>
 
 #include <sstream>
 #include <variant>
@@ -31,6 +32,12 @@
 #include "texture_atlas.h"
 
 #include <unordered_map>
+
+struct SpriteRange
+{
+  uint32_t start;
+  uint32_t end;
+};
 
 enum class HookType
 {
@@ -227,6 +234,9 @@ struct SpriteAnimation
   uint32_t loopCount;
   std::vector<SpritePhase> phases;
 
+  friend struct SpriteInfo;
+
+private:
   static SpriteAnimation fromProtobufData(tibia::protobuf::appearances::SpriteAnimation animation);
 };
 
@@ -252,10 +262,12 @@ struct SpriteInfo
     return animation.get();
   }
 
-  static SpriteInfo fromProtobufData(tibia::protobuf::appearances::SpriteInfo info);
+  friend class Appearance;
 
   // repeated Box bounding_box_per_direction = 9;
 private:
+  static SpriteInfo fromProtobufData(tibia::protobuf::appearances::SpriteInfo info);
+
   std::unique_ptr<SpriteAnimation> animation;
 };
 
@@ -334,9 +346,8 @@ class Appearances
   using AppearanceId = uint32_t;
 
 public:
-  static void loadFromFile(const std::filesystem::path path);
-  static void loadCatalog(const std::filesystem::path path);
-  static void loadTextureAtlases();
+  static void loadTextureAtlases(const std::filesystem::path catalogContentsPath);
+  static void loadAppearanceData(const std::filesystem::path path);
 
   static bool hasObject(AppearanceId id)
   {
