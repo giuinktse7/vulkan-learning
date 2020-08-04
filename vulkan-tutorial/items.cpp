@@ -5,6 +5,7 @@
 #include <memory>
 #include <algorithm>
 #include <bitset>
+#include "logger.h"
 
 #include "version.h"
 #include "otb.h"
@@ -13,8 +14,6 @@
 #include "graphics/appearances.h"
 #include "graphics/engine.h"
 #include "item_type.h"
-
-using tl::unexpected;
 
 Items Items::items;
 
@@ -51,14 +50,9 @@ ItemType *Items::getItemTypeByClientId(uint16_t clientId)
 	return &itemTypes.at(id);
 }
 
-tl::expected<void, std::string> unexpecting(const std::string s)
+void Items::loadFromXml(const std::filesystem::path path)
 {
-	return tl::make_unexpected(s);
-}
-
-tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path path)
-{
-	auto start = TimeMeasure::start();
+	TimeMeasure start;
 
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(path.c_str());
@@ -66,13 +60,13 @@ tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path p
 	if (!result)
 	{
 		std::string pugiError = result.description();
-		return unexpecting("Could not load items.xml (Syntax error?): " + pugiError);
+		ABORT_PROGRAM("Could not load items.xml (Syntax error?): " + pugiError);
 	}
 
 	pugi::xml_node node = doc.child("items");
 	if (!node)
 	{
-		return unexpecting("items.xml, invalid root node.");
+		ABORT_PROGRAM("items.xml, invalid root node.");
 	}
 
 	for (pugi::xml_node itemNode = node.first_child(); itemNode; itemNode = itemNode.next_sibling())
@@ -91,24 +85,19 @@ tl::expected<void, std::string> Items::loadFromXml(const std::filesystem::path p
 
 		if (fromId == 0 || toId == 0)
 		{
-			return unexpecting("Could not read item id from item node.");
+			ABORT_PROGRAM("Could not read item id from item node.");
 		}
 
 		for (uint32_t id = fromId; id <= toId; ++id)
 		{
-			auto result = loadItemFromXml(itemNode, id);
-			if (!result.has_value())
-			{
-				std::cout << result.error() << std::endl;
-			}
+			loadItemFromXml(itemNode, id);
 		}
 	}
 
-	std::cout << "Loaded items.xml in " << start.elapsedMillis() << " milliseconds." << std::endl;
-	return {};
+	Logger::info() << "Loaded items.xml in " << start.elapsedMillis() << " ms." << std::endl;
 }
 
-tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, uint32_t id)
+bool Items::loadItemFromXml(pugi::xml_node itemNode, uint32_t id)
 {
 	// TODO Fix versioning
 	// TODO Why do we skip these in these cases?
@@ -131,7 +120,8 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 		{
 			return {};
 		}
-		return unexpecting("There is no itemType with server ID " + std::to_string(id));
+		Logger::error("There is no itemType with server ID " + std::to_string(id));
+		return false;
 	}
 
 	ItemType &it = *Items::items.getItemType(id);
@@ -337,11 +327,13 @@ tl::expected<void, std::string> Items::loadItemFromXml(pugi::xml_node itemNode, 
 			}
 		}
 	}
-	return {};
+	return true;
 }
 
-tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
+void Items::loadFromOtb(const std::string &file)
 {
+	auto start = TimeMeasure::start();
+
 	if (!Appearances::isLoaded)
 	{
 		throw std::runtime_error("Appearances must be loaded before loading items.otb.");
@@ -370,13 +362,13 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		uint32_t flags;
 		if (!props.read<uint32_t>(flags))
 		{
-			return unexpecting("Could not read the OTB header flags.");
+			ABORT_PROGRAM("Could not read the OTB header flags.");
 		}
 
 		uint8_t attr;
 		if (!props.read<uint8_t>(attr))
 		{
-			return unexpecting("Could not read the OTB header attr.");
+			ABORT_PROGRAM("Could not read the OTB header attr.");
 		}
 
 		if (attr == to_underlying(OTB::RootAttributes::Version))
@@ -384,17 +376,17 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			uint16_t length;
 			if (!props.read<uint16_t>(length))
 			{
-				return unexpecting("Could not read the OTB version length.");
+				ABORT_PROGRAM("Could not read the OTB version length.");
 			}
 
 			if (length != sizeof(OTB::VersionInfo))
 			{
-				return unexpecting("The length of the version info is incorrect.");
+				ABORT_PROGRAM("The length of the version info is incorrect.");
 			}
 
 			if (!props.read(items.otbVersionInfo))
 			{
-				return unexpecting("Could not read OTB version information.");
+				ABORT_PROGRAM("Could not read OTB version information.");
 			}
 		}
 	}
@@ -405,27 +397,28 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 	}
 	else if (items.otbVersionInfo.majorVersion != 3)
 	{
-		std::cout << "Old version detected, a newer version of items.otb is required." << std::endl;
-		return unexpecting("Old version detected, a newer version of items.otb is required.");
+		ABORT_PROGRAM("Old version detected, a newer version of items.otb is required.");
 	}
 	else if (items.otbVersionInfo.minorVersion < to_underlying(ClientVersion::CLIENT_VERSION_1098))
 	{
-		std::cout << "A newer version of items.otb is required." << std::endl;
-		return unexpecting("A newer version of items.otb is required.");
+		ABORT_PROGRAM("A newer version of items.otb is required.");
 	}
 
+	// Flag to skip item if a recoverable problem occurs
+	bool skipItem = false;
 	for (auto &itemNode : root.children)
 	{
+		skipItem = false;
 		PropStream stream;
 		if (!loader->getProps(itemNode, stream))
 		{
-			return unexpecting("Could not get props for a node.");
+			ABORT_PROGRAM("Could not get props for a node.");
 		}
 
 		uint32_t flags;
 		if (!stream.read<uint32_t>(flags))
 		{
-			return unexpecting("Could not read flags for a node.");
+			ABORT_PROGRAM("Could not read flags for a node.");
 		}
 
 		uint16_t serverId = 0;
@@ -438,14 +431,14 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 
 		uint8_t attrib;
 
-		const auto DEFAULT_ERROR = unexpecting("Bad format.");
+		const auto DEFAULT_ERROR = "Bad format.";
 
 		while (stream.read<uint8_t>(attrib))
 		{
 			uint16_t length;
 			if (!stream.read<uint16_t>(length))
 			{
-				return unexpecting("Could not read attribute length.");
+				ABORT_PROGRAM("Could not read attribute length.");
 			}
 
 			switch (attrib)
@@ -454,12 +447,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			{
 				if (length != sizeof(uint16_t))
 				{
-					return unexpecting("Invalid attribute length.");
+					ABORT_PROGRAM("Invalid attribute length.");
 				}
 
 				if (!stream.read<uint16_t>(serverId))
 				{
-					return unexpecting("Could not read server ID.");
+					ABORT_PROGRAM("Could not read server ID.");
 				}
 
 				if (serverId > 30000 && serverId < 30100)
@@ -474,12 +467,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			{
 				if (length != sizeof(uint16_t))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 
 				if (!stream.read<uint16_t>(clientId))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 				break;
 			}
@@ -488,12 +481,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			{
 				if (length != sizeof(uint16_t))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 
 				if (!stream.read<uint16_t>(speed))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 				break;
 			}
@@ -503,12 +496,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 				OTB::LightInfo lightInfo;
 				if (length != sizeof(OTB::LightInfo))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 
 				if (!stream.read(lightInfo))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 
 				lightLevel = static_cast<uint8_t>(lightInfo.level);
@@ -520,12 +513,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			{
 				if (length != sizeof(uint8_t))
 				{
-					return unexpecting("Bad length.");
+					ABORT_PROGRAM("Bad length.");
 				}
 
 				if (!stream.read<uint8_t>(alwaysOnTopOrder))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 				break;
 			}
@@ -534,12 +527,12 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 			{
 				if (length != sizeof(uint16_t))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 
 				if (!stream.read<uint16_t>(wareId))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 				break;
 			}
@@ -549,7 +542,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 				//skip unknown attributes
 				if (!stream.skip(length))
 				{
-					return DEFAULT_ERROR;
+					ABORT_PROGRAM(DEFAULT_ERROR);
 				}
 				break;
 			}
@@ -620,7 +613,7 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		case itemgroup_t::ITEM_GROUP_DEPRECATED:
 			break;
 		default:
-			return DEFAULT_ERROR;
+			ABORT_PROGRAM(DEFAULT_ERROR);
 		}
 
 		// TODO: Check for items that do not have matching flags in .otb and appearances.dat
@@ -674,21 +667,11 @@ tl::expected<void, std::string> Items::loadFromOtb(const std::string &file)
 		// {
 		// 	std::cout << serverId << ": (x=" << appearance.flagData.shiftX << ", y=" << appearance.flagData.shiftY << ")" << std::endl;
 		// }
-
-		auto catalogs = iType.catalogInfos();
-		if (catalogs.size() > 4)
-		{
-			std::cout << serverId << ":" << std::endl;
-			for (const auto c : catalogs)
-			{
-				std::cout << "\t" << c.file << ", " << std::endl;
-			}
-		}
 	}
 
 	items.itemTypes.shrink_to_fit();
 
-	return {};
+	Logger::info() << "Loaded items.otb in " << start.elapsedMillis() << " ms." << std::endl;
 }
 
 ItemType *Items::getNextValidItemType(uint16_t serverId)

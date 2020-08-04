@@ -3,7 +3,6 @@
 #include <string>
 #include <filesystem>
 #include <unordered_map>
-#include <tl/expected.hpp>
 #include <memory>
 #include <pugixml.hpp>
 #include <vector>
@@ -30,9 +29,9 @@ class Appearances;
 class Items
 {
 public:
-  static tl::expected<void, std::string> loadFromOtb(const std::string &file);
+  static void loadFromOtb(const std::string &file);
 
-  static tl::expected<void, std::string> loadFromXml(const std::filesystem::path path);
+  static void loadFromXml(const std::filesystem::path path);
 
   bool reload();
   void clear();
@@ -68,7 +67,7 @@ private:
   // MapID is used to filter out ItemTypes that do not have an appearance (e.g. invalid ItemTypes).
   // using MapID = uint16_t;
 
-  static tl::expected<void, std::string> loadItemFromXml(pugi::xml_node itemNode, uint32_t id);
+  static bool loadItemFromXml(pugi::xml_node itemNode, uint32_t id);
 
   std::vector<ItemType> itemTypes;
   std::unordered_map<ClientID, ServerID> clientIdToServerId;
