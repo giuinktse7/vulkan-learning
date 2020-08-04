@@ -8,6 +8,9 @@
 #include "vertex.h"
 #include "../debug.h"
 
+#include "texture.h"
+#include "texture_atlas.h"
+
 #include "buffer.h"
 
 #include "../item.h"
@@ -15,6 +18,14 @@
 
 constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 128 * sizeof(Vertex);
 // constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
+
+struct ObjectDrawInfo
+{
+	Appearance *appearance;
+	TextureInfo textureInfo;
+	Position position;
+	glm::vec4 color;
+};
 
 struct Batch
 {
@@ -102,11 +113,7 @@ public:
 
 	BatchDraw();
 
-	void push(Item &item, Position &pos, glm::vec4 color);
-	void push(Item &item, Position &pos);
-
-	void push(ItemType &itemType, TextureWindow textureWindow, Position &pos);
-	void push(ItemType &itemType, TextureWindow window, Position &pos, glm::vec4 color);
+	void push(ObjectDrawInfo &info);
 
 	void reset();
 

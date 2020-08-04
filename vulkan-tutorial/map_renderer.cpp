@@ -16,6 +16,13 @@
 
 constexpr int GROUND_FLOOR = 7;
 
+constexpr glm::vec4 PreviewCursorColor{0.6f,
+                                       0.6f,
+                                       0.6f,
+                                       0.7f};
+
+constexpr glm::vec4 DefaultColor{1.0f, 1.0f, 1.0f, 1.0f};
+
 MapRenderer::MapRenderer(std::unique_ptr<Map> map)
 {
   this->map = std::move(map);
@@ -447,15 +454,22 @@ void MapRenderer::drawMap()
     }
   }
 
-  // Draw ghost item cursor
+  drawPreviewCursor();
+}
+
+void MapRenderer::drawPreviewCursor()
+{
   ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId());
-  if (!selectedItemType.textureAtlas)
-  {
-    selectedItemType.loadTextureAtlas();
-  }
 
   Position pos = g_engine->screenToGamePos(g_engine->getMousePosition());
-  currentFrame->batchDraw.push(selectedItemType, selectedItemType.getTextureWindow(), pos, {0.5f, 0.5f, 0.5f, 0.7f});
+
+  ObjectDrawInfo drawInfo;
+  drawInfo.appearance = selectedItemType.appearance;
+  drawInfo.color = PreviewCursorColor;
+  drawInfo.position = pos;
+  drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
+
+  currentFrame->batchDraw.push(drawInfo);
 }
 
 void MapRenderer::drawTile(const TileLocation &tileLocation)
@@ -509,40 +523,20 @@ void MapRenderer::createFrameBuffers()
   }
 }
 
-TextureAtlas *MapRenderer::getTextureAtlas(const uint32_t spriteId)
-{
-  auto found = std::lower_bound(textureAtlasIds.begin(), textureAtlasIds.end(), spriteId);
-  if (found == textureAtlasIds.end())
-  {
-    std::cout << "Could not find a sprite sheet for sprite ID " << spriteId << "." << std::endl;
-    exit(1);
-  }
-
-  uint32_t lastSpriteId = *found;
-
-  return textureAtlases.at(lastSpriteId).get();
-}
-
-TextureAtlas *MapRenderer::getTextureAtlas(ItemType &itemType)
-{
-  if (itemType.textureAtlas == nullptr)
-  {
-    auto &appearance = Appearances::getObjectById(itemType.clientId);
-
-    auto firstSpriteId = itemType.appearance->getFirstSpriteId();
-    itemType.textureAtlas = getTextureAtlas(firstSpriteId);
-  }
-
-  return itemType.textureAtlas;
-}
 void MapRenderer::drawItem(Item &item, Position position, glm::vec4 color)
 {
-  currentFrame->batchDraw.push(item, position, color);
+  ObjectDrawInfo info;
+  info.appearance = item.itemType->appearance;
+  info.color = color;
+  info.position = position;
+  info.textureInfo = item.getTextureInfo(position);
+
+  currentFrame->batchDraw.push(info);
 }
 
 void MapRenderer::drawItem(Item &item, Position position)
 {
-  currentFrame->batchDraw.push(item, position);
+  drawItem(item, position, DefaultColor);
 }
 
 void MapRenderer::cleanup()

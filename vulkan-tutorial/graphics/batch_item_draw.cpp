@@ -3,8 +3,6 @@
 #include "engine.h"
 #include <ios>
 
-constexpr glm::vec4 DEFAULT_COLOR{1.0f, 1.0f, 1.0f, 1.0f};
-
 BatchDraw::BatchDraw()
     : batchIndex(0), commandBuffer(nullptr)
 {
@@ -85,28 +83,22 @@ void Batch::copyStagingToDevice(VkCommandBuffer commandBuffer)
   vkCmdCopyBuffer(commandBuffer, stagingBuffer.buffer, buffer.buffer, 1, &copyRegion);
 }
 
-void BatchDraw::push(Item &item, Position &pos)
+void BatchDraw::push(ObjectDrawInfo &info)
 {
-  push(*item.itemType, item.getTextureWindow(), pos, DEFAULT_COLOR);
-}
+  auto [appearance, textureInfo, position, color] = info;
+  auto [atlas, window] = textureInfo;
 
-void BatchDraw::push(ItemType &itemType, TextureWindow window, Position &pos)
-{
-  push(itemType, window, pos, DEFAULT_COLOR);
-}
+  auto drawOffset = atlas->drawOffset;
 
-void BatchDraw::push(Item &item, Position &pos, glm::vec4 color)
-{
-  push(*item.itemType, item.getTextureWindow(), pos, color);
-}
+  int worldX = g_engine->gameToWorldPos(position.x + drawOffset.x);
+  int worldY = g_engine->gameToWorldPos(position.y + drawOffset.y);
 
-void BatchDraw::push(ItemType &itemType, TextureWindow window, Position &pos, glm::vec4 color)
-{
-  TextureAtlas *atlas = itemType.textureAtlas;
-  auto drawOffset = itemType.textureAtlas->drawOffset;
-
-  int worldX = g_engine->gameToWorldPos(pos.x + drawOffset.x);
-  int worldY = g_engine->gameToWorldPos(pos.y + drawOffset.y);
+  // Add the item shift if necessary
+  if (appearance->hasFlag(AppearanceFlag::Shift))
+  {
+    worldX -= appearance->flagData.shiftX;
+    worldY -= appearance->flagData.shiftY;
+  }
 
   uint32_t width = atlas->spriteWidth;
   uint32_t height = atlas->spriteHeight;

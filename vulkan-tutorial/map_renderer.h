@@ -182,6 +182,8 @@ private:
 	void beginRenderPass();
 
 	void drawMap();
+	void drawPreviewCursor();
+
 	void drawBatches();
 
 	void cleanup();
