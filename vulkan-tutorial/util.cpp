@@ -61,3 +61,8 @@ long long TimeMeasure::elapsedMillis()
 
   return durationMillis;
 }
+
+std::chrono::steady_clock::time_point TimeMeasure::getCurrentTime()
+{
+  return std::chrono::high_resolution_clock::now();
+}

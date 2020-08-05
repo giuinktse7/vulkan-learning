@@ -29,6 +29,7 @@ struct TimeMeasure
 	void setStartNow();
 
 	static TimeMeasure start();
+	static std::chrono::steady_clock::time_point getCurrentTime();
 
 private:
 };
