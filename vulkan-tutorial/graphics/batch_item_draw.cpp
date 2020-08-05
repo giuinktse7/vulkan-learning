@@ -134,13 +134,13 @@ void Batch::addVertices(std::array<Vertex, SIZE> &vertexArray)
   vertexCount += static_cast<uint32_t>(vertexArray.size());
 }
 
-Batch &BatchDraw::getBatch()
+Batch &BatchDraw::getBatch() const
 {
   // Request no additional space
   return getBatch(0);
 }
 
-Batch &BatchDraw::getBatch(uint32_t requiredVertexCount)
+Batch &BatchDraw::getBatch(uint32_t requiredVertexCount) const
 {
   if (batches.empty())
   {
@@ -216,4 +216,9 @@ void BatchDraw::prepareDraw()
   }
 
   this->batchIndex = 0;
+}
+
+std::vector<Batch> &BatchDraw::getBatches() const
+{
+  return batches;
 }

@@ -270,7 +270,7 @@ void MapRenderer::drawBatches()
 
   vkCmdBindIndexBuffer(currentFrame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
 
-  for (auto &batch : currentFrame->batchDraw.batches)
+  for (auto &batch : currentFrame->batchDraw.getBatches())
   {
     if (!batch.isValid())
       break;

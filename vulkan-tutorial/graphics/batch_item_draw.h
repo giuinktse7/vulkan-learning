@@ -108,7 +108,6 @@ private:
 class BatchDraw
 {
 public:
-	std::vector<Batch> batches;
 	VkCommandBuffer commandBuffer;
 
 	BatchDraw();
@@ -117,11 +116,13 @@ public:
 
 	void reset();
 
-	Batch &getBatch();
+	Batch &getBatch() const;
+	std::vector<Batch> &getBatches() const;
 	void prepareDraw();
 
 private:
-	uint32_t batchIndex;
+	mutable uint32_t batchIndex;
+	mutable std::vector<Batch> batches;
 
-	Batch &getBatch(uint32_t requiredVertexCount);
+	Batch &getBatch(uint32_t requiredVertexCount) const;
 };
