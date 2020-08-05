@@ -407,6 +407,9 @@ void Engine::nextFrame()
 {
   if (!initFrame())
     return;
+
+  currentTime = TimeMeasure::getCurrentTime();
+
   mapRenderer->recordFrame(currentFrameIndex);
   gui.recordFrame(currentFrameIndex);
 
@@ -607,4 +610,14 @@ int Engine::getKeyState(int key)
   }
 
   return value->second;
+}
+
+std::chrono::steady_clock::time_point Engine::getStartTime()
+{
+  return clock.startTime;
+}
+
+std::chrono::steady_clock::time_point Engine::getCurrentTime()
+{
+  return currentTime;
 }
