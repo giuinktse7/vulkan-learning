@@ -45,7 +45,19 @@ public:
 	Engine();
 	~Engine();
 
+	static const int TILE_SIZE = 32;
+	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+
+	uint32_t currentFrameIndex;
+
+	TimeMeasure clock;
+	Random random;
+
 	bool debug = false;
+
+	// Can be set to false if the UI is currently capturing the mouse.
+	bool captureMouse = true;
+	bool captureKeyboard = true;
 
 	struct FrameData
 	{
@@ -53,12 +65,6 @@ public:
 		VkSemaphore renderCompleteSemaphore = nullptr;
 		VkFence inFlightFence = nullptr;
 	};
-
-	// Can be set to false if the UI is currently capturing the mouse.
-	bool captureMouse = true;
-	bool captureKeyboard = true;
-
-	static const int TILE_SIZE = 32;
 
 	/* Vulkan helpers */
 	VkResult mapMemory(
@@ -177,9 +183,6 @@ public:
 	void createSyncObjects();
 	void cleanupSyncObjects();
 
-	// glm::vec4 getClearColor() const;
-	// void setClearColor(const glm::vec4 &clearColor);
-
 	uint32_t getMaxFramesInFlight();
 
 	bool isValidWindowSize();
@@ -265,15 +268,15 @@ public:
 		return gui.brushServerId;
 	}
 
-	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	uint32_t currentFrameIndex;
-
-	TimeMeasure clock;
-
-	Random random;
+	std::chrono::steady_clock::time_point getStartTime();
+	std::chrono::steady_clock::time_point getCurrentTime();
 
 private:
+	/*
+		Used by animators for synchronous animations
+	*/
+	std::chrono::steady_clock::time_point currentTime;
+
 	std::array<FrameData, 3> frames;
 	// Fences for vkAcquireNextImageKHR
 	std::array<VkFence, 3> swapChainImageInFlight;
