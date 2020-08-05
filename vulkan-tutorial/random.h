@@ -13,7 +13,14 @@ public:
 	Random(uint32_t seed);
 	Random();
 
+	/*
+		Random double in range [0, 1].
+	*/
 	double nextDouble();
+
+	/*
+		Random int in range [from, to).
+	*/
 	int nextInt(int from, int to);
 
 private:

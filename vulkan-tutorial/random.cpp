@@ -27,6 +27,7 @@ double Random::nextDouble()
 int Random::nextInt(int from, int to)
 {
   double r = nextDouble();
+  int maxValue = std::max(from, to - 1);
 
-  return static_cast<int>(std::round(from + r * (to - from)));
+  return static_cast<int>(std::round(from + r * (maxValue - from)));
 }
