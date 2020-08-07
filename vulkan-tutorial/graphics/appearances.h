@@ -571,3 +571,41 @@ inline std::ostream &operator<<(std::ostream &os, const tibia::protobuf::appeara
   os << s.str();
   return os;
 }
+
+inline std::ostream &operator<<(std::ostream &os, const SpriteAnimation &animation)
+{
+  std::ostringstream s;
+
+  s << "default_start_phase: " << animation.defaultStartPhase << ", ";
+  s << "synchronized: " << animation.synchronized << ", ";
+  s << "random_start_phase: " << animation.randomStartPhase << ", ";
+
+  s << "loop_type: ";
+
+  switch (animation.loopType)
+  {
+  case AnimationLoopType::PingPong:
+    s << "ANIMATION_LOOP_TYPE_PINGPONG";
+    break;
+  case AnimationLoopType::Infinite:
+    s << "ANIMATION_LOOP_TYPE_INFINITE";
+    break;
+  case AnimationLoopType::Counted:
+  default:
+    s << "ANIMATION_LOOP_TYPE_COUNTED";
+    break;
+  }
+
+  s << std::endl;
+
+  s << "loop_count: " << animation.loopCount << ", " << std::endl;
+  s << "phases:" << std::endl;
+  for (int i = 0; i < animation.phases.size(); ++i)
+  {
+    auto phase = animation.phases.at(i);
+    s << "\t[" << phase.minDuration << ", " << phase.maxDuration << "]" << std::endl;
+  }
+
+  os << s.str();
+  return os;
+}
