@@ -15,6 +15,9 @@
 
 #include "../gui/imgui_impl_glfw.h"
 
+#include "../ecs/ecs.h"
+#include "../ecs/item_animation.h"
+
 constexpr uint32_t TILE_SIZE = 32;
 
 Engine *g_engine;
@@ -57,6 +60,7 @@ Engine::Engine()
 {
   uint32_t seed = 1234;
   this->random = Random(seed);
+  this->currentTime = TimeMeasure::getCurrentTime();
 
   // Uncomment below for a random seed each run
   // random = Random();
@@ -403,10 +407,10 @@ bool Engine::initFrame()
   return true;
 }
 
-void Engine::nextFrame()
+FrameResult Engine::nextFrame()
 {
   if (!initFrame())
-    return;
+    return FrameResult::Failure;
 
   currentTime = TimeMeasure::getCurrentTime();
 
@@ -459,6 +463,8 @@ void Engine::nextFrame()
   }
 
   setFrameIndex((currentFrameIndex + 1) % getMaxFramesInFlight());
+
+  return FrameResult::Success;
 }
 
 void Engine::createSyncObjects()

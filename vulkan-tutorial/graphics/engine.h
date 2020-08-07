@@ -28,6 +28,12 @@
 
 #include "../util.h"
 
+enum class FrameResult
+{
+	Failure = 0,
+	Success = 1
+};
+
 class Engine;
 
 extern Engine *g_engine;
@@ -190,8 +196,14 @@ public:
 	void setKeyState(int key, int state);
 	int getKeyState(int key);
 
+	bool isMouseDragging() const
+	{
+		return this->mousePosition != this->prevMousePosition;
+	}
+
 	void setMousePosition(float x, float y)
 	{
+		this->prevMousePosition = this->mousePosition;
 		this->mousePosition.x = x;
 		this->mousePosition.y = y;
 	}
@@ -226,7 +238,7 @@ public:
 	}
 
 	bool initFrame();
-	void nextFrame();
+	FrameResult nextFrame();
 
 	VkShaderModule createShaderModule(const std::vector<uint8_t> &code);
 
@@ -263,9 +275,17 @@ public:
 		return mapRenderer;
 	}
 
-	const uint32_t getSelectedServerId() const
+	const std::optional<uint16_t> getSelectedServerId() const
 	{
 		return gui.brushServerId;
+	}
+
+	/*
+	Remove selected item from the brush
+	*/
+	void clearBrush()
+	{
+		gui.brushServerId.reset();
 	}
 
 	std::chrono::steady_clock::time_point getStartTime();
@@ -282,6 +302,7 @@ private:
 	std::array<VkFence, 3> swapChainImageInFlight;
 	FrameData *currentFrame = nullptr;
 
+	glm::vec2 prevMousePosition;
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
 

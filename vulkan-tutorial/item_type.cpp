@@ -1,8 +1,24 @@
 #include "item_type.h"
 
+#include "ecs/ecs.h"
+#include "ecs/item_animation.h"
+
 ItemType::~ItemType()
 {
   // Empty
+}
+
+const uint32_t ItemType::getPatternIndex(const Position &pos) const
+{
+  const SpriteInfo &spriteInfo = appearance->getSpriteInfo();
+
+  uint32_t width = spriteInfo.patternWidth;
+  uint32_t height = spriteInfo.patternHeight;
+  uint32_t depth = spriteInfo.patternDepth;
+
+  uint32_t spriteIndex = (pos.x % width) + (pos.y % height) * width + (pos.z % depth) * height * width;
+
+  return spriteIndex;
 }
 
 const TextureInfo ItemType::getTextureInfo() const
@@ -16,16 +32,19 @@ const TextureInfo ItemType::getTextureInfo() const
   return info;
 }
 
+const TextureInfo ItemType::getTextureInfo(uint32_t spriteId) const
+{
+  TextureAtlas *atlas = getTextureAtlas(spriteId);
+
+  return TextureInfo{atlas, atlas->getTextureWindow(spriteId)};
+}
+
 const TextureInfo ItemType::getTextureInfo(const Position &pos) const
 {
+  auto k = this;
   if (!appearance->hasFlag(AppearanceFlag::Take) && appearance->hasFlag(AppearanceFlag::Unmove))
   {
     const SpriteInfo &spriteInfo = appearance->getSpriteInfo();
-    if (spriteInfo.hasAnimation())
-    {
-      // TODO Handle animated un-takeable, un-movable tiles
-      return getTextureInfo();
-    }
 
     uint32_t width = spriteInfo.patternWidth;
     uint32_t height = spriteInfo.patternHeight;

@@ -5,7 +5,10 @@
 #include <iostream>
 
 #include "tile_location.h"
+#include "ecs/ecs.h"
+#include "ecs/item_animation.h"
 #include "debug.h"
+#include "graphics/appearances.h"
 
 #include <stack>
 
@@ -227,5 +230,16 @@ std::string &Map::getDescription()
 void Map::createItemAt(Position pos, uint16_t id)
 {
   auto item = Item::create(id);
+
+  const SpriteInfo &spriteInfo = item->itemType->appearance->getSpriteInfo();
+  if (spriteInfo.hasAnimation())
+  {
+    auto &anim = *spriteInfo.getAnimation();
+    std::cout << anim << std::endl;
+    Entity entity = g_ecs.createEntity();
+    item->entity = entity;
+    g_ecs.addComponent(entity, ItemAnimationComponent(spriteInfo.getAnimation()));
+  }
+
   getOrCreateTile(pos).addItem(std::move(item));
 }

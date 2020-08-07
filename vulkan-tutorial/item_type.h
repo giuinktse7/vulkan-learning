@@ -166,7 +166,10 @@ public:
 
   void cacheTextureAtlases();
 
+  const uint32_t getPatternIndex(const Position &pos) const;
+
   const TextureInfo getTextureInfo() const;
+  const TextureInfo getTextureInfo(uint32_t spriteId) const;
   const TextureInfo getTextureInfo(const Position &pos) const;
 
   // For debugging purposes
@@ -273,7 +276,7 @@ public:
   uint16_t wareId = 0;
 
   MagicEffectClasses magicEffect = CONST_ME_NONE;
-  Direction bedPartnerDir = DIRECTION_NONE;
+  GameDirection bedPartnerDir = DIRECTION_NONE;
   WeaponType_t weaponType = WEAPON_NONE;
   Ammo_t ammoType = AMMO_NONE;
   ShootType_t shootType = CONST_ANI_NONE;

@@ -89,7 +89,8 @@
     "stack": "cpp",
     "valarray": "cpp",
     "*.inc": "cpp",
-    "random": "cpp"
+    "random": "cpp",
+    "queue": "cpp"
   },
   "files.exclude": {
     "**/.git": true,

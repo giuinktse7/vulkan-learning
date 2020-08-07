@@ -4,14 +4,15 @@
 #include "graphics/texture.h"
 #include "graphics/appearances.h"
 #include <glm/glm.hpp>
+#include <unordered_map>
+#include <optional>
 
 #include "item_attribute.h"
 
 #include "items.h"
 #include "graphics/texture_atlas.h"
 #include "position.h"
-
-#include <unordered_map>
+#include "ecs/entity.h"
 
 class Appearances;
 
@@ -20,6 +21,9 @@ class Item
 	using ItemTypeId = uint32_t;
 
 public:
+	std::optional<Entity> entity;
+	ItemType *itemType;
+
 	Item(ItemTypeId serverId);
 	~Item();
 
@@ -68,8 +72,6 @@ public:
 	{
 		return attributes;
 	}
-
-	ItemType *itemType;
 
 private:
 	std::unordered_map<ItemAttribute_t, ItemAttribute> attributes;

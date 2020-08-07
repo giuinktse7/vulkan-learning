@@ -1,6 +1,8 @@
 #include "item.h"
 
 #include "items.h"
+#include "ecs/ecs.h"
+#include "ecs/item_animation.h"
 
 #include "graphics/engine.h"
 Item::Item(ItemTypeId itemTypeId)
@@ -22,9 +24,20 @@ const TextureInfo Item::getTextureInfo(const Position &pos) const
 {
 	// TODO Add more pattern checks like hanging or cumulative item types
 	const SpriteInfo &spriteInfo = itemType->appearance->getSpriteInfo();
-	if (spriteInfo.hasAnimation())
+	if (spriteInfo.hasAnimation() && this->entity.has_value())
 	{
-		// spriteInfo.getAnimation().
+		auto c = g_ecs.getComponent<ItemAnimationComponent>(this->entity.value());
+
+		uint32_t width = spriteInfo.patternWidth;
+		uint32_t height = spriteInfo.patternHeight;
+		uint32_t depth = spriteInfo.patternDepth;
+
+		uint32_t patternIndex = itemType->getPatternIndex(pos);
+		uint32_t spriteIndex = patternIndex + c.state.phaseIndex * width * height * depth;
+
+		uint32_t spriteId = spriteInfo.spriteIds.at(spriteIndex);
+
+		return itemType->getTextureInfo(spriteId);
 	}
 	return itemType->getTextureInfo(pos);
 }

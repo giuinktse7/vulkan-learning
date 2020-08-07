@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <ostream>
 
-enum Direction : uint8_t
+enum GameDirection : uint8_t
 {
 	DIRECTION_NORTH = 0,
 	DIRECTION_EAST = 1,
