@@ -21,7 +21,14 @@ public:
 	/*
 		Random int in range [from, to).
 	*/
-	int nextInt(int from, int to);
+	template <typename T, typename A = int>
+	T nextInt(A from, A to)
+	{
+		double r = nextDouble();
+		int maxValue = std::max(from, to - 1);
+
+		return static_cast<T>(std::round(from + r * (maxValue - from)));
+	}
 
 private:
 	std::mt19937 randomEngine;

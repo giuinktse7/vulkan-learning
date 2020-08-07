@@ -23,11 +23,3 @@ double Random::nextDouble()
 {
   return distribution(randomEngine);
 }
-
-int Random::nextInt(int from, int to)
-{
-  double r = nextDouble();
-  int maxValue = std::max(from, to - 1);
-
-  return static_cast<int>(std::round(from + r * (maxValue - from)));
-}
