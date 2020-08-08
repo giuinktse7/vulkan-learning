@@ -105,9 +105,18 @@ public:
 	}
 
 	template <typename T>
-	T &getComponent(Entity entity)
+	T *getComponent(Entity entity)
 	{
-		return getComponentArray<T>().getComponent(entity);
+		ComponentArray<T> *componentArray = getComponentArray<T>();
+		if (componentArray->hasComponent(entity))
+		{
+			T *component = componentArray->getComponent(entity);
+			return component;
+		}
+		else
+		{
+			return nullptr;
+		}
 	}
 
 	template <typename T>
@@ -124,8 +133,8 @@ public:
 	template <typename T>
 	void addComponent(Entity entity, T component)
 	{
-		ComponentArray<T> &componentArray = getComponentArray<T>();
-		componentArray.addComponent(entity, component);
+		ComponentArray<T> *componentArray = getComponentArray<T>();
+		componentArray->addComponent(entity, component);
 
 		setEntityComponentBit<T>(entity);
 	}
@@ -133,8 +142,8 @@ public:
 	template <typename T>
 	void removeComponent(Entity entity)
 	{
-		ComponentArray<T> &array = getComponentArray<T>();
-		array.removeComponent(entity);
+		ComponentArray<T> *array = getComponentArray<T>();
+		array->removeComponent(entity);
 
 		unsetEntityComponentBit<T>(entity);
 	}
@@ -170,14 +179,12 @@ private:
 	std::unordered_map<const char *, std::unique_ptr<ecs::System>> systems;
 
 	template <typename T>
-	ComponentArray<T> &getComponentArray()
+	ComponentArray<T> *getComponentArray()
 	{
 		const char *typeName = typeid(T).name();
 		DEBUG_ASSERT(componentTypes.find(typeName) != componentTypes.end(), "The component type '" + std::string(typeName) + "' is not registered.");
 
-		IComponentArray &arr = *componentArrays.at(typeName).get();
-		return dynamic_cast<ComponentArray<T> &>(arr);
-		// return std::static_pointer_cast<ComponentArray<T>>(componentArrays[typeName]);
+		return dynamic_cast<ComponentArray<T> *>(componentArrays.at(typeName).get());
 	}
 
 	template <typename T>

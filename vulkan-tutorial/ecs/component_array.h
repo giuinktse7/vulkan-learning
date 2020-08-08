@@ -58,11 +58,16 @@ public:
 		removeComponent(entity);
 	}
 
-	T &getComponent(Entity entity)
+	bool hasComponent(Entity entity) const
 	{
-		DEBUG_ASSERT(entityIndex.find(entity) != entityIndex.end(), "Entity " + std::to_string(entity.id) + " does not have a " + std::string(typeid(T).name()) + " component.");
+		return entityIndex.find(entity) != entityIndex.end();
+	}
 
-		return components.at(entityIndex.at(entity));
+	T *getComponent(Entity entity)
+	{
+		// DEBUG_ASSERT(entityIndex.find(entity) != entityIndex.end(), "Entity " + std::to_string(entity.id) + " does not have a " + std::string(typeid(T).name()) + " component.");
+
+		return &components.at(entityIndex.at(entity));
 	}
 
 private:
