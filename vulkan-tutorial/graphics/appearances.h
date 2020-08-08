@@ -227,6 +227,9 @@ struct SpriteAnimation
 {
   uint32_t defaultStartPhase;
   bool synchronized;
+  /*
+    If true, the animation can start in any phase.
+  */
   bool randomStartPhase;
   AnimationLoopType loopType;
 
@@ -599,7 +602,7 @@ inline std::ostream &operator<<(std::ostream &os, const SpriteAnimation &animati
   s << std::endl;
 
   s << "loop_count: " << animation.loopCount << ", " << std::endl;
-  s << "phases:" << std::endl;
+  s << "phases (" << animation.phases.size() << "):" << std::endl;
   for (int i = 0; i < animation.phases.size(); ++i)
   {
     auto phase = animation.phases.at(i);

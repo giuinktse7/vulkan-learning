@@ -241,9 +241,18 @@ SpriteAnimation SpriteAnimation::fromProtobufData(tibia::protobuf::appearances::
         anim.phases.push_back({phase.duration_min(), phase.duration_max()});
     }
 
-    anim.defaultStartPhase = animation.default_start_phase();
-    anim.randomStartPhase = animation.random_start_phase();
-    anim.synchronized = animation.synchronized();
+    if (animation.has_default_start_phase())
+    {
+        anim.defaultStartPhase = animation.default_start_phase();
+    }
+    if (animation.has_random_start_phase())
+    {
+        anim.randomStartPhase = animation.random_start_phase();
+    }
+    if (animation.has_synchronized())
+    {
+        anim.synchronized = animation.synchronized();
+    }
 
     return anim;
 }
