@@ -18,6 +18,8 @@ public:
 	Tile *getTile() const;
 	const bool hasTile() const;
 
+	void removeTile();
+
 	friend class Floor;
 	friend class Tile;
 

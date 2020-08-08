@@ -22,6 +22,23 @@ Tile &Map::getOrCreateTile(Position &pos)
   return getOrCreateTile(pos.x, pos.y, pos.z);
 }
 
+void Map::removeTile(Position pos)
+{
+  auto leaf = root.getLeafUnsafe(pos.x, pos.y);
+  if (leaf)
+  {
+    Floor *floor = leaf->getFloor(pos.z);
+    if (floor)
+    {
+      auto &loc = floor->getTileLocation(pos.x, pos.y);
+      if (loc.hasTile())
+      {
+        loc.removeTile();
+      }
+    }
+  }
+}
+
 Tile *Map::getTile(Position pos) const
 {
   auto leaf = root.getLeafUnsafe(pos.x, pos.y);
@@ -51,6 +68,11 @@ Tile &Map::getOrCreateTile(int x, int y, int z)
   }
 
   return *location.getTile();
+}
+
+TileLocation *Map::getTileLocation(Position &pos) const
+{
+  return getTileLocation(pos.x, pos.y, pos.z);
 }
 
 TileLocation *Map::getTileLocation(int x, int y, int z) const
@@ -235,7 +257,7 @@ void Map::createItemAt(Position pos, uint16_t id)
   if (spriteInfo.hasAnimation())
   {
     auto &anim = *spriteInfo.getAnimation();
-    std::cout << anim << std::endl;
+    // std::cout << anim << std::endl;
     Entity entity = g_ecs.createEntity();
     item->entity = entity;
     g_ecs.addComponent(entity, ItemAnimationComponent(spriteInfo.getAnimation()));

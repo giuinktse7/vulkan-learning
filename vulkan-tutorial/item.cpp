@@ -33,7 +33,7 @@ const TextureInfo Item::getTextureInfo(const Position &pos) const
 		uint32_t depth = spriteInfo.patternDepth;
 
 		uint32_t patternIndex = itemType->getPatternIndex(pos);
-		uint32_t spriteIndex = patternIndex + c.state.phaseIndex * width * height * depth;
+		uint32_t spriteIndex = patternIndex + c->state.phaseIndex * width * height * depth;
 
 		uint32_t spriteId = spriteInfo.spriteIds.at(spriteIndex);
 

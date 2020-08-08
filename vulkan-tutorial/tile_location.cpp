@@ -27,3 +27,8 @@ const bool TileLocation::hasTile() const
 {
   return getTile() != nullptr;
 }
+
+void TileLocation::removeTile()
+{
+  this->tile = nullptr;
+}

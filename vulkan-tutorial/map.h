@@ -97,7 +97,9 @@ public:
 	Tile &getOrCreateTile(int x, int y, int z);
 	Tile &getOrCreateTile(Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
+	TileLocation *getTileLocation(Position &pos) const;
 	Tile *getTile(Position pos) const;
+	void removeTile(Position pos);
 
 	MapVersion getMapVersion();
 	std::string &getDescription();

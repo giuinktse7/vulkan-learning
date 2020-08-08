@@ -1,15 +1,19 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+
 #include "tile_location.h"
 #include "item.h"
-
-#include <memory>
+#include "ecs/entity.h"
 
 class TileLocation;
 
 class Tile
 {
 public:
+	std::optional<Entity> entity;
+
 	Tile(TileLocation &location);
 	~Tile();
 
@@ -20,10 +24,17 @@ public:
 	Item *getGround() const;
 
 	void addItem(std::unique_ptr<Item> item);
+	void removeItem(size_t index);
+	void removeGround();
 
 	const std::vector<std::unique_ptr<Item>> &getItems() const
 	{
 		return items;
+	}
+
+	const size_t getItemCount() const
+	{
+		return items.size();
 	}
 
 	/*
@@ -45,8 +56,7 @@ private:
 	std::vector<std::unique_ptr<Item>> items;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
-	union
-	{
+	union {
 		struct
 		{
 			uint16_t mapflags;

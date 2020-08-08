@@ -70,6 +70,18 @@ void Tile::addItem(std::unique_ptr<Item> item)
   items.insert(cursor, std::move(item));
 }
 
+void Tile::removeItem(size_t index)
+{
+  auto pos = items.begin();
+  std::advance(pos, index);
+  items.erase(pos);
+}
+
+void Tile::removeGround()
+{
+  this->ground.reset();
+}
+
 const Position &Tile::getPosition() const
 {
   return tileLocation.position;

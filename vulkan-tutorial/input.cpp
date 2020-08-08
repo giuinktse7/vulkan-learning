@@ -1,6 +1,8 @@
 #include "input.h"
 
 #include "graphics/engine.h"
+#include "ecs/ecs.h"
+#include "ecs/item_selection.h"
 
 void updateKeyState(int key, int action)
 {
@@ -127,6 +129,11 @@ void Input::handleKeyAction(GLFWwindow *window, int key, int scancode, int actio
     return;
   }
 
+  if (key == GLFW_KEY_ESCAPE)
+  {
+    g_engine->clearBrush();
+  }
+
   updateCamera(key);
 }
 
@@ -139,12 +146,13 @@ void Input::handleCursorPosition(GLFWwindow *window, double x, double y)
   g_engine->setMousePosition(static_cast<float>(x), static_cast<float>(y));
   Position newGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
 
-  if (oldGamePos != newGamePos)
+  // Create items when dragging mouse
+  if (g_engine->getSelectedServerId().has_value() && oldGamePos != newGamePos)
   {
     // Dragging mouse
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
     {
-      uint16_t selectedId = g_engine->getSelectedServerId();
+      uint16_t selectedId = g_engine->getSelectedServerId().value();
 
       auto &map = *g_engine->getMapRenderer()->map;
       auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
@@ -161,11 +169,53 @@ void Input::handleMouseKeyAction(GLFWwindow *window, int button, int action, int
 
   if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
   {
-    uint16_t selectedId = g_engine->getSelectedServerId();
+    bool activeBrush = g_engine->getSelectedServerId().has_value();
 
     auto &map = *g_engine->getMapRenderer()->map;
     auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
 
-    map.createItemAt(pos, selectedId);
+    if (activeBrush)
+    {
+      uint16_t selectedId = g_engine->getSelectedServerId().value();
+
+      map.createItemAt(pos, selectedId);
+    }
+    else
+    {
+      Tile *tile = map.getTile(pos);
+      if (tile != nullptr)
+      {
+        if (!tile->entity.has_value())
+        {
+          Entity entity = g_ecs.createEntity();
+          tile->entity = entity;
+        }
+
+        Entity entity = tile->entity.value();
+        TileSelectionComponent *selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+        if (selection == nullptr)
+        {
+          TileSelectionComponent component;
+          component.position = pos;
+          g_ecs.addComponent(entity, component);
+        }
+
+        selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+        std::cout << selection->position << std::endl;
+
+        auto topItem = tile->getTopItem();
+        if (topItem != nullptr)
+        {
+          if (topItem == tile->getGround())
+          {
+            selection->toggleSelection(TileEntity::Ground);
+          }
+          else
+          {
+            selection->selectItemIndex(tile->getItemCount() - 1);
+          }
+        }
+      }
+    }
   }
 }

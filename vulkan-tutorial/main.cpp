@@ -42,6 +42,8 @@
 #include "graphics/appearances.h"
 #include "map.h"
 
+#include "ecs/ecs.h"
+
 using namespace std;
 
 const uint32_t WIDTH = 800;
@@ -93,6 +95,18 @@ void populateTestMap()
 	// }
 }
 
+#include "ecs/item_animation.h"
+#include "ecs/item_selection.h"
+#include <initializer_list>
+
+class X
+{
+};
+
+class Y
+{
+};
+
 int main()
 {
 	MapRenderer *mapRenderer;
@@ -100,6 +114,14 @@ int main()
 	try
 	{
 		engine::create();
+
+		// Register animation
+		g_ecs.registerComponent<ItemAnimationComponent>();
+		g_ecs.registerSystem<ItemAnimationSystem>();
+
+		// Register selection
+		g_ecs.registerComponent<TileSelectionComponent>();
+		g_ecs.registerSystem<TileSelectionSystem>();
 
 		Appearances::loadTextureAtlases("data/catalog-content.json");
 		Appearances::loadAppearanceData("data/appearances.dat");
@@ -121,7 +143,12 @@ int main()
 		{
 			glfwPollEvents();
 			Input::update(window);
-			g_engine->nextFrame();
+			FrameResult res = g_engine->nextFrame();
+			if (res == FrameResult::Success)
+			{
+
+				g_ecs.getSystem<ItemAnimationSystem>().update();
+			}
 		}
 
 		g_engine->WaitUntilDeviceIdle();

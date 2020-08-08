@@ -8,6 +8,9 @@
 #include "graphics/resource-descriptor.h"
 #include "graphics/appearances.h"
 
+#include "ecs/ecs.h"
+#include "ecs/item_selection.h"
+
 #include "debug.h"
 
 #include "util.h"
@@ -443,7 +446,10 @@ void MapRenderer::drawMap()
 
 void MapRenderer::drawPreviewCursor()
 {
-  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId());
+  if (!g_engine->getSelectedServerId().has_value())
+    return;
+
+  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
 
   Position pos = g_engine->screenToGamePos(g_engine->getMousePosition());
 
@@ -461,9 +467,22 @@ void MapRenderer::drawTile(const TileLocation &tileLocation)
   auto position = tileLocation.getPosition();
   auto tile = tileLocation.getTile();
 
+  TileSelectionComponent *selection = nullptr;
+  if (tile->entity.has_value())
+  {
+    selection = g_ecs.getComponent<TileSelectionComponent>(tile->entity.value());
+  }
+
   if (tile->getGround())
   {
-    drawItem(*tile->getGround(), position);
+    if (selection && selection->isGroundSelected())
+    {
+      drawItem(*tile->getGround(), position, {0.45, 0.45, 0.45, 1.0});
+    }
+    else
+    {
+      drawItem(*tile->getGround(), position);
+    }
   }
   for (const auto &item : tile->getItems())
     drawItem(*item, position);
