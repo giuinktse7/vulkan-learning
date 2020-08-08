@@ -109,7 +109,7 @@ void ItemType::cacheTextureAtlas(uint32_t spriteId)
     }
     else
     {
-      if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
+      if (atlas->firstSpriteId <= spriteId && spriteId <= atlas->lastSpriteId)
       {
         // The TextureAtlas is already cached
         return;
@@ -127,13 +127,13 @@ TextureAtlas *ItemType::getTextureAtlas(uint32_t spriteId) const
       return nullptr;
     }
 
-    if (atlas->firstSpriteId >= id && id <= atlas->lastSpriteId)
+    if (atlas->firstSpriteId <= spriteId && spriteId <= atlas->lastSpriteId)
     {
       return atlas;
     }
   }
 
-  return getTextureAtlas(spriteId);
+  return Appearances::getTextureAtlas(spriteId);
 }
 
 TextureAtlas *ItemType::getFirstTextureAtlas() const
