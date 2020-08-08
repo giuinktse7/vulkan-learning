@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClCompile Include="ecs\ecs.cpp" />
     <ClCompile Include="ecs\item_animation.cpp" />
+    <ClCompile Include="ecs\item_selection.cpp" />
     <ClCompile Include="graphics\appearances.cpp" />
     <ClCompile Include="graphics\batch_item_draw.cpp" />
     <ClCompile Include="graphics\buffer.cpp" />
@@ -213,6 +214,7 @@
     <ClInclude Include="ecs\entity.h" />
     <ClInclude Include="ecs\item_animation.h" />
     <ClInclude Include="ecs\ecs.h" />
+    <ClInclude Include="ecs\item_selection.h" />
     <ClInclude Include="graphics\batch_item_draw.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="graphics\appearances.h" />

@@ -196,11 +196,6 @@ public:
 	void setKeyState(int key, int state);
 	int getKeyState(int key);
 
-	bool isMouseDragging() const
-	{
-		return this->mousePosition != this->prevMousePosition;
-	}
-
 	void setMousePosition(float x, float y)
 	{
 		this->prevMousePosition = this->mousePosition;

@@ -46,23 +46,49 @@ TimeMeasure TimeMeasure::start()
 
 TimeMeasure::TimeMeasure()
 {
-  startTime = std::chrono::high_resolution_clock::now();
+  startTime = std::chrono::steady_clock::now();
 }
 
 void TimeMeasure::setStartNow()
 {
-  startTime = std::chrono::high_resolution_clock::now();
+  startTime = std::chrono::steady_clock::now();
 }
 
 long long TimeMeasure::elapsedMillis()
 {
-  auto stopTime = std::chrono::high_resolution_clock::now();
+  auto stopTime = std::chrono::steady_clock::now();
   long long durationMillis = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime).count();
 
   return durationMillis;
 }
 
+long long TimeMeasure::elapsedMillis(std::chrono::steady_clock::time_point other)
+{
+  long long durationMillis = std::chrono::duration_cast<std::chrono::milliseconds>(other - startTime).count();
+
+  return durationMillis;
+}
+
+std::chrono::steady_clock::time_point TimeMeasure::ellapsedMillisAsTime()
+{
+  auto stopTime = std::chrono::steady_clock::now();
+  long long millis = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime).count();
+
+  std::chrono::time_point<std::chrono::steady_clock> result(std::chrono::milliseconds{millis});
+  return result;
+}
+
 std::chrono::steady_clock::time_point TimeMeasure::getCurrentTime()
 {
-  return std::chrono::high_resolution_clock::now();
+  return std::chrono::steady_clock::now();
+}
+
+long long TimeMeasure::diffMillis(std::chrono::steady_clock::time_point from, std::chrono::steady_clock::time_point to)
+{
+  return std::chrono::duration_cast<std::chrono::milliseconds>(to - from).count();
+}
+
+long long TimeMeasure::millis(std::chrono::steady_clock::time_point a)
+{
+  return std::chrono::time_point_cast<std::chrono::milliseconds>(a).time_since_epoch().count();
 }

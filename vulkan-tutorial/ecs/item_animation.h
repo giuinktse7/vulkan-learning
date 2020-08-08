@@ -24,6 +24,7 @@ public:
 private:
 	std::vector<const char *> getRequiredComponents() override;
 
+	void updateInfinite(ItemAnimationComponent &animation, long long elapsedTimeMs);
 	void updatePingPong(ItemAnimationComponent &animation);
 	void updateCounted(ItemAnimationComponent &animation);
 };
@@ -32,16 +33,11 @@ struct ItemAnimationComponent
 {
 	ItemAnimationComponent(SpriteAnimation *animationInfo);
 
-	void setPhase(uint32_t phaseIndex);
+	void setPhase(uint32_t phaseIndex, std::chrono::steady_clock::time_point updateTime);
 
 	SpriteAnimation *animationInfo;
 	// Should not be changed after construction
 	uint32_t startPhase;
-
-	/*
-		Used for async animation. Should not be changed after construction.
-	*/
-	std::chrono::steady_clock::time_point baseTime;
 
 	struct
 	{
@@ -65,4 +61,7 @@ struct ItemAnimationComponent
 		*/
 		std::chrono::steady_clock::time_point lastUpdateTime;
 	} state;
+
+	void initializeStartPhase();
+	void synchronizePhase();
 };

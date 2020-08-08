@@ -187,15 +187,15 @@ void GUI::createTopMenuBar()
     }
 
     HelpMarker("Map editor. Repository: https://github.com/giuinktse7/vulkan-learning");
-    if (ImGui::InputInt("serverIdInput", (int *)&selectedServerId, 1, 20))
+    if (ImGui::InputInt("serverIdInput", (int *)&inputServerId, 1, 20))
     {
-      if (selectedServerId < 100)
-        selectedServerId = 100;
+      if (inputServerId < 100)
+        inputServerId = 100;
     }
 
     ImGui::EndMenuBar();
 
-    renderN(4);
+    renderN(10);
   }
   ImGui::End();
 
@@ -209,13 +209,13 @@ void GUI::renderN(uint32_t n)
 {
   for (uint32_t i = 0; i < n; ++i)
   {
-    renderItem(Items::items.getItemType(this->selectedServerId - n + i));
+    renderItem(Items::items.getItemType(this->inputServerId - n + i));
     ImGui::SameLine();
   }
 
   for (uint32_t i = 0; i <= n; ++i)
   {
-    renderItem(Items::items.getItemType(this->selectedServerId + i));
+    renderItem(Items::items.getItemType(this->inputServerId + i));
     if (i < n)
     {
       ImGui::SameLine();
@@ -302,7 +302,6 @@ void GUI::createBottomBar()
 
 void GUI::recordFrame(uint32_t currentFrame)
 {
-
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();

@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <optional>
 
 #include "../items.h"
 
@@ -16,13 +17,12 @@ public:
 	void renderItem(ItemType *itemType);
 
 	/* Data */
-	uint32_t prevId = 100;
-	uint32_t selectedServerId = 100;
+	uint32_t inputServerId = 4632;
+	std::optional<uint16_t> brushServerId;
 
 	uint16_t hoveredId = 0;
 	uint16_t nextHoveredId = 0;
 
-	uint32_t brushServerId = 100;
 	/* End data */
 
 	bool testOpen = true;
