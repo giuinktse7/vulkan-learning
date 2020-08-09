@@ -4,6 +4,7 @@
 
 #include "ecs.h"
 #include "../graphics/appearances.h"
+#include "../time.h"
 
 namespace item_animation
 {

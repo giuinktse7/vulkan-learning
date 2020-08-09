@@ -36,7 +36,6 @@ void ItemAnimationComponent::synchronizePhase()
 
   using namespace std::chrono;
   long long res = elapsedTimeMs - (animationInfo->phases[phaseIndex].maxDuration + timeDiff);
-  DEBUG_ASSERT(res % 200 == 0, "Wtf");
 
   time_point<std::chrono::steady_clock> lastUpdateTime(milliseconds{res});
   this->state.lastUpdateTime = lastUpdateTime;

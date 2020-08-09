@@ -99,6 +99,8 @@ void populateTestMap()
 #include "ecs/item_selection.h"
 #include <initializer_list>
 
+#include "time.h"
+
 class X
 {
 };
