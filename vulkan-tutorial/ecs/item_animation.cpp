@@ -1,5 +1,8 @@
 #include "item_animation.h"
 
+#include <chrono>
+#include <numeric>
+
 #include "../type_trait.h"
 #include "../graphics/engine.h"
 #include "../debug.h"
@@ -13,18 +16,13 @@ void ItemAnimationComponent::synchronizePhase()
 {
   DEBUG_ASSERT(animationInfo->synchronized, "BUG! synchronizePhase should only be called on an animation that is marked as synchronized.");
 
-  long long loopTime = 0;
-  for (const auto &phase : animationInfo->phases)
-  {
-    loopTime += phase.maxDuration;
-  }
+  auto elapsedTimeMs = g_engine->startTime.elapsedMillis();
+  uint32_t loopTime = std::get<uint32_t>(state.info);
 
-  auto elapsedTimeMs = TimeMeasure::millis(g_engine->getCurrentTime());
   long long timeDiff = elapsedTimeMs % loopTime;
   long long startTimeDiff = timeDiff;
 
   size_t phaseIndex = 0;
-
   while (timeDiff >= 0)
   {
     timeDiff -= animationInfo->phases[phaseIndex].maxDuration;
@@ -34,11 +32,8 @@ void ItemAnimationComponent::synchronizePhase()
   }
   this->startPhase = phaseIndex;
 
-  using namespace std::chrono;
   long long res = elapsedTimeMs - (animationInfo->phases[phaseIndex].maxDuration + timeDiff);
-
-  time_point<std::chrono::steady_clock> lastUpdateTime(milliseconds{res});
-  this->state.lastUpdateTime = lastUpdateTime;
+  this->state.lastUpdateTime = g_engine->startTime.forwardMs(res);
 
   std::cout << "lastUpdateTime: " << res << ", elapsedTimeMs: " << elapsedTimeMs << ", startTimeDiff: " << startTimeDiff << ", timeDiff: " << timeDiff << ", startPhase: " << phaseIndex << std::endl;
 
@@ -58,48 +53,26 @@ void ItemAnimationComponent::initializeStartPhase()
   if (animationInfo->randomStartPhase)
   {
     this->startPhase = g_engine->random.nextInt<uint32_t>(0, static_cast<int>(animationInfo->phases.size()));
-    this->state.lastUpdateTime = g_engine->getCurrentTime();
+    this->state.lastUpdateTime = g_engine->currentTime;
 
     return;
   }
 
   this->startPhase = animationInfo->defaultStartPhase;
-  this->state.lastUpdateTime = g_engine->getCurrentTime();
-}
-
-std::chrono::steady_clock::time_point initializeBaseTime(SpriteAnimation &animation)
-{
-  if (animation.synchronized)
-  {
-    return g_engine->getStartTime();
-  }
-  else
-  {
-    return TimeMeasure::getCurrentTime();
-  }
+  this->state.lastUpdateTime = g_engine->currentTime;
 }
 
 ItemAnimationComponent::ItemAnimationComponent(SpriteAnimation *animationInfo)
     : animationInfo(animationInfo)
 {
-  state.lastUpdateTime = g_engine->getCurrentTime();
-
-  initializeStartPhase();
-  state.phaseIndex = this->startPhase;
-  SpritePhase &phase = animationInfo->phases.at(startPhase);
-  if (phase.minDuration != phase.maxDuration)
-  {
-    state.phaseDurationMs = g_engine->random.nextInt<uint32_t>(phase.minDuration, phase.maxDuration + 1);
-  }
-  else
-  {
-    state.phaseDurationMs = phase.minDuration;
-  }
-
   switch (animationInfo->loopType)
   {
   case AnimationLoopType::Infinite:
-    state.info = {};
+    state.info = std::accumulate(
+        animationInfo->phases.begin(),
+        animationInfo->phases.end(),
+        0,
+        [](uint32_t acc, SpritePhase next) { return acc + next.maxDuration; });
     break;
   case AnimationLoopType::PingPong:
     state.info = Direction::Forward;
@@ -107,13 +80,15 @@ ItemAnimationComponent::ItemAnimationComponent(SpriteAnimation *animationInfo)
   case AnimationLoopType::Counted:
     state.info = 0;
   }
+
+  initializeStartPhase();
+  state.phaseIndex = this->startPhase;
+  setPhase(state.phaseIndex, state.lastUpdateTime);
 }
 
-void ItemAnimationComponent::setPhase(uint32_t phaseIndex, std::chrono::steady_clock::time_point updateTime)
+void ItemAnimationComponent::setPhase(uint32_t phaseIndex, TimePoint updateTime)
 {
-  using namespace std::chrono;
   SpritePhase phase = animationInfo->phases.at(phaseIndex);
-  // std::cout << "Phase: " << phaseIndex << std::endl;
 
   state.phaseIndex = phaseIndex;
   if (phase.minDuration != phase.maxDuration)
@@ -135,13 +110,13 @@ std::vector<const char *> ItemAnimationSystem::getRequiredComponents()
 
 void ItemAnimationSystem::update()
 {
-  auto currentTime = g_engine->getCurrentTime();
+  auto currentTime = g_engine->currentTime;
   for (const auto &entity : entities)
   {
     auto &animation = *g_ecs.getComponent<ItemAnimationComponent>(entity);
     bool debug = g_engine->debug;
 
-    auto elapsedTimeMs = TimeMeasure::diffMillis(animation.state.lastUpdateTime, currentTime);
+    auto elapsedTimeMs = currentTime.timeSince<std::chrono::milliseconds>(animation.state.lastUpdateTime);
 
     if (elapsedTimeMs >= animation.state.phaseDurationMs)
     {
@@ -174,13 +149,13 @@ void ItemAnimationSystem::updateInfinite(ItemAnimationComponent &animation, long
     }
     else
     {
-      auto updateTime = TimeMeasure::addTime<std::chrono::milliseconds>(animation.state.lastUpdateTime, animation.state.phaseDurationMs);
+      auto updateTime = animation.state.lastUpdateTime.forwardMs(animation.state.phaseDurationMs);
       animation.setPhase(nextPhase, updateTime);
     }
   }
   else
   {
-    auto updateTime = TimeMeasure::addTime<std::chrono::milliseconds>(animation.state.lastUpdateTime, animation.state.phaseDurationMs);
+    auto updateTime = animation.state.lastUpdateTime.forwardMs(animation.state.phaseDurationMs);
     animation.setPhase(nextPhase, updateTime);
   }
 }
@@ -195,7 +170,7 @@ void ItemAnimationSystem::updatePingPong(ItemAnimationComponent &animation)
   }
 
   uint32_t indexChange = direction == Direction::Forward ? 1 : -1;
-  animation.setPhase(animation.state.phaseIndex + indexChange, g_engine->getCurrentTime());
+  animation.setPhase(animation.state.phaseIndex + indexChange, g_engine->currentTime);
 }
 
 void ItemAnimationSystem::updateCounted(ItemAnimationComponent &animation)
@@ -209,6 +184,6 @@ void ItemAnimationSystem::updateCounted(ItemAnimationComponent &animation)
       DEBUG_ASSERT(std::get<uint32_t>(animation.state.info) <= animation.animationInfo->loopCount, "The current loop for an animation cannot be higher than its loopCount.");
     }
 
-    animation.setPhase(0, g_engine->getCurrentTime());
+    animation.setPhase(0, g_engine->currentTime);
   }
 }

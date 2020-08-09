@@ -27,6 +27,7 @@
 #include "../gui/gui.h"
 
 #include "../util.h"
+#include "../time.h"
 
 enum class FrameResult
 {
@@ -54,9 +55,15 @@ public:
 	static const int TILE_SIZE = 32;
 	const glm::vec4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
+	TimePoint startTime;
+
+	/*
+		Used by animators for synchronous animations
+	*/
+	TimePoint currentTime;
+
 	uint32_t currentFrameIndex;
 
-	TimeMeasure clock;
 	Random random;
 
 	bool debug = false;
@@ -283,15 +290,7 @@ public:
 		gui.brushServerId.reset();
 	}
 
-	std::chrono::steady_clock::time_point getStartTime();
-	std::chrono::steady_clock::time_point getCurrentTime();
-
 private:
-	/*
-		Used by animators for synchronous animations
-	*/
-	std::chrono::steady_clock::time_point currentTime;
-
 	std::array<FrameData, 3> frames;
 	// Fences for vkAcquireNextImageKHR
 	std::array<VkFence, 3> swapChainImageInFlight;

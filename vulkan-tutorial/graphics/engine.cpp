@@ -60,7 +60,7 @@ Engine::Engine()
 {
   uint32_t seed = 1234;
   this->random = Random(seed);
-  this->currentTime = TimeMeasure::getCurrentTime();
+  this->currentTime = TimePoint::now();
 
   // Uncomment below for a random seed each run
   // random = Random();
@@ -412,7 +412,7 @@ FrameResult Engine::nextFrame()
   if (!initFrame())
     return FrameResult::Failure;
 
-  currentTime = TimeMeasure::getCurrentTime();
+  currentTime = TimePoint::now();
 
   mapRenderer->recordFrame(currentFrameIndex);
   gui.recordFrame(currentFrameIndex);
@@ -616,14 +616,4 @@ int Engine::getKeyState(int key)
   }
 
   return value->second;
-}
-
-std::chrono::steady_clock::time_point Engine::getStartTime()
-{
-  return clock.startTime;
-}
-
-std::chrono::steady_clock::time_point Engine::getCurrentTime()
-{
-  return currentTime;
 }

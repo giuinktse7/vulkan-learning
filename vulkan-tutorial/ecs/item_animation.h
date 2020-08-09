@@ -1,7 +1,5 @@
 #pragma once
 
-#include <chrono>
-
 #include "ecs.h"
 #include "../graphics/appearances.h"
 #include "../time.h"
@@ -34,7 +32,7 @@ struct ItemAnimationComponent
 {
 	ItemAnimationComponent(SpriteAnimation *animationInfo);
 
-	void setPhase(uint32_t phaseIndex, std::chrono::steady_clock::time_point updateTime);
+	void setPhase(uint32_t phaseIndex, TimePoint updateTime);
 
 	SpriteAnimation *animationInfo;
 	// Should not be changed after construction
@@ -52,15 +50,15 @@ struct ItemAnimationComponent
 		/*
 			Holds necessary information about the animation state based on the
 			animation type.
-			AnimationLoopType::Infinte -> std::monostate
+			AnimationLoopType::Infinte -> total time for one loop
 			AnimationLoopType::PingPong -> ItemAnimator::Direction
-			AnimationLoopType::Counted -> loop_t
+			AnimationLoopType::Counted -> current loop
 		*/
-		std::variant<std::monostate, loop_t, item_animation::AnimationDirection> info;
+		std::variant<uint32_t, item_animation::AnimationDirection> info;
 		/*
 			The time that the latest phase change occurred.
 		*/
-		std::chrono::steady_clock::time_point lastUpdateTime;
+		TimePoint lastUpdateTime;
 	} state;
 
 	void initializeStartPhase();
