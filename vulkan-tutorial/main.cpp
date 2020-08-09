@@ -18,30 +18,24 @@
 #include <array>
 #include <cassert>
 
+#include <stdlib.h>
+
 #include "input.h"
-
 #include "map_io.h"
-
 #include "quad_tree.h"
 #include "tile_location.h"
-
 #include "debug.h"
-
 #include "util.h"
 #include "file.h"
-
 #include "graphics/engine.h"
-
 #include "Logger.h"
-
 #include "graphics/vulkan_helpers.h"
 #include "graphics/resource-descriptor.h"
-
 #include "graphics/texture.h"
-
 #include "graphics/appearances.h"
+#include "ecs/item_animation.h"
+#include "ecs/item_selection.h"
 #include "map.h"
-
 #include "ecs/ecs.h"
 
 using namespace std;
@@ -95,12 +89,6 @@ void populateTestMap()
 	// }
 }
 
-#include "ecs/item_animation.h"
-#include "ecs/item_selection.h"
-#include <initializer_list>
-
-#include "time.h"
-
 class X
 {
 };
@@ -108,6 +96,8 @@ class X
 class Y
 {
 };
+
+constexpr int IdleFrameTime = 1000 / 60;
 
 int main()
 {
@@ -139,7 +129,9 @@ int main()
 
 		GLFWwindow *window = initWindow();
 		g_engine->initialize(window);
-		Logger::info() << "Loading finished in " << g_engine->clock.elapsedMillis() << " ms." << std::endl;
+		Logger::info() << "Loading finished in " << g_engine->startTime.elapsedMillis() << " ms." << std::endl;
+
+		long long x = 0;
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -148,8 +140,16 @@ int main()
 			FrameResult res = g_engine->nextFrame();
 			if (res == FrameResult::Success)
 			{
-
 				g_ecs.getSystem<ItemAnimationSystem>().update();
+			}
+			else
+			{
+				++x;
+				std::this_thread::sleep_for(std::chrono::milliseconds(IdleFrameTime));
+				if (x % 60 == 0)
+				{
+					std::cout << "Failed count: " << x << std::endl;
+				}
 			}
 		}
 
