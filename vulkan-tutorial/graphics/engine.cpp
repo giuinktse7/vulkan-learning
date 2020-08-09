@@ -594,26 +594,3 @@ void Engine::shutdown()
   ImGui::DestroyContext();
   vkDestroyDescriptorPool(device, gui.getDescriptorPool(), nullptr);
 }
-
-void Engine::setKeyState(int key, int state)
-{
-  if (keyState.find(key) == keyState.end())
-  {
-    keyState.try_emplace(key, GLFW_PRESS);
-  }
-  else
-  {
-    keyState.at(key) = state;
-  }
-}
-
-int Engine::getKeyState(int key)
-{
-  auto value = keyState.find(key);
-  if (value == keyState.end())
-  {
-    return GLFW_RELEASE;
-  }
-
-  return value->second;
-}

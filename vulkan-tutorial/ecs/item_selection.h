@@ -56,7 +56,7 @@ struct TileSelectionComponent
   }
   void deselectItemIndex(size_t index)
   {
-    itemIndices.emplace(index);
+    itemIndices.erase(index);
   }
 
   void toggleItemSelection(size_t index)

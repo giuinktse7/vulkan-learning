@@ -176,7 +176,7 @@ void GUI::createTopMenuBar()
       ImGui::Separator();
       if (ImGui::MenuItem("Save", "Ctrl+S"))
       {
-        MapIO::saveMap(*g_engine->getMapRenderer()->map);
+        MapIO::saveMap(*g_engine->getMapRenderer()->getMap());
       }
       ImGui::EndMenu();
     }
@@ -281,7 +281,7 @@ void GUI::createBottomBar()
   {
     Position gameMousePos = g_engine->screenToGamePos(g_engine->getMousePosition());
 
-    Tile *tile = g_engine->getMapRenderer()->map->getTile(gameMousePos);
+    Tile *tile = g_engine->getMapRenderer()->getMap()->getTile(gameMousePos);
     std::ostringstream tileInfoString;
     if (tile && tile->getTopItem())
     {
@@ -330,7 +330,6 @@ void GUI::recordFrame(uint32_t currentFrame)
   vkCmdBeginRenderPass(commandBuffers[currentFrame], &info, VK_SUBPASS_CONTENTS_INLINE);
 
   ImGui::Render();
-  this->captureIO();
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
 

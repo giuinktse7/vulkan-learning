@@ -102,9 +102,12 @@ public:
 
 	Viewport viewport;
 
-	std::unique_ptr<Map> map;
-
 	Camera camera;
+
+	Map *getMap() const
+	{
+		return map.get();
+	}
 
 	// All sprites are drawn using this index buffer
 	BoundBuffer indexBuffer;
@@ -134,6 +137,8 @@ public:
 	void drawItem(Item &item, Position position, glm::vec4 color);
 
 private:
+	std::unique_ptr<Map> map;
+
 	std::array<FrameData, 3> frames;
 
 	FrameData *currentFrame;

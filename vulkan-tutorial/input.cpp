@@ -1,105 +1,214 @@
 #include "input.h"
 
+#include <algorithm>
+
 #include "graphics/engine.h"
 #include "ecs/ecs.h"
 #include "ecs/item_selection.h"
+#include "util.h"
 
-void updateKeyState(int key, int action)
+Input::Input(GLFWwindow *window)
+    : window(window)
 {
-  g_engine->setKeyState(key, action);
+
+  glfwSetWindowUserPointer(window, this);
+
+  glfwSetKeyCallback(window, [](GLFWwindow *w, auto... args) {
+    static_cast<Input *>(glfwGetWindowUserPointer(w))->handleKeyCallback(args...);
+  });
+
+  glfwSetScrollCallback(window, [](GLFWwindow *w, auto... args) {
+    static_cast<Input *>(glfwGetWindowUserPointer(w))->handleScrollCallback(args...);
+  });
+
+  glfwSetCursorPosCallback(window, [](GLFWwindow *w, auto... args) {
+    static_cast<Input *>(glfwGetWindowUserPointer(w))->handleCursorPosCallback(args...);
+  });
+
+  glfwSetMouseButtonCallback(window, [](GLFWwindow *w, auto... args) {
+    static_cast<Input *>(glfwGetWindowUserPointer(w))->handleMouseButtonCallback(args...);
+  });
 }
 
-bool fastKeyDown(GLFWwindow *window, int key)
+void Input::update()
 {
-  return g_engine->getKeyState(key) == GLFW_REPEAT && glfwGetKey(window, key) != GLFW_RELEASE;
+  for (const auto thunk : inputHooks)
+  {
+    thunk(this);
+  }
+
+  justPressedState.clear();
+  this->currentKeyChange.key = -1;
+  this->currentKeyChange.state = -1;
+
+  this->currentScrollOffset.x = 0;
+  this->currentScrollOffset.y = 0;
+
+  this->currentLeftMouseEvent = -1;
+  this->currentRightMouseEvent = -1;
 }
 
-void Input::update(GLFWwindow *window)
+void Input::registerHook(FunctionPtr ptr)
 {
-  glm::vec3 delta{};
-  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 1.5));
+  inputHooks.emplace(ptr);
+}
 
-  if (fastKeyDown(window, GLFW_KEY_RIGHT))
+bool Input::justPressed(int key) const
+{
+  return getKeyState(key) == KeyState::JustPressed;
+}
+
+bool Input::pressed(int key) const
+{
+  return getKeyState(key) == KeyState::Pressed;
+}
+
+bool Input::pressed(const KeyCombination key) const
+{
+  bool pressed = getKeyState(key.key) == KeyState::Pressed;
+  if (key.ctrl)
   {
-    delta.x += step;
+    pressed = pressed && (getKeyState(GLFW_KEY_LEFT_CONTROL) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_CONTROL) != KeyState::Release);
   }
-  if (fastKeyDown(window, GLFW_KEY_LEFT))
+  if (key.shift)
   {
-    delta.x -= step;
+    pressed = pressed && (getKeyState(GLFW_KEY_LEFT_SHIFT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_SHIFT) != KeyState::Release);
   }
-  if (fastKeyDown(window, GLFW_KEY_UP))
+  if (key.alt)
   {
-    delta.y -= step;
-  }
-  if (fastKeyDown(window, GLFW_KEY_DOWN))
-  {
-    delta.y += step;
+    pressed = pressed && (getKeyState(GLFW_KEY_LEFT_ALT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_ALT) != KeyState::Release);
   }
 
-  if (delta.x != 0 || delta.y != 0 || delta.z != 0)
+  return pressed;
+}
+
+KeyState Input::getKeyState(int key) const
+{
+  if (justPressedState.find(key) != justPressedState.end())
+    return KeyState::JustPressed;
+
+  switch (keyState.at(key))
   {
-    g_engine->getMapRenderer()->camera.translate(delta);
+  case GLFW_RELEASE:
+    return KeyState::Release;
+  case GLFW_PRESS:
+    // std::cout << value->second.prev << ", " << value->second.current << std::endl;
+    return KeyState::Pressed;
+  case GLFW_REPEAT:
+    return KeyState::Repeat;
+  default:
+    DEBUG_ASSERT(false, "This should never happen.");
+    return KeyState::Release;
   }
 }
 
-void updateCamera(int key)
+void Input::setKeyState(int key, int state)
 {
+  int prevState = keyState.at(key);
+  keyState.at(key) = state;
 
-  if (key == GLFW_KEY_KP_ADD)
+  switch (state)
   {
-    g_engine->translateCameraZ(-1);
-  }
-  if (key == GLFW_KEY_KP_SUBTRACT)
-  {
-    g_engine->translateCameraZ(+1);
-  }
+  case GLFW_PRESS:
+    pressedKeys.emplace(key);
 
-  glm::vec3 delta(0.0f, 0.0f, 0.0f);
-  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 1.5));
-
-  switch (key)
-  {
-  case GLFW_KEY_RIGHT:
-    delta.x = step;
+    if (prevState == GLFW_RELEASE)
+    {
+      justPressedState.emplace(key);
+    }
     break;
-  case GLFW_KEY_LEFT:
-    delta.x = -step;
+  case GLFW_RELEASE:
+    pressedKeys.erase(key);
     break;
-  case GLFW_KEY_UP:
-    delta.y = -step;
-    break;
-  case GLFW_KEY_DOWN:
-    delta.y = step;
-    break;
-  case GLFW_KEY_KP_ADD:
-
+  case GLFW_REPEAT:
+    if (!pressedKeys.empty())
+    {
+      for (const auto pressedKey : pressedKeys)
+      {
+        keyState.at(pressedKey) = GLFW_REPEAT;
+      }
+      pressedKeys.clear();
+    }
   default:
     break;
   }
+}
 
-  if (delta.x != 0 || delta.y != 0)
+KeyCombination::KeyCombination(int key)
+    : key(key), ctrl(false), shift(false), alt(false)
+{
+}
+
+bool Input::released(int key) const
+{
+  return getKeyState(key) == KeyState::Release;
+}
+
+bool Input::down(int key) const
+{
+  return !released(key);
+}
+
+bool Input::repeated(int key) const
+{
+  return getKeyState(key) == KeyState::Repeat && glfwGetKey(window, key) == GLFW_PRESS;
+}
+
+bool Input::anyRepeated(std::initializer_list<int> keys) const
+{
+  return std::any_of(keys.begin(), keys.end(), [this](int key) { return repeated(key); });
+}
+
+bool Input::ctrl() const
+{
+  return getKeyState(GLFW_KEY_LEFT_CONTROL) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_CONTROL) != KeyState::Release;
+}
+bool Input::shift() const
+{
+  return getKeyState(GLFW_KEY_LEFT_SHIFT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_SHIFT) != KeyState::Release;
+}
+bool Input::alt() const
+{
+  return getKeyState(GLFW_KEY_LEFT_ALT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_ALT) != KeyState::Release;
+}
+
+int Input::keyEvent(GLFWKey key)
+{
+  if (currentKeyChange.key == key)
+    return currentKeyChange.state;
+  else
   {
-    g_engine->translateCamera(delta);
+    return -1;
   }
 }
 
-void Input::handleMouseScroll(GLFWwindow *window, double xoffset, double yoffset)
+bool Input::keyDownEvent(GLFWKey key)
+{
+  return currentKeyChange.key == key && (currentKeyChange.state != GLFW_RELEASE);
+}
+
+std::pair<double, double> Input::scrollOfset() const
+{
+  return {currentScrollOffset.x, currentScrollOffset.y};
+}
+
+void Input::handleScrollCallback(double xOffset, double yOffset)
 {
   if (!g_engine->captureMouse)
     return;
 
-  if (yoffset > 0)
-  {
-    g_engine->zoomIn();
-  }
-  else
-  {
-    g_engine->zoomOut();
-  }
+  currentScrollOffset.x += xOffset;
+  currentScrollOffset.y += yOffset;
 }
 
-void Input::handleKeyAction(GLFWwindow *window, int key, int scancode, int action, int mods)
+void Input::handleKeyCallback(int key, int scancode, int action, int mods)
 {
+  if (!g_engine->captureKeyboard)
+    return;
+
+  currentKeyChange.key = key;
+  currentKeyChange.state = action;
+
   if (key == GLFW_KEY_D && action == GLFW_PRESS)
   {
     g_engine->debug = !g_engine->debug;
@@ -107,115 +216,56 @@ void Input::handleKeyAction(GLFWwindow *window, int key, int scancode, int actio
   if (!g_engine->captureKeyboard)
     return;
 
-  // if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
-  // {
-  updateKeyState(key, action);
-  // }
-
-  if (key == GLFW_KEY_0)
-  {
-    bool ctrlDown = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) != GLFW_RELEASE || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) != GLFW_RELEASE;
-    if (ctrlDown)
-    {
-      g_engine->resetZoom();
-      std::cout << "Reset zoom" << std::endl;
-    }
-  }
-
-  bool keyActive = action == GLFW_PRESS || action == GLFW_REPEAT;
-
-  if (!keyActive)
-  {
-    return;
-  }
-
-  if (key == GLFW_KEY_ESCAPE)
-  {
-    g_engine->clearBrush();
-  }
-
-  updateCamera(key);
+  setKeyState(key, action);
 }
 
-void Input::handleCursorPosition(GLFWwindow *window, double x, double y)
+std::pair<double, double> Input::cursorPos()
+{
+  return {currentCursorPos.x, currentCursorPos.y};
+}
+
+void Input::handleCursorPosCallback(double x, double y)
 {
   if (!g_engine->captureMouse)
     return;
 
-  Position oldGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
-  g_engine->setMousePosition(static_cast<float>(x), static_cast<float>(y));
-  Position newGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
-
-  // Create items when dragging mouse
-  if (g_engine->getSelectedServerId().has_value() && oldGamePos != newGamePos)
-  {
-    // Dragging mouse
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-    {
-      uint16_t selectedId = g_engine->getSelectedServerId().value();
-
-      auto &map = *g_engine->getMapRenderer()->map;
-      auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
-
-      map.createItemAt(pos, selectedId);
-    }
-  }
+  currentCursorPos.x = x;
+  currentCursorPos.y = y;
 }
 
-void Input::handleMouseKeyAction(GLFWwindow *window, int button, int action, int mods)
+bool Input::leftMouseDown() const
+{
+  return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+}
+bool Input::rightMouseDown() const
+{
+  return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+}
+
+int Input::leftMouseEvent() const
+{
+  return currentLeftMouseEvent;
+}
+
+int Input::rightMouseEvent() const
+{
+  return currentLeftMouseEvent;
+}
+
+void Input::handleMouseButtonCallback(int button, int action, int mods)
 {
   if (!g_engine->captureMouse)
     return;
 
-  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+  switch (button)
   {
-    bool activeBrush = g_engine->getSelectedServerId().has_value();
-
-    auto &map = *g_engine->getMapRenderer()->map;
-    auto pos = g_engine->screenToGamePos(g_engine->getMousePosition());
-
-    if (activeBrush)
-    {
-      uint16_t selectedId = g_engine->getSelectedServerId().value();
-
-      map.createItemAt(pos, selectedId);
-    }
-    else
-    {
-      Tile *tile = map.getTile(pos);
-      if (tile != nullptr)
-      {
-        if (!tile->entity.has_value())
-        {
-          Entity entity = g_ecs.createEntity();
-          tile->entity = entity;
-        }
-
-        Entity entity = tile->entity.value();
-        TileSelectionComponent *selection = g_ecs.getComponent<TileSelectionComponent>(entity);
-        if (selection == nullptr)
-        {
-          TileSelectionComponent component;
-          component.position = pos;
-          g_ecs.addComponent(entity, component);
-        }
-
-        selection = g_ecs.getComponent<TileSelectionComponent>(entity);
-        std::cout << selection->position << std::endl;
-
-        auto topItem = tile->getTopItem();
-        if (topItem != nullptr)
-        {
-          if (topItem == tile->getGround())
-          {
-            selection->toggleSelection(TileEntity::Ground);
-          }
-          else
-          {
-            selection->selectItemIndex(tile->getItemCount() - 1);
-          }
-        }
-      }
-    }
+  case GLFW_MOUSE_BUTTON_LEFT:
+    currentLeftMouseEvent = action;
+    break;
+  case GLFW_MOUSE_BUTTON_RIGHT:
+    currentRightMouseEvent = action;
+    break;
+  default:
+    break;
   }
 }

@@ -37,6 +37,7 @@
 #include "ecs/item_selection.h"
 #include "map.h"
 #include "ecs/ecs.h"
+#include "input_control.h"
 
 using namespace std;
 
@@ -57,10 +58,6 @@ GLFWwindow *initWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan map editor", nullptr, nullptr);
-	glfwSetKeyCallback(window, Input::handleKeyAction);
-	glfwSetScrollCallback(window, Input::handleMouseScroll);
-	glfwSetCursorPosCallback(window, Input::handleCursorPosition);
-	glfwSetMouseButtonCallback(window, Input::handleMouseKeyAction);
 
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
@@ -69,7 +66,7 @@ GLFWwindow *initWindow()
 
 void populateTestMap()
 {
-	auto &map = *g_engine->getMapRenderer()->map;
+	auto &map = *g_engine->getMapRenderer()->getMap();
 	Tile &tile1 = map.getOrCreateTile(17, 1, 7);
 	// Tile &tile2 = map.getOrCreateTile(1, 1, 7);
 	// Tile &tile3 = map.getOrCreateTile(3, 1, 7);
@@ -97,7 +94,21 @@ class Y
 {
 };
 
+enum class AllKeys
+{
+	Ctrl,
+	Alt,
+	P
+};
+#include <functional>
+
 constexpr int IdleFrameTime = 1000 / 60;
+
+#include "type_trait.h"
+
+void panCamera(Input *input)
+{
+}
 
 int main()
 {
@@ -128,6 +139,10 @@ int main()
 		// MapIO::saveMap(*mapRenderer->map);
 
 		GLFWwindow *window = initWindow();
+		Input input(window);
+		input.registerHook(InputControl::cameraMovement);
+		input.registerHook(InputControl::mapEditing);
+
 		g_engine->initialize(window);
 		Logger::info() << "Loading finished in " << g_engine->startTime.elapsedMillis() << " ms." << std::endl;
 
@@ -135,11 +150,13 @@ int main()
 
 		while (!glfwWindowShouldClose(window))
 		{
+			g_engine->gui.captureIO();
 			glfwPollEvents();
-			Input::update(window);
+
 			FrameResult res = g_engine->nextFrame();
 			if (res == FrameResult::Success)
 			{
+				input.update();
 				g_ecs.getSystem<ItemAnimationSystem>().update();
 			}
 			else

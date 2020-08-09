@@ -17,5 +17,5 @@
 
 ## General
 
-- [ ] Refactor the TimeMeasure class into TimePoint or similar
+- [x] Refactor the TimeMeasure class into TimePoint or similar
 - [ ] System for custom keybindings

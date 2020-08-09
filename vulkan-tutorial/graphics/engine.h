@@ -200,9 +200,6 @@ public:
 
 	bool isValidWindowSize();
 
-	void setKeyState(int key, int state);
-	int getKeyState(int key);
-
 	void setMousePosition(float x, float y)
 	{
 		this->prevMousePosition = this->mousePosition;
@@ -290,6 +287,8 @@ public:
 		gui.brushServerId.reset();
 	}
 
+	GUI gui;
+
 private:
 	std::array<FrameData, 3> frames;
 	// Fences for vkAcquireNextImageKHR
@@ -300,7 +299,6 @@ private:
 	glm::vec2 mousePosition;
 	bool isInitialized = false;
 
-	GUI gui;
 	GLFWwindow *window;
 
 	int width;
@@ -337,8 +335,6 @@ private:
 	VkCommandBuffer currentCommandBuffer;
 
 	uint32_t previousFrame;
-
-	std::map<int, int> keyState;
 
 	void createVulkanInstance();
 

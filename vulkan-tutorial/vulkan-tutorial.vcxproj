@@ -176,6 +176,7 @@
     <ClCompile Include="graphics\texture_atlas.cpp" />
     <ClCompile Include="gui\custom_imgui.cpp" />
     <ClCompile Include="input.cpp" />
+    <ClCompile Include="input_control.cpp" />
     <ClCompile Include="item.cpp" />
     <ClCompile Include="graphics\protobuf\appearances.pb.cc" />
     <ClCompile Include="graphics\protobuf\map.pb.cc" />
@@ -229,6 +230,7 @@
     <ClInclude Include="graphics\texture_atlas.h" />
     <ClInclude Include="gui\custom_imgui.h" />
     <ClInclude Include="input.h" />
+    <ClInclude Include="input_control.h" />
     <ClInclude Include="item.h" />
     <ClInclude Include="graphics\protobuf\appearances.pb.h" />
     <ClInclude Include="graphics\protobuf\map.pb.h" />
