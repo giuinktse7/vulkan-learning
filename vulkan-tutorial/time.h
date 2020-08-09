@@ -17,24 +17,29 @@ public:
 	}
 
 	template <typename T>
-	std::chrono::steady_clock::time_point addTime(time_t delta)
+	TimePoint addTime(time_t delta)
 	{
-		auto rawTime = std::chrono::time_point_cast<T>(time).time_since_epoch().count() + delta;
+		auto rawTime = std::chrono::time_point_cast<T>(this->timePoint).time_since_epoch().count() + delta;
 		std::chrono::time_point<std::chrono::steady_clock> result(T{rawTime});
 
 		return result;
 	}
 
 	template <typename T>
-	std::chrono::steady_clock::time_point back(time_t delta)
+	TimePoint back(time_t delta)
 	{
-		return addTime(-delta);
+		return addTime<T>(-delta);
 	}
 
 	template <typename T>
-	std::chrono::steady_clock::time_point forward(time_t delta)
+	TimePoint forward(time_t delta)
 	{
-		return addTime(delta);
+		return addTime<T>(delta);
+	}
+
+	TimePoint forwardMs(time_t delta)
+	{
+		return addTime<std::chrono::milliseconds>(delta);
 	}
 
 	time_t elapsedMillis();
