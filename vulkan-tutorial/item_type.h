@@ -318,6 +318,16 @@ public:
   bool stopTime = false;
   bool showCount = true;
 
+  int getElevation() const
+  {
+    return appearance->flagData.elevation;
+  }
+
+  bool hasElevation() const
+  {
+    return appearance->hasFlag(AppearanceFlag::Height);
+  }
+
   Appearance *appearance = nullptr;
 
 private:

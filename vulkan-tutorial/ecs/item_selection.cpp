@@ -13,6 +13,11 @@ void TileSelectionSystem::update()
 {
 }
 
+void TileSelectionSystem::clearAllSelections()
+{
+    g_ecs.removeAllComponents<TileSelectionComponent>();
+}
+
 void TileSelectionSystem::deleteItems()
 {
     for (const auto &entity : entities)

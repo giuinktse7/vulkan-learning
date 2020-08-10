@@ -25,13 +25,20 @@ void handleCameraZoom(Input *input)
   }
 }
 
-void handleSelection(Position &pos)
+void handleSelectionOnClick(Input *input, Position &pos)
 {
   Map *map = g_engine->getMapRenderer()->getMap();
   Tile *tile = map->getTile(pos);
 
+  if (!input->ctrl())
+  {
+    g_ecs.getSystem<TileSelectionSystem>().clearAllSelections();
+  }
+
   if (tile == nullptr)
+  {
     return;
+  }
 
   if (!tile->entity.has_value())
   {
@@ -49,16 +56,23 @@ void handleSelection(Position &pos)
   }
   selection = g_ecs.getComponent<TileSelectionComponent>(entity);
 
-  auto topItem = tile->getTopItem();
-  if (topItem != nullptr)
+  if (input->shift())
   {
-    if (topItem == tile->getGround())
+    selection->toggleSelectAll();
+  }
+  else
+  {
+    auto topItem = tile->getTopItem();
+    if (topItem != nullptr)
     {
-      selection->toggleSelection(TileEntity::Ground);
-    }
-    else
-    {
-      selection->toggleItemSelection(tile->getItemCount() - 1);
+      if (topItem == tile->getGround())
+      {
+        selection->toggleSelection(TileEntity::Ground);
+      }
+      else
+      {
+        selection->toggleItemSelection(tile->getItemCount() - 1);
+      }
     }
   }
 }
@@ -167,7 +181,7 @@ void InputControl::mapEditing(Input *input)
     }
     else
     {
-      handleSelection(pos);
+      handleSelectionOnClick(input, pos);
     }
   }
 }

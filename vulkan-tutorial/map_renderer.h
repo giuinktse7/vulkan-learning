@@ -133,8 +133,7 @@ public:
 
 	void drawTile(const TileLocation &tileLocation);
 
-	void drawItem(Item &item, Position position);
-	void drawItem(Item &item, Position position, glm::vec4 color);
+	void drawItem(ObjectDrawInfo &info);
 
 private:
 	std::unique_ptr<Map> map;

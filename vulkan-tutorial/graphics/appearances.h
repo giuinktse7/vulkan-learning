@@ -305,7 +305,7 @@ public:
   std::string name;
 
   // Appearance flag data
-  struct
+  struct AppearanceFlagData
   {
     uint32_t bankWaypoints;
     uint32_t maxTextLength;
@@ -313,7 +313,7 @@ public:
     // Represents the radius of the emitted light.
     uint32_t brightness;
     uint32_t color;
-    uint32_t elevation;
+    int elevation = 0;
     uint32_t shiftX = 0;
     uint32_t shiftY = 0;
     uint32_t itemSlot;
@@ -332,7 +332,7 @@ public:
     uint32_t lenshelp;
     uint32_t changedToExpireFormerObjectTypeId;
     uint32_t cyclopediaClientId;
-  } flagData;
+  } flagData = {};
 
 private:
   // Most (if not all) objects have only one FrameGroup. This avoids having to create a vector to store a single element (perf not tested as of 2020/08/02).

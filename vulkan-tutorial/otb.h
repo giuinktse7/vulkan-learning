@@ -24,7 +24,7 @@ namespace OTB
   struct VersionInfo
   {
     uint32_t majorVersion = 0xFFFFFFFF;
-    uint32_t minorVersion = 0x0;
+    int minorVersion = 0x0;
     uint32_t buildNumber;
     uint8_t CSDVersion[128];
   };

@@ -56,6 +56,11 @@ void Appearances::loadAppearanceData(const std::filesystem::path path)
     {
         const tibia::protobuf::appearances::Appearance &object = parsed.object(i);
         auto info = object.frame_group().at(0).sprite_info();
+
+        if (object.id() == 7441)
+        {
+            std::cout << object.flags() << std::endl;
+        }
         // if (object.id() == 3031 || object.id() == 103)
         // {
         //     std::cout << "\n(cid: " << object.id() << "): " << std::endl;

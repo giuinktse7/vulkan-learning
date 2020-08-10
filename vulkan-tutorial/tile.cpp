@@ -1,6 +1,7 @@
 #include "tile.h"
 
-using namespace std;
+#include <numeric>
+
 
 Tile::Tile(TileLocation &tileLocation)
     : tileLocation(tileLocation)
@@ -107,4 +108,13 @@ size_t Tile::getEntityCount()
     ++result;
 
   return result;
+}
+
+int Tile::getTopElevation() const
+{
+  return std::accumulate(
+      items.begin(),
+      items.end(),
+      0,
+      [](int elevation, const std::unique_ptr<Item> &next) { return elevation + next->itemType->getElevation(); });
 }

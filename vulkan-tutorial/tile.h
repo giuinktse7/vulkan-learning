@@ -27,6 +27,8 @@ public:
 	void removeItem(size_t index);
 	void removeGround();
 
+	int getTopElevation() const;
+
 	const std::vector<std::unique_ptr<Item>> &getItems() const
 	{
 		return items;
@@ -56,7 +58,8 @@ private:
 	std::vector<std::unique_ptr<Item>> items;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
-	union {
+	union
+	{
 		struct
 		{
 			uint16_t mapflags;

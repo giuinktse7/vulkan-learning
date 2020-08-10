@@ -25,6 +25,7 @@ constexpr glm::vec4 PreviewCursorColor{0.6f,
                                        0.7f};
 
 constexpr glm::vec4 DefaultColor{1.0f, 1.0f, 1.0f, 1.0f};
+constexpr glm::vec4 SelectedColor{0.45f, 0.45f, 0.45f, 1.0f};
 
 MapRenderer::MapRenderer(std::unique_ptr<Map> map)
 {
@@ -453,13 +454,18 @@ void MapRenderer::drawPreviewCursor()
 
   Position pos = g_engine->screenToGamePos(g_engine->getMousePosition());
 
+  Tile *tile = map->getTile(pos);
+
+  int elevation = tile ? tile->getTopElevation() : 0;
+
   ObjectDrawInfo drawInfo;
   drawInfo.appearance = selectedItemType.appearance;
   drawInfo.color = PreviewCursorColor;
+  drawInfo.drawOffset = {-elevation, -elevation};
   drawInfo.position = pos;
   drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
 
-  currentFrame->batchDraw.push(drawInfo);
+  drawItem(drawInfo);
 }
 
 void MapRenderer::drawTile(const TileLocation &tileLocation)
@@ -475,17 +481,40 @@ void MapRenderer::drawTile(const TileLocation &tileLocation)
 
   if (tile->getGround())
   {
-    if (selection && selection->isGroundSelected())
+    Item *ground = tile->getGround();
+    ObjectDrawInfo info;
+    info.appearance = ground->itemType->appearance;
+    info.position = position;
+    info.color = selection && selection->isGroundSelected() ? SelectedColor : DefaultColor;
+    info.textureInfo = ground->getTextureInfo(position);
+
+    drawItem(info);
+  }
+
+  DrawOffset drawOffset{0, 0};
+  auto &items = tile->getItems();
+
+  // The index i is necessary to check whether the item is selected (can't use range-based loop because of this)
+  for (size_t i = 0; i < items.size(); ++i)
+  {
+    Item *item = items.at(i).get();
+
+    ObjectDrawInfo info;
+    info.appearance = item->itemType->appearance;
+    info.color = selection && selection->isItemIndexSelected(i) ? SelectedColor : DefaultColor;
+    info.drawOffset = drawOffset;
+    info.position = position;
+    info.textureInfo = item->getTextureInfo(position);
+
+    drawItem(info);
+
+    if (item->itemType->hasElevation())
     {
-      drawItem(*tile->getGround(), position, {0.45, 0.45, 0.45, 1.0});
-    }
-    else
-    {
-      drawItem(*tile->getGround(), position);
+      uint32_t elevation = item->itemType->getElevation();
+      drawOffset.x -= elevation;
+      drawOffset.y -= elevation;
     }
   }
-  for (const auto &item : tile->getItems())
-    drawItem(*item, position);
 }
 
 void MapRenderer::updateUniformBuffer()
@@ -526,20 +555,9 @@ void MapRenderer::createFrameBuffers()
   }
 }
 
-void MapRenderer::drawItem(Item &item, Position position, glm::vec4 color)
+void MapRenderer::drawItem(ObjectDrawInfo &info)
 {
-  ObjectDrawInfo info;
-  info.appearance = item.itemType->appearance;
-  info.color = color;
-  info.position = position;
-  info.textureInfo = item.getTextureInfo(position);
-
   currentFrame->batchDraw.push(info);
-}
-
-void MapRenderer::drawItem(Item &item, Position position)
-{
-  drawItem(item, position, DefaultColor);
 }
 
 void MapRenderer::cleanup()

@@ -95,7 +95,7 @@ bool Items::loadItemFromXml(pugi::xml_node itemNode, uint32_t id)
 {
 	// TODO Fix versioning
 	// TODO Why do we skip these in these cases?
-	uint32_t clientVersion = 52;
+	int clientVersion = 52;
 	if (clientVersion < to_underlying(ClientVersion::CLIENT_VERSION_980) && id > 20000 && id < 20100)
 	{
 		itemNode = itemNode.next_sibling();
@@ -543,11 +543,6 @@ void Items::loadFromOtb(const std::string &file)
 			}
 		}
 
-		// if (items.itemTypes[serverId - 1].clientId == 0)
-		// {
-		// 	items.validItemTypeStartId.emplace(serverId);
-		// }
-
 		items.clientIdToServerId.emplace(clientId, serverId);
 
 		// store the found item
@@ -561,14 +556,6 @@ void Items::loadFromOtb(const std::string &file)
 
 		if (!Appearances::hasObject(clientId))
 		{
-			/*
-				if (items.itemTypes[serverId - 1].clientId != 0)
-			{
-				items.validItemTypeEndId.emplace(serverId - 1);
-			}
-			iType.clientId = 0;
-			continue;
-			*/
 			iType.clientId = 0;
 
 			continue;
