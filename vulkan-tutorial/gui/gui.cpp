@@ -176,7 +176,7 @@ void GUI::createTopMenuBar()
       ImGui::Separator();
       if (ImGui::MenuItem("Save", "Ctrl+S"))
       {
-        MapIO::saveMap(*g_engine->getMapRenderer()->getMap());
+        MapIO::saveMap(*g_engine->getMapView()->getMap());
       }
       ImGui::EndMenu();
     }
@@ -225,6 +225,7 @@ void GUI::renderN(uint32_t n)
 
 void GUI::createBottomBar()
 {
+  const MapView &mapView = *g_engine->getMapView();
 
   float padding = DEFAULT_PADDING;
   float bottomBarHeight = 20 + padding * 2;
@@ -257,7 +258,7 @@ void GUI::createBottomBar()
 
   ImGui::BeginChild("Bottom1", bottomSubAreaSize, ImGuiWindowFlags_NoResize);
   {
-    float zoomPercentage = g_engine->getMapRenderer()->camera.zoomFactor * 100;
+    float zoomPercentage = g_engine->getMapView()->getZoomFactor() * 100;
     std::ostringstream zoomString;
     zoomString << std::fixed << std::setprecision(0);
     zoomString << "Zoom: " << zoomPercentage << "%%";
@@ -268,7 +269,7 @@ void GUI::createBottomBar()
   ImGui::SameLine();
   ImGui::BeginChild("Bottom2", bottomSubAreaSize, ImGuiWindowFlags_NoResize);
   {
-    auto [x, y, z] = g_engine->screenToGamePos(g_engine->getMousePosition());
+    auto [x, y, z] = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getZ());
 
     std::ostringstream positionString;
     positionString << "x: " << (x) << " y: " << (y) << " z: " << z;
@@ -279,9 +280,9 @@ void GUI::createBottomBar()
   ImGui::SameLine();
   ImGui::BeginChild("Bottom3", ImVec2{viewport->GetWorkSize().x / 2, bottomBarHeight + padding * 2}, ImGuiWindowFlags_NoResize);
   {
-    Position gameMousePos = g_engine->screenToGamePos(g_engine->getMousePosition());
+    Position cursorMapPos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getZ());
 
-    Tile *tile = g_engine->getMapRenderer()->getMap()->getTile(gameMousePos);
+    Tile *tile = mapView.getMap()->getTile(cursorMapPos);
     std::ostringstream tileInfoString;
     if (tile && tile->getTopItem())
     {

@@ -198,7 +198,9 @@
     <ClCompile Include="map_renderer.cpp" />
     <ClCompile Include="graphics\swapchain.cpp" />
     <ClCompile Include="graphics\texture.cpp" />
+    <ClCompile Include="map_view.cpp" />
     <ClCompile Include="otb.cpp" />
+    <ClCompile Include="position.cpp" />
     <ClCompile Include="quad_tree.cpp" />
     <ClCompile Include="random.cpp" />
     <ClCompile Include="tile.cpp" />
@@ -245,6 +247,7 @@
     <ClInclude Include="map_renderer.h" />
     <ClInclude Include="graphics\swapchain.h" />
     <ClInclude Include="graphics\texture.h" />
+    <ClInclude Include="map_view.h" />
     <ClInclude Include="otb.h" />
     <ClInclude Include="position.h" />
     <ClInclude Include="quad_tree.h" />

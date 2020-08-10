@@ -25,7 +25,7 @@ void TileSelectionSystem::deleteItems()
         auto &selection = *g_ecs.getComponent<TileSelectionComponent>(entity);
 
         // Tile *tile = g_engine->getMapRenderer()->map->getTile(selection.position);
-        TileLocation *location = g_engine->getMapRenderer()->getMap()->getTileLocation(selection.position);
+        TileLocation *location = g_engine->getMapView()->getMap()->getTileLocation(selection.position);
 
         DEBUG_ASSERT(location->hasTile(), "The location has no tile.");
         Tile *tile = location->getTile();

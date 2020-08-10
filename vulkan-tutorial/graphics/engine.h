@@ -4,30 +4,27 @@
 #define GLM_FORCE_RADIANS
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-
-#include "../random.h"
+#include <unordered_set>
+#include <memory>
 
 #include "../gui/imgui_impl_vulkan.h"
 
-#include <unordered_set>
-#include <mutex>
-
-#include "../position.h"
-
 #include "device_manager.h"
-#include "../map_renderer.h"
 #include "texture.h"
 #include "resource-descriptor.h"
 #include "buffer.h"
 #include "vertex.h"
+
 #include "../camera.h"
-
 #include "../map.h"
-
+#include "../random.h"
 #include "../gui/gui.h"
-
 #include "../util.h"
 #include "../time.h"
+#include "../map_renderer.h"
+#include "../position.h"
+#include "../map_view.h"
+#include "../position.h"
 
 enum class FrameResult
 {
@@ -112,11 +109,6 @@ public:
 		return framebufferResized;
 	}
 
-	void setMapRenderer(MapRenderer *renderer)
-	{
-		mapRenderer = renderer;
-	}
-
 	SwapChain &getSwapChain()
 	{
 		return swapChain;
@@ -162,12 +154,6 @@ public:
 		currentCommandBuffer = nullptr;
 	}
 
-	const uint32_t gameToWorldPos(uint32_t gamePos) const;
-	const uint32_t worldToGamePos(float worldPos) const;
-	const Position screenToGamePos(float screenX, float screenY) const;
-	const uint32_t screenToGamePos(float value) const;
-	const Position screenToGamePos(glm::vec2 pos) const;
-
 	void createCommandPool();
 
 	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -200,16 +186,20 @@ public:
 
 	bool isValidWindowSize();
 
-	void setMousePosition(float x, float y)
+	void setCursorPos(ScreenPosition pos)
 	{
-		this->prevMousePosition = this->mousePosition;
-		this->mousePosition.x = x;
-		this->mousePosition.y = y;
+		this->prevCursorPos = this->cursorPos;
+		this->cursorPos = pos;
 	}
 
-	glm::vec2 getMousePosition() const
+	ScreenPosition getCursorPos() const
 	{
-		return mousePosition;
+		return cursorPos;
+	}
+
+	ScreenPosition getPrevCursorPos() const
+	{
+		return prevCursorPos;
 	}
 
 	VkAllocationCallbacks *getAllocator()
@@ -243,17 +233,17 @@ public:
 
 	void resetZoom()
 	{
-		mapRenderer->camera.resetZoom();
+		mapView->resetZoom();
 	}
 
 	void zoomIn()
 	{
-		mapRenderer->camera.zoomIn();
+		mapView->zoomIn();
 	}
 
 	void zoomOut()
 	{
-		mapRenderer->camera.zoomOut();
+		mapView->zoomOut();
 	}
 
 	void translateCamera(glm::vec3 delta);
@@ -269,11 +259,6 @@ public:
 		return mapRenderer->getTextureDescriptorSetLayout();
 	}
 
-	MapRenderer *getMapRenderer()
-	{
-		return mapRenderer;
-	}
-
 	const std::optional<uint16_t> getSelectedServerId() const
 	{
 		return gui.brushServerId;
@@ -287,6 +272,11 @@ public:
 		gui.brushServerId.reset();
 	}
 
+	MapView *getMapView() const
+	{
+		return mapView.get();
+	}
+
 	GUI gui;
 
 private:
@@ -295,8 +285,8 @@ private:
 	std::array<VkFence, 3> swapChainImageInFlight;
 	FrameData *currentFrame = nullptr;
 
-	glm::vec2 prevMousePosition;
-	glm::vec2 mousePosition;
+	ScreenPosition prevCursorPos;
+	ScreenPosition cursorPos;
 	bool isInitialized = false;
 
 	GLFWwindow *window;
@@ -319,7 +309,8 @@ private:
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 
-	MapRenderer *mapRenderer;
+	std::unique_ptr<MapView> mapView;
+	std::unique_ptr<MapRenderer> mapRenderer;
 
 	VkDebugUtilsMessengerEXT debugMessenger;
 

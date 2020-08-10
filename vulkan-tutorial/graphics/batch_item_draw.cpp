@@ -90,18 +90,17 @@ void BatchDraw::push(ObjectDrawInfo &info)
   auto [appearance, textureInfo, position, color, drawOffset] = info;
   auto [atlas, window] = textureInfo;
 
-  int worldX = g_engine->gameToWorldPos(position.x + atlas->drawOffset.x);
-  int worldY = g_engine->gameToWorldPos(position.y + atlas->drawOffset.y);
+  WorldPosition worldPos = MapPosition{position.x + atlas->drawOffset.x, position.y + atlas->drawOffset.y}.worldPos();
 
   // Add draw offsets like elevation
-  worldX += std::clamp(info.drawOffset.x, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
-  worldY += std::clamp(info.drawOffset.y, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
+  worldPos.x += std::clamp(info.drawOffset.x, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
+  worldPos.y += std::clamp(info.drawOffset.y, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
 
   // Add the item shift if necessary
   if (appearance->hasFlag(AppearanceFlag::Shift))
   {
-    worldX -= appearance->flagData.shiftX;
-    worldY -= appearance->flagData.shiftY;
+    worldPos.x -= appearance->flagData.shiftX;
+    worldPos.y -= appearance->flagData.shiftY;
   }
 
   uint32_t width = atlas->spriteWidth;
@@ -121,10 +120,10 @@ void BatchDraw::push(ObjectDrawInfo &info)
   batch.setDescriptor(atlas->getDescriptorSet());
 
   std::array<Vertex, 4> vertices{{
-      {{worldX, worldY}, color, {window.x0, window.y0}, rect},
-      {{worldX, worldY + height}, color, {window.x0, window.y1}, rect},
-      {{worldX + width, worldY + height}, color, {window.x1, window.y1}, rect},
-      {{worldX + width, worldY}, color, {window.x1, window.y0}, rect},
+      {{worldPos.x, worldPos.y}, color, {window.x0, window.y0}, rect},
+      {{worldPos.x, worldPos.y + height}, color, {window.x0, window.y1}, rect},
+      {{worldPos.x + width, worldPos.y + height}, color, {window.x1, window.y1}, rect},
+      {{worldPos.x + width, worldPos.y}, color, {window.x1, window.y0}, rect},
   }};
 
   batch.addVertices(vertices);

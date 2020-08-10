@@ -190,7 +190,7 @@ MapIterator &MapIterator::operator++()
     tileIndex = 0;
     floorIndex = 0;
 
-    uint32_t size = current.node->nodes.size();
+    size_t size = current.node->nodes.size();
     // This node is finished
     if (current.cursor == size)
     {

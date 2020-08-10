@@ -11,6 +11,7 @@
 #include <initializer_list>
 
 #include "time.h"
+#include "position.h"
 
 enum class KeyState
 {
@@ -80,7 +81,7 @@ public:
 
 	bool keyDownEvent(GLFWKey key);
 
-	std::pair<double, double> cursorPos();
+	ScreenPosition cursorPos();
 
 	TimePoint lastUpdateTime;
 
@@ -109,11 +110,7 @@ private:
 		double y;
 	} currentScrollOffset;
 
-	struct
-	{
-		double x;
-		double y;
-	} currentCursorPos;
+	ScreenPosition currentCursorPos;
 };
 
 inline std::ostream &operator<<(std::ostream &os, KeyState type)

@@ -5,17 +5,17 @@
 
 void Camera::updateZoom()
 {
-	glm::vec2 mousePos = g_engine->getMousePosition();
+	auto [cursorX, cursorY] = g_engine->getCursorPos();
 	float n = 0.1f;
 	float zoomFactor = n * exp(log(1 / n) / 10 * zoomStep);
 
 	glm::vec3 newPos{this->position};
 
-	newPos.x += mousePos.x / this->zoomFactor;
-	newPos.x -= mousePos.x / zoomFactor;
+	newPos.x += cursorX / this->zoomFactor;
+	newPos.x -= cursorX / zoomFactor;
 
-	newPos.y += mousePos.y / this->zoomFactor;
-	newPos.y -= mousePos.y / zoomFactor;
+	newPos.y += cursorY / this->zoomFactor;
+	newPos.y -= cursorY / zoomFactor;
 
 	this->setPosition(newPos);
 

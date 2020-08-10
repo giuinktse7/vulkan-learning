@@ -66,19 +66,19 @@ GLFWwindow *initWindow()
 
 void populateTestMap()
 {
-	auto &map = *g_engine->getMapRenderer()->getMap();
-	Tile &tile1 = map.getOrCreateTile(17, 1, 7);
+	// auto &map = *g_engine->getMapRenderer()->getMap();
+	// Tile &tile1 = map.getOrCreateTile(17, 1, 7);
 	// Tile &tile2 = map.getOrCreateTile(1, 1, 7);
 	// Tile &tile3 = map.getOrCreateTile(3, 1, 7);
 	// Tile &tile4 = map.getOrCreateTile(4, 1, 7);
 	// Tile &tile4 = map.createTile(4, 4, 7);
 
 	// // auto shovel = Item::create(2554);
-	auto shovel = Item::create(2554);
+	// auto shovel = Item::create(2554);
 	// auto tree = Item::create(2706);
 	// auto grass = Item::create(103);
 
-	tile1.addItem(std::move(shovel));
+	// tile1.addItem(std::move(shovel));
 
 	// for (const auto &tile : map.begin())
 	// {
@@ -112,8 +112,6 @@ void panCamera(Input *input)
 
 int main()
 {
-	MapRenderer *mapRenderer;
-
 	try
 	{
 		engine::create();
@@ -132,9 +130,6 @@ int main()
 		Items::loadFromOtb("data/items.otb");
 		Items::loadFromXml("data/items.xml");
 
-		mapRenderer = new MapRenderer(std::make_unique<Map>());
-		g_engine->setMapRenderer(mapRenderer);
-
 		// populateTestMap();
 		// MapIO::saveMap(*mapRenderer->map);
 
@@ -145,8 +140,6 @@ int main()
 
 		g_engine->initialize(window);
 		Logger::info() << "Loading finished in " << g_engine->startTime.elapsedMillis() << " ms." << std::endl;
-
-		long long x = 0;
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -161,12 +154,7 @@ int main()
 			}
 			else
 			{
-				++x;
 				std::this_thread::sleep_for(std::chrono::milliseconds(IdleFrameTime));
-				if (x % 60 == 0)
-				{
-					std::cout << "Failed count: " << x << std::endl;
-				}
 			}
 		}
 

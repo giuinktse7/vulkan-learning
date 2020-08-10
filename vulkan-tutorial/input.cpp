@@ -32,6 +32,8 @@ Input::Input(GLFWwindow *window)
 
 void Input::update()
 {
+  g_engine->setCursorPos(currentCursorPos);
+
   for (const auto thunk : inputHooks)
   {
     thunk(this);
@@ -219,9 +221,9 @@ void Input::handleKeyCallback(int key, int scancode, int action, int mods)
   setKeyState(key, action);
 }
 
-std::pair<double, double> Input::cursorPos()
+ScreenPosition Input::cursorPos()
 {
-  return {currentCursorPos.x, currentCursorPos.y};
+  return currentCursorPos;
 }
 
 void Input::handleCursorPosCallback(double x, double y)

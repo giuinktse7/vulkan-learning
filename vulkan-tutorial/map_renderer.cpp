@@ -27,11 +27,6 @@ constexpr glm::vec4 PreviewCursorColor{0.6f,
 constexpr glm::vec4 DefaultColor{1.0f, 1.0f, 1.0f, 1.0f};
 constexpr glm::vec4 SelectedColor{0.45f, 0.45f, 0.45f, 1.0f};
 
-MapRenderer::MapRenderer(std::unique_ptr<Map> map)
-{
-  this->map = std::move(map);
-}
-
 void MapRenderer::initialize()
 {
   currentFrame = &frames.front();
@@ -341,17 +336,8 @@ void MapRenderer::startCommandBuffer()
   }
 }
 
-void MapRenderer::updateViewport()
+void MapRenderer::recordFrame(uint32_t frameIndex, MapView &mapView)
 {
-  glfwGetFramebufferSize(g_engine->getWindow(), &viewport.width, &viewport.height);
-  viewport.zoom = 1 / camera.zoomFactor;
-  viewport.offsetX = camera.position.x;
-  viewport.offsetY = camera.position.y;
-}
-
-void MapRenderer::recordFrame(uint32_t frameIndex)
-{
-  updateViewport();
 
   this->currentFrame = &frames[frameIndex];
   if (!currentFrame->commandBuffer)
@@ -374,9 +360,9 @@ void MapRenderer::recordFrame(uint32_t frameIndex)
 
   vkCmdBindPipeline(currentFrame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-  updateUniformBuffer();
+  updateUniformBuffer(mapView);
 
-  drawMap();
+  drawMap(mapView);
 
   currentFrame->batchDraw.prepareDraw();
 
@@ -390,21 +376,11 @@ void MapRenderer::recordFrame(uint32_t frameIndex)
   }
 }
 
-Viewport::BoundingRect Viewport::getGameBoundingRect()
-{
-  int gameX = static_cast<int>(g_engine->worldToGamePos(offsetX));
-  int gameY = static_cast<int>(g_engine->worldToGamePos(offsetY));
-  int gameWidth = static_cast<int>(g_engine->screenToGamePos(static_cast<float>(width)));
-  int gameHeight = static_cast<int>(g_engine->screenToGamePos(static_cast<float>(height)));
-
-  return Viewport::BoundingRect{gameX, gameY, gameX + gameWidth, gameY + gameHeight};
-}
-
-void MapRenderer::drawMap()
+void MapRenderer::drawMap(const MapView &mapView)
 {
   // std::cout << std::endl << "drawMap()" << std::endl;
-  auto mapRect = viewport.getGameBoundingRect();
-  int floor = camera.position.z;
+  const auto mapRect = mapView.getGameBoundingRect();
+  int floor = mapView.getZ();
 
   bool aboveGround = floor <= 7;
 
@@ -423,7 +399,7 @@ void MapRenderer::drawMap()
     {
       for (int mapY = y1; mapY <= y2; mapY += 4)
       {
-        quadtree::Node *node = map->getLeafUnsafe(mapX, mapY);
+        quadtree::Node *node = mapView.getMap()->getLeafUnsafe(mapX, mapY);
         if (!node)
           continue;
 
@@ -442,19 +418,19 @@ void MapRenderer::drawMap()
     }
   }
 
-  drawPreviewCursor();
+  drawPreviewCursor(mapView);
 }
 
-void MapRenderer::drawPreviewCursor()
+void MapRenderer::drawPreviewCursor(const MapView &mapView)
 {
   if (!g_engine->getSelectedServerId().has_value())
     return;
 
   ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
 
-  Position pos = g_engine->screenToGamePos(g_engine->getMousePosition());
+  Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
 
-  Tile *tile = map->getTile(pos);
+  Tile *tile = mapView.getMap()->getTile(pos);
 
   int elevation = tile ? tile->getTopElevation() : 0;
 
@@ -517,8 +493,9 @@ void MapRenderer::drawTile(const TileLocation &tileLocation)
   }
 }
 
-void MapRenderer::updateUniformBuffer()
+void MapRenderer::updateUniformBuffer(const MapView &mapView)
 {
+  const Viewport viewport = mapView.getViewport();
   glm::mat4 projection = glm::translate(
       glm::ortho(0.0f, viewport.width * viewport.zoom, viewport.height * viewport.zoom, 0.0f),
       glm::vec3(-std::floor(viewport.offsetX), -std::floor(viewport.offsetY), 0.0f));

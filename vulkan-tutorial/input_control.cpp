@@ -27,7 +27,7 @@ void handleCameraZoom(Input *input)
 
 void handleSelectionOnClick(Input *input, Position &pos)
 {
-  Map *map = g_engine->getMapRenderer()->getMap();
+  Map *map = g_engine->getMapView()->getMap();
   Tile *tile = map->getTile(pos);
 
   if (!input->ctrl())
@@ -82,7 +82,7 @@ void InputControl::cameraMovement(Input *input)
   handleCameraZoom(input);
 
   glm::vec3 delta{};
-  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapRenderer()->camera.zoomFactor, 1.5f));
+  float step = Engine::TILE_SIZE / (std::pow(g_engine->getMapView()->getZoomFactor(), 1.5f));
 
   bool anyRepeated = input->anyRepeated({GLFW_KEY_RIGHT, GLFW_KEY_LEFT, GLFW_KEY_UP, GLFW_KEY_DOWN});
 
@@ -137,7 +137,7 @@ void InputControl::cameraMovement(Input *input)
 
   if (delta.x != 0 || delta.y != 0 || delta.z != 0)
   {
-    g_engine->getMapRenderer()->camera.translate(delta);
+    g_engine->getMapView()->translateCamera(delta);
   }
 }
 
@@ -148,38 +148,34 @@ void InputControl::mapEditing(Input *input)
     g_engine->clearBrush();
   }
 
-  Map *map = g_engine->getMapRenderer()->getMap();
+  MapView &mapView = *g_engine->getMapView();
+  Map *map = g_engine->getMapView()->getMap();
 
-  const auto [cursorX, cursorY] = input->cursorPos();
-
-  Position oldGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
-  g_engine->setMousePosition(static_cast<float>(cursorX), static_cast<float>(cursorY));
-  Position newGamePos = g_engine->screenToGamePos(g_engine->getMousePosition());
+  MapPosition oldMapPos = g_engine->getPrevCursorPos().worldPos(mapView).mapPos();
+  MapPosition mapPos = g_engine->getCursorPos().worldPos(mapView).mapPos();
 
   auto selectedId = g_engine->getSelectedServerId();
 
-  // Create items when dragging mouse
-  bool hasSelectedItem = selectedId.has_value();
-  if (hasSelectedItem && oldGamePos != newGamePos)
+  Position pos = mapPos.floor(mapView.getFloor());
+
+  if (selectedId.has_value())
   {
-    // Dragging mouse
-    if (input->leftMouseDown())
+    if (oldMapPos != mapPos)
     {
-      map->createItemAt(newGamePos, selectedId.value());
+      // Dragging mouse
+      if (input->leftMouseDown())
+      {
+        map->createItemAt(pos, selectedId.value());
+      }
     }
-  }
-
-  if (input->leftMouseEvent() == GLFW_PRESS)
-  {
-    bool activeBrush = selectedId.has_value();
-
-    auto pos = g_engine->screenToGamePos({cursorX, cursorY});
-
-    if (activeBrush)
+    else if (input->leftMouseEvent() == GLFW_PRESS)
     {
       map->createItemAt(pos, selectedId.value());
     }
-    else
+  }
+  else
+  {
+    if (input->leftMouseEvent() == GLFW_PRESS)
     {
       handleSelectionOnClick(input, pos);
     }

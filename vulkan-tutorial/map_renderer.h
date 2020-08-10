@@ -26,31 +26,9 @@
 #include "graphics/texture_atlas.h"
 
 #include "graphics/batch_item_draw.h"
+#include "map_view.h"
 
 #include "map.h"
-
-struct Viewport
-{
-	struct BoundingRect
-	{
-		int x1, y1, x2, y2;
-	};
-
-	int width;
-	int height;
-	float zoom;
-
-	uint32_t offsetX;
-	uint32_t offsetY;
-
-	Viewport::BoundingRect getGameBoundingRect();
-};
-
-inline std::ostream &operator<<(std::ostream &os, const Viewport::BoundingRect &rect)
-{
-	os << "{ x1=" << rect.x1 << ", y1=" << rect.y1 << ", x2=" << rect.x2 << ", y2=" << rect.y2 << "}";
-	return os;
-}
 
 struct TextureOffset
 {
@@ -73,14 +51,6 @@ enum BlendMode
 	NUM_BLENDMODES
 };
 
-template <typename T>
-struct WriteRange
-{
-	T *start;
-	T *cursor;
-	T *end;
-};
-
 struct FrameData
 {
 	VkFramebuffer frameBuffer = nullptr;
@@ -94,20 +64,10 @@ struct FrameData
 class MapRenderer
 {
 public:
-	MapRenderer(std::unique_ptr<Map> map);
 	static const int MAX_NUM_TEXTURES = 256 * 256;
 
 	static const int TILE_SIZE = 32;
 	static const uint32_t MAX_VERTICES = 64 * 1024;
-
-	Viewport viewport;
-
-	Camera camera;
-
-	Map *getMap() const
-	{
-		return map.get();
-	}
 
 	// All sprites are drawn using this index buffer
 	BoundBuffer indexBuffer;
@@ -115,7 +75,7 @@ public:
 	void initialize();
 	void recreate();
 
-	void recordFrame(uint32_t currentFrame);
+	void recordFrame(uint32_t currentFrame, MapView &mapView);
 
 	VkCommandBuffer getCommandBuffer();
 
@@ -136,8 +96,6 @@ public:
 	void drawItem(ObjectDrawInfo &info);
 
 private:
-	std::unique_ptr<Map> map;
-
 	std::array<FrameData, 3> frames;
 
 	FrameData *currentFrame;
@@ -163,14 +121,13 @@ private:
 	void createDescriptorSets();
 	void createFrameBuffers();
 
-	void updateViewport();
-	void updateUniformBuffer();
+	void updateUniformBuffer(const MapView &mapView);
 
 	void startCommandBuffer();
 	void beginRenderPass();
 
-	void drawMap();
-	void drawPreviewCursor();
+	void drawMap(const MapView &mapView);
+	void drawPreviewCursor(const MapView &mapView);
 
 	void drawBatches();
 

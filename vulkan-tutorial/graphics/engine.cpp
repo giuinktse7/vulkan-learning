@@ -61,6 +61,7 @@ Engine::Engine()
   uint32_t seed = 1234;
   this->random = Random(seed);
   this->currentTime = TimePoint::now();
+  this->mapRenderer = std::make_unique<MapRenderer>();
 
   // Uncomment below for a random seed each run
   // random = Random();
@@ -78,6 +79,7 @@ void Engine::initialize(GLFWwindow *window)
   }
 
   this->window = window;
+  this->mapView = std::make_unique<MapView>(window);
 
   TimeMeasure start;
   createVulkanInstance();
@@ -413,8 +415,9 @@ FrameResult Engine::nextFrame()
     return FrameResult::Failure;
 
   currentTime = TimePoint::now();
+  mapView->updateViewport();
 
-  mapRenderer->recordFrame(currentFrameIndex);
+  mapRenderer->recordFrame(currentFrameIndex, *mapView);
   gui.recordFrame(currentFrameIndex);
 
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -519,50 +522,6 @@ void Engine::recreateSwapChain()
   gui.recreate();
 
   setFrameIndex(0);
-}
-
-const uint32_t Engine::gameToWorldPos(uint32_t gamePosition) const
-{
-  return gamePosition * TILE_SIZE;
-}
-
-const uint32_t Engine::worldToGamePos(float worldPos) const
-{
-  return static_cast<uint32_t>(std::floor(worldPos / TILE_SIZE));
-}
-
-const Position Engine::screenToGamePos(glm::vec2 pos) const
-{
-  return screenToGamePos(pos.x, pos.y);
-}
-
-// TODO Fix these unclear functions.
-// TODO should not use camera.position.x and camera.position.y
-const Position Engine::screenToGamePos(float screenX, float screenY) const
-{
-  auto camera = mapRenderer->camera;
-
-  uint32_t x = worldToGamePos(camera.position.x + screenX / camera.zoomFactor);
-  uint32_t y = worldToGamePos(camera.position.y + screenY / camera.zoomFactor);
-
-  return {x, y, static_cast<uint32_t>(camera.position.z)};
-}
-
-const uint32_t Engine::screenToGamePos(float value) const
-{
-  auto camera = mapRenderer->camera;
-
-  return worldToGamePos(value / camera.zoomFactor);
-}
-
-void Engine::translateCamera(glm::vec3 delta)
-{
-  mapRenderer->camera.translate(delta);
-}
-
-void Engine::translateCameraZ(int z)
-{
-  mapRenderer->camera.translateZ(z);
 }
 
 void Engine::WaitUntilDeviceIdle()
