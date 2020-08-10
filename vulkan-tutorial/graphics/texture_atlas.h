@@ -27,8 +27,8 @@ struct TextureInfo
 
 struct DrawOffset
 {
-	int8_t x;
-	int8_t y;
+	int x;
+	int y;
 };
 
 struct TextureAtlas

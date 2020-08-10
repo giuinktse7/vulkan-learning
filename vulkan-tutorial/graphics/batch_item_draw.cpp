@@ -3,6 +3,8 @@
 #include "engine.h"
 #include <ios>
 
+constexpr int MaxDrawOffsetPixels = 24;
+
 BatchDraw::BatchDraw()
     : batchIndex(0), commandBuffer(nullptr)
 {
@@ -85,13 +87,15 @@ void Batch::copyStagingToDevice(VkCommandBuffer commandBuffer)
 
 void BatchDraw::push(ObjectDrawInfo &info)
 {
-  auto [appearance, textureInfo, position, color] = info;
+  auto [appearance, textureInfo, position, color, drawOffset] = info;
   auto [atlas, window] = textureInfo;
 
-  auto drawOffset = atlas->drawOffset;
+  int worldX = g_engine->gameToWorldPos(position.x + atlas->drawOffset.x);
+  int worldY = g_engine->gameToWorldPos(position.y + atlas->drawOffset.y);
 
-  int worldX = g_engine->gameToWorldPos(position.x + drawOffset.x);
-  int worldY = g_engine->gameToWorldPos(position.y + drawOffset.y);
+  // Add draw offsets like elevation
+  worldX += std::clamp(info.drawOffset.x, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
+  worldY += std::clamp(info.drawOffset.y, -MaxDrawOffsetPixels, MaxDrawOffsetPixels);
 
   // Add the item shift if necessary
   if (appearance->hasFlag(AppearanceFlag::Shift))

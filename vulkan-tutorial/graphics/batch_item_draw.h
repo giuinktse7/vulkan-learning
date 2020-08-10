@@ -25,6 +25,7 @@ struct ObjectDrawInfo
 	TextureInfo textureInfo;
 	Position position;
 	glm::vec4 color;
+	DrawOffset drawOffset = {0, 0};
 };
 
 struct Batch
