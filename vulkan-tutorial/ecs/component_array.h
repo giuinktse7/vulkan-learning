@@ -33,6 +33,12 @@ public:
 	void addComponent(Entity entity, T &component);
 	void addComponent(Entity entity, T &&component);
 
+	void clear()
+	{
+		components.clear();
+		entityIndex.clear();
+	}
+
 	void removeComponent(Entity entity)
 	{
 		if (entityIndex.find(entity) != entityIndex.end())

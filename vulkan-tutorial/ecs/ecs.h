@@ -34,6 +34,10 @@ namespace ecs
 	{
 	public:
 		virtual void update() = 0;
+		void clear()
+		{
+			entities.clear();
+		}
 
 	protected:
 		friend class ECS;
@@ -148,7 +152,24 @@ public:
 		unsetEntityComponentBit<T>(entity);
 	}
 
-	void destroy(Entity entity)
+	template <typename T>
+	void removeAllComponents()
+	{
+		ComponentArray<T> *array = getComponentArray<T>();
+		array->clear();
+
+		for (const auto &entry : systems)
+		{
+			ecs::System *system = entry.second.get();
+			if (system->componentBitset.test(componentTypes.at(typeid(T).name())))
+			{
+				system->clear();
+			}
+		}
+	}
+
+	void
+	destroy(Entity entity)
 	{
 		for (const auto &entry : componentArrays)
 		{
