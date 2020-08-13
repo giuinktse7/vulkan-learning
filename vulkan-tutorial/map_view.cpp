@@ -3,6 +3,7 @@
 #include "const.h"
 
 MapView::MapView(GLFWwindow *window) : window(window), map(std::make_shared<Map>())
+	,moveSelectionOrigin{}
 {
 }
 

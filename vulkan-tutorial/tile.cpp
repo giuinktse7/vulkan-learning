@@ -2,6 +2,8 @@
 
 #include <numeric>
 
+#include "ecs/ecs.h"
+#include "ecs/item_selection.h"
 
 Tile::Tile(TileLocation &tileLocation)
     : tileLocation(tileLocation)
@@ -11,7 +13,11 @@ Tile::Tile(TileLocation &tileLocation)
 
 Tile::~Tile()
 {
-  // cout << "~Tile()" << endl;
+  if (entity.has_value())
+  {
+    Logger::debug() << "~Tile() with entity id: " << entity.value().id << std::endl;
+    g_ecs.destroy(entity.value());
+  }
 }
 
 Item *Tile::getGround() const
@@ -35,6 +41,8 @@ Item *Tile::getTopItem() const
 
 void Tile::addItem(std::unique_ptr<Item> item)
 {
+  std::cout << "Toporder: " << item->getTopOrder() << std::endl;
+
   if (item->isGround())
   {
     this->ground = std::move(item);
@@ -69,6 +77,19 @@ void Tile::addItem(std::unique_ptr<Item> item)
 
   // TODO Is the move unnecessary?
   items.insert(cursor, std::move(item));
+  updateSelectionComponent();
+}
+
+void Tile::updateSelectionComponent() const
+{
+  if (entity.has_value())
+  {
+    TileSelectionComponent *component = g_ecs.getComponent<TileSelectionComponent>(entity.value());
+    if (component)
+    {
+      component->tileItemCount = items.size();
+    }
+  }
 }
 
 void Tile::removeItem(size_t index)
@@ -76,6 +97,8 @@ void Tile::removeItem(size_t index)
   auto pos = items.begin();
   std::advance(pos, index);
   items.erase(pos);
+
+  updateSelectionComponent();
 }
 
 void Tile::removeGround()
@@ -83,20 +106,20 @@ void Tile::removeGround()
   this->ground.reset();
 }
 
-const Position &Tile::getPosition() const
+const Position Tile::getPosition() const
 {
   return tileLocation.position;
 }
 
-const uint32_t &Tile::getX() const
+long Tile::getX() const
 {
   return tileLocation.position.x;
 }
-const uint32_t &Tile::getY() const
+long Tile::getY() const
 {
   return tileLocation.position.y;
 }
-const uint32_t &Tile::getZ() const
+long Tile::getZ() const
 {
   return tileLocation.position.z;
 }
@@ -117,4 +140,13 @@ int Tile::getTopElevation() const
       items.end(),
       0,
       [](int elevation, const std::unique_ptr<Item> &next) { return elevation + next->itemType->getElevation(); });
+}
+
+Entity Tile::getOrCreateEntity()
+{
+  if (!entity.has_value())
+  {
+    this->entity = g_ecs.createEntity();
+  }
+  return this->entity.value();
 }

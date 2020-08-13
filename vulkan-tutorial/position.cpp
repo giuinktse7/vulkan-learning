@@ -18,14 +18,14 @@ MapPosition ScreenPosition::mapPos(const MapView &mapView)
   newX = std::floor(newX / MapTileSize);
   newY = std::floor(newY / MapTileSize);
 
-  return MapPosition{static_cast<uint32_t>(newX), static_cast<uint32_t>(newY)};
+  return MapPosition{static_cast<long>(newX), static_cast<long>(newY)};
 }
 
 MapPosition WorldPosition::mapPos()
 {
   return MapPosition{
-      static_cast<uint32_t>(std::floor(this->x / MapTileSize)),
-      static_cast<uint32_t>(std::floor(this->y / MapTileSize))};
+      static_cast<long>(std::floor(this->x / MapTileSize)),
+      static_cast<long>(std::floor(this->y / MapTileSize))};
 }
 
 WorldPosition MapPosition::worldPos()
@@ -41,4 +41,9 @@ Position MapPosition::floor(int floor)
   pos.z = floor;
 
   return pos;
+}
+
+Position ScreenPosition::toPos(const MapView &mapView)
+{
+  return worldPos(mapView).mapPos().floor(mapView.getFloor());
 }

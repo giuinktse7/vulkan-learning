@@ -36,6 +36,31 @@ struct TileSelectionComponent
   */
   std::set<size_t, std::greater<size_t>> itemIndices;
 
+  size_t tileItemCount;
+
+  bool isAllSelected() const
+  {
+    if (allSelected)
+    {
+      return true;
+    }
+    else
+    {
+      bool allItemsSelected = itemIndices.size() == tileItemCount;
+      return allItemsSelected && isGroundSelected();
+    }
+  }
+
+  bool isGroundSelected() const
+  {
+    return allSelected || selectedEntities.test(to_underlying(TileEntity::Ground));
+  }
+
+  bool isItemIndexSelected(size_t index) const
+  {
+    return allSelected || itemIndices.find(index) != itemIndices.end();
+  }
+
   void selectAll()
   {
     allSelected = true;
@@ -43,7 +68,16 @@ struct TileSelectionComponent
 
   void toggleSelectAll()
   {
-    allSelected = !allSelected;
+    if (!allSelected)
+    {
+      allSelected = true;
+    }
+    else
+    {
+      allSelected = false;
+      selectedEntities.reset();
+      itemIndices.clear();
+    }
   }
 
   void select(TileEntity tileEntity)
@@ -53,7 +87,10 @@ struct TileSelectionComponent
 
   void deselect(TileEntity tileEntity)
   {
-    allSelected = false;
+    if (allSelected)
+    {
+      allSelected = false;
+    }
     selectedEntities.reset(to_underlying(tileEntity));
   }
 
@@ -62,7 +99,13 @@ struct TileSelectionComponent
     selectedEntities.flip(to_underlying(tileEntity));
     if (!selectedEntities.test(to_underlying(tileEntity)))
     {
-      allSelected = false;
+      if (allSelected)
+      {
+        allSelected = false;
+        selectAllItems();
+        selectAllTileEntities();
+        deselect(tileEntity);
+      }
     }
   }
 
@@ -70,9 +113,17 @@ struct TileSelectionComponent
   {
     itemIndices.emplace(index);
   }
+
   void deselectItemIndex(size_t index)
   {
-    allSelected = false;
+    if (allSelected)
+    {
+      allSelected = false;
+
+      selectAllItems();
+      selectAllTileEntities();
+    }
+
     itemIndices.erase(index);
   }
 
@@ -88,18 +139,37 @@ struct TileSelectionComponent
     }
   }
 
-  bool isGroundSelected() const
+  bool isTopSelected() const
   {
-    return allSelected || selectedEntities.test(to_underlying(TileEntity::Ground));
-  }
-
-  bool isItemIndexSelected(size_t index) const
-  {
-    return allSelected || itemIndices.find(index) != itemIndices.end();
+    if (allSelected)
+    {
+      return true;
+    }
+    else if (tileItemCount > 0)
+    {
+      return isItemIndexSelected(tileItemCount - 1);
+    }
+    else
+    {
+      return isGroundSelected();
+    }
   }
 
 private:
   std::bitset<16> selectedEntities;
+
+  void selectAllItems()
+  {
+    for (size_t i = 0; i < tileItemCount; ++i)
+    {
+      itemIndices.emplace(i);
+    }
+  }
+
+  void selectAllTileEntities()
+  {
+    select(TileEntity::Ground);
+  }
 
   /*
     IMPORTANT: Has to be set to false whenever something is deselected.

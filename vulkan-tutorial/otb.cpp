@@ -1,8 +1,9 @@
+#include "otb.h"
+
 #include <stack>
 #include <iostream>
 #include <string>
 
-#include "otb.h"
 #include "file.h"
 #include "util.h"
 

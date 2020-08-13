@@ -12,7 +12,15 @@ Item::Item(ItemTypeId itemTypeId)
 }
 Item::~Item()
 {
-	// std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << std::endl;
+	if (entity.has_value())
+	{
+		g_ecs.destroy(entity.value());
+		std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity id: " << entity.value().id << std::endl;
+	}
+	else
+	{
+		std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity: None" << std::endl;
+	}
 }
 
 std::unique_ptr<Item> Item::create(ItemTypeId serverId)

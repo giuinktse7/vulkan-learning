@@ -28,33 +28,52 @@ void handleCameraZoom(Input *input)
 void handleSelectionOnClick(Input *input, Position &pos)
 {
   Map *map = g_engine->getMapView()->getMap();
-  Tile *tile = map->getTile(pos);
 
-  if (!input->ctrl())
-  {
-    g_ecs.getSystem<TileSelectionSystem>().clearAllSelections();
-  }
+  Tile *tile = map->getTile(pos);
 
   if (tile == nullptr)
   {
+    if (!input->ctrl())
+    {
+      g_ecs.getSystem<TileSelectionSystem>().clearAllSelections();
+    }
+
     return;
   }
 
-  if (!tile->entity.has_value())
-  {
-    Entity entity = g_ecs.createEntity();
-    tile->entity = entity;
-  }
-  Entity entity = tile->entity.value();
+  MapView &mapView = *g_engine->getMapView();
+  Entity entity = tile->getOrCreateEntity();
 
   auto *selection = g_ecs.getComponent<TileSelectionComponent>(entity);
-  if (selection == nullptr)
+  if (selection)
   {
-    TileSelectionComponent component;
-    component.position = pos;
-    g_ecs.addComponent(entity, component);
+    // Move selection
+    if (selection->isTopSelected())
+    {
+      Position pos = g_engine->getCursorPos().toPos(mapView);
+      std::cout << "moveSelectionOrigin: " << pos << std::endl;
+      mapView.moveSelectionOrigin = pos;
+      // Rest of function is selection logic unrelated to dragging
+      return;
+    }
+    if (!input->ctrl())
+    {
+      g_ecs.getSystem<TileSelectionSystem>().clearAllSelections();
+    }
   }
-  selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+  else
+  {
+    if (!input->ctrl())
+    {
+      g_ecs.getSystem<TileSelectionSystem>().clearAllSelections();
+    }
+
+    TileSelectionComponent component{};
+    component.position = pos;
+    component.tileItemCount = tile->getItemCount();
+    g_ecs.addComponent(entity, component);
+    selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+  }
 
   if (input->shift())
   {
@@ -73,6 +92,16 @@ void handleSelectionOnClick(Input *input, Position &pos)
       {
         selection->toggleItemSelection(tile->getItemCount() - 1);
       }
+    }
+  }
+
+  if (selection)
+  {
+    // Move selection
+    if (selection->isTopSelected())
+    {
+      Position pos = g_engine->getCursorPos().toPos(mapView);
+      mapView.moveSelectionOrigin = pos;
     }
   }
 }
@@ -143,12 +172,24 @@ void InputControl::cameraMovement(Input *input)
 
 void InputControl::mapEditing(Input *input)
 {
+  MapView &mapView = *g_engine->getMapView();
+
   if (input->keyEvent(GLFW_KEY_ESCAPE) == GLFW_PRESS)
   {
     g_engine->clearBrush();
   }
 
-  MapView &mapView = *g_engine->getMapView();
+  if (input->keyDownEvent(GLFW_KEY_DELETE) == GLFW_PRESS)
+  {
+    g_ecs.getSystem<TileSelectionSystem>().deleteItems();
+  }
+
+  if (input->leftMouseEvent() == GLFW_RELEASE)
+  {
+    Logger::debug("input->leftMouseEvent() == GLFW_RELEASE");
+    mapView.moveSelectionOrigin.reset();
+  }
+
   Map *map = g_engine->getMapView()->getMap();
 
   MapPosition oldMapPos = g_engine->getPrevCursorPos().worldPos(mapView).mapPos();
@@ -177,6 +218,7 @@ void InputControl::mapEditing(Input *input)
   {
     if (input->leftMouseEvent() == GLFW_PRESS)
     {
+      std::cout << "input->leftMouseEvent() == GLFW_PRESS" << std::endl;
       handleSelectionOnClick(input, pos);
     }
   }

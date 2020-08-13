@@ -9,11 +9,6 @@ class MapView;
 struct WorldPosition;
 struct MapPosition;
 
-struct Position
-{
-	uint32_t x, y, z;
-};
-
 template <typename T>
 struct BasePosition
 {
@@ -21,10 +16,49 @@ struct BasePosition
 	T y;
 };
 
+struct Position : public BasePosition<long>
+{
+	int z;
+
+	Position &operator+=(const Position &rhs)
+	{
+		this->x += rhs.x;
+		this->y += rhs.y;
+		this->z += rhs.z;
+		return *this;
+	}
+
+	Position &operator-=(const Position &rhs)
+	{
+		this->x -= rhs.x;
+		this->y -= rhs.y;
+		this->z -= rhs.z;
+		return *this;
+	}
+
+	Position operator-(const Position &rhs)
+	{
+		*this -= rhs;
+		return *this;
+	}
+
+	template <int I>
+	auto get() const
+	{
+		if constexpr (I == 0)
+			return x;
+		else if constexpr (I == 1)
+			return y;
+		else if constexpr (I == 2)
+			return z;
+	}
+};
+
 struct ScreenPosition : public BasePosition<double>
 {
 	WorldPosition worldPos(const MapView &mapView);
 	MapPosition mapPos(const MapView &mapView);
+	Position toPos(const MapView &mapView);
 };
 
 struct WorldPosition : public BasePosition<double>
@@ -32,7 +66,7 @@ struct WorldPosition : public BasePosition<double>
 	MapPosition mapPos();
 };
 
-struct MapPosition : public BasePosition<uint32_t>
+struct MapPosition : public BasePosition<long>
 {
 	WorldPosition worldPos();
 
@@ -82,3 +116,19 @@ inline bool operator!=(const BasePosition<T> &pos1, const BasePosition<T> &pos2)
 {
 	return !(pos1 == pos2);
 }
+
+namespace std
+{
+	template <>
+	struct tuple_size<Position> : std::integral_constant<size_t, 3>
+	{
+	};
+
+	template <size_t I>
+	class std::tuple_element<I, Position>
+	{
+	public:
+		using type = decltype(declval<Position>().get<I>());
+	};
+
+} // namespace std

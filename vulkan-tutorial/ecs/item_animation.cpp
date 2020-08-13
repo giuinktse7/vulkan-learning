@@ -30,7 +30,7 @@ void ItemAnimationComponent::synchronizePhase()
       break;
     ++phaseIndex;
   }
-  this->startPhase = phaseIndex;
+  this->startPhase = static_cast<uint32_t>(phaseIndex);
 
   long long res = elapsedTimeMs - (animationInfo->phases[phaseIndex].maxDuration + timeDiff);
   this->state.lastUpdateTime = g_engine->startTime.forwardMs(res);

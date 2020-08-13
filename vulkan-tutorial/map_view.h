@@ -5,8 +5,11 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <optional>
+
 #include "map.h"
 #include "camera.h"
+#include "position.h"
 
 struct Viewport
 {
@@ -27,9 +30,17 @@ class MapView
 {
 public:
 	MapView(GLFWwindow *window);
+
+	std::optional<Position> moveSelectionOrigin;
+
 	Map *getMap() const
 	{
 		return map.get();
+	}
+
+	bool isSelectionMoved() const
+	{
+		return moveSelectionOrigin.has_value();
 	}
 
 	void zoomOut();

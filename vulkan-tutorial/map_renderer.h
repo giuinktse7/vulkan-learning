@@ -30,6 +30,12 @@
 
 #include "map.h"
 
+namespace ItemDrawFlags
+{
+	constexpr uint32_t None = 0;
+	constexpr uint32_t DrawSelected = 1 << 0;
+} // namespace ItemDrawFlags
+
 struct TextureOffset
 {
 	float x;
@@ -91,10 +97,6 @@ public:
 		return textureDescriptorSetLayout;
 	}
 
-	void drawTile(const TileLocation &tileLocation);
-
-	void drawItem(ObjectDrawInfo &info);
-
 private:
 	std::array<FrameData, 3> frames;
 
@@ -128,6 +130,10 @@ private:
 
 	void drawMap(const MapView &mapView);
 	void drawPreviewCursor(const MapView &mapView);
+	void drawMovedSelection(const MapView &mapView);
+
+	void drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags = ItemDrawFlags::None);
+	void drawItem(ObjectDrawInfo &info);
 
 	void drawBatches();
 

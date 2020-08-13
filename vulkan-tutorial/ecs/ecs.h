@@ -153,6 +153,12 @@ public:
 	}
 
 	template <typename T>
+	bool systemRequiresComponent(ecs::System &system)
+	{
+		return system.componentBitset.test(componentTypes.at(typeid(T).name()));
+	}
+
+	template <typename T>
 	void removeAllComponents()
 	{
 		ComponentArray<T> *array = getComponentArray<T>();
@@ -161,7 +167,7 @@ public:
 		for (const auto &entry : systems)
 		{
 			ecs::System *system = entry.second.get();
-			if (system->componentBitset.test(componentTypes.at(typeid(T).name())))
+			if (systemRequiresComponent<T>(*system))
 			{
 				system->clear();
 			}

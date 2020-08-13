@@ -25,7 +25,7 @@ public:
 
 	void setTile(std::unique_ptr<Tile> tile);
 
-	const Position &getPosition() const
+	const Position getPosition() const
 	{
 		return position;
 	}

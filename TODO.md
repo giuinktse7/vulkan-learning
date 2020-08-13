@@ -7,11 +7,14 @@
 - [x] Use sprite patterns
 - [x] Implement animation
 - [ ] Handle stackable appearances
-- [ ] Handle appearances with elevation
+- [x] Handle appearances with elevation
+- [ ] BUG: Ground (and bottom stackpos items) should not be affected by tile elevation when rendered (both normally and as item preview)
+- [ ] BUG: ESC should clear selections
+- [ ] Feature?: Maybe clicking on a selected item should deselect it. If whole tile, the whole tile should maybe be deselected?
 
 ## Editing functionality
 
-- [ ] Implement multi-select
+- [x] Implement multi-select
 - [ ] Delete selected items
 - [ ] Move selected items
 

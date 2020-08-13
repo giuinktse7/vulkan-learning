@@ -5,7 +5,6 @@
 #include "file.h"
 #include "graphics/resource-descriptor.h"
 #include "graphics/engine.h"
-#include "graphics/resource-descriptor.h"
 #include "graphics/appearances.h"
 
 #include "ecs/ecs.h"
@@ -410,7 +409,10 @@ void MapRenderer::drawMap(const MapView &mapView)
             TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
             if (tile && tile->hasTile())
             {
-              drawTile(*tile);
+              if (mapView.isSelectionMoved())
+              {
+                drawTile(*tile, mapView);
+              }
             }
           }
         }
@@ -419,6 +421,12 @@ void MapRenderer::drawMap(const MapView &mapView)
   }
 
   drawPreviewCursor(mapView);
+  drawMovedSelection(mapView);
+}
+
+void MapRenderer::drawMovedSelection(const MapView &mapView)
+{
+  g_ecs.getSystem<TileSelectionSystem>().
 }
 
 void MapRenderer::drawPreviewCursor(const MapView &mapView)
@@ -444,7 +452,7 @@ void MapRenderer::drawPreviewCursor(const MapView &mapView)
   drawItem(drawInfo);
 }
 
-void MapRenderer::drawTile(const TileLocation &tileLocation)
+void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags)
 {
   auto position = tileLocation.getPosition();
   auto tile = tileLocation.getTile();
@@ -455,16 +463,33 @@ void MapRenderer::drawTile(const TileLocation &tileLocation)
     selection = g_ecs.getComponent<TileSelectionComponent>(tile->entity.value());
   }
 
+  bool drawSelected = drawFlags & ItemDrawFlags::DrawSelected;
+
+  Position selectionMovePosDelta{};
+  if (mapView.moveSelectionOrigin.has_value())
+  {
+    selectionMovePosDelta = g_engine->getCursorPos().toPos(mapView) - mapView.moveSelectionOrigin.value();
+  }
+
   if (tile->getGround())
   {
-    Item *ground = tile->getGround();
-    ObjectDrawInfo info;
-    info.appearance = ground->itemType->appearance;
-    info.position = position;
-    info.color = selection && selection->isGroundSelected() ? SelectedColor : DefaultColor;
-    info.textureInfo = ground->getTextureInfo(position);
+    bool groundSelected = selection && selection->isGroundSelected();
+    if (drawSelected || !groundSelected)
+    {
+      Item *ground = tile->getGround();
+      ObjectDrawInfo info;
+      info.appearance = ground->itemType->appearance;
+      info.position = position;
+      info.color = groundSelected ? SelectedColor : DefaultColor;
+      info.textureInfo = ground->getTextureInfo(position);
 
-    drawItem(info);
+      if (groundSelected)
+      {
+        info.position += selectionMovePosDelta;
+      }
+
+      drawItem(info);
+    }
   }
 
   DrawOffset drawOffset{0, 0};
@@ -473,6 +498,12 @@ void MapRenderer::drawTile(const TileLocation &tileLocation)
   // The index i is necessary to check whether the item is selected (can't use range-based loop because of this)
   for (size_t i = 0; i < items.size(); ++i)
   {
+    bool itemSelected = selection && selection->isItemIndexSelected(i);
+    if (itemSelected && !drawSelected)
+    {
+      continue;
+    }
+
     Item *item = items.at(i).get();
 
     ObjectDrawInfo info;

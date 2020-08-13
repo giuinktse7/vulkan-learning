@@ -20,6 +20,7 @@ void TileSelectionSystem::clearAllSelections()
 
 void TileSelectionSystem::deleteItems()
 {
+    std::vector<TileLocation *> toBeRemoved;
     for (const auto &entity : entities)
     {
         auto &selection = *g_ecs.getComponent<TileSelectionComponent>(entity);
@@ -30,11 +31,9 @@ void TileSelectionSystem::deleteItems()
         DEBUG_ASSERT(location->hasTile(), "The location has no tile.");
         Tile *tile = location->getTile();
 
-        // All items on the tile are selected; we can delete the tile
-        bool allItemsSelected = selection.itemIndices.size() == tile->getItemCount();
-        if (allItemsSelected && selection.isGroundSelected())
+        if (selection.isAllSelected())
         {
-            location->removeTile();
+            toBeRemoved.emplace_back(location);
         }
         else
         {
@@ -49,6 +48,13 @@ void TileSelectionSystem::deleteItems()
             }
         }
     }
+
+    for (auto p : toBeRemoved)
+    {
+        p->removeTile();
+    }
+
+    g_ecs.removeAllComponents<TileSelectionComponent>();
 }
 
 std::vector<const char *> TileSelectionSystem::getRequiredComponents()

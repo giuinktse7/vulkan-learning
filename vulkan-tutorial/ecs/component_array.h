@@ -5,8 +5,11 @@
 
 #include "entity.h"
 #include "../debug.h"
+#include "../logger.h"
 
 #include <type_traits>
+
+constexpr size_t InitialCapacity = 32;
 
 class IComponentArray
 {
@@ -23,11 +26,13 @@ class ComponentArray : public IComponentArray
 public:
 	ComponentArray()
 	{
-		std::cout << "ComponentArray()" << std::endl;
+		components.reserve(InitialCapacity);
+		entityToComponentIndex.reserve(InitialCapacity);
+		componentIndexToEntity.reserve(InitialCapacity);
 	}
 	~ComponentArray() override
 	{
-		std::cout << "~ComponentArray()" << std::endl;
+		Logger::debug("~ComponentArray()");
 	}
 
 	void addComponent(Entity entity, T &component);
@@ -36,65 +41,100 @@ public:
 	void clear()
 	{
 		components.clear();
-		entityIndex.clear();
+		entityToComponentIndex.clear();
+		componentIndexToEntity.clear();
 	}
 
 	void removeComponent(Entity entity)
 	{
-		if (entityIndex.find(entity) != entityIndex.end())
-		{
-			size_t componentCount = components.size();
-			size_t removedIndex = entityIndex[entity];
-			if (std::is_move_assignable<T>::value && std::is_move_constructible<T>::value)
-			{
-				// components[removedIndex] = std::move(components.back());
-			}
-			else
-			{
-				// components[removedIndex] = components.back();
-			}
+		// if (entityToComponentIndex.find(entity) != entityToComponentIndex.end())
+		// {
+		// 	if (components.size() == 1)
+		// 	{
+		// 		clear();
+		// 	}
+		// 	else
+		// 	{
+		// 		size_t lastIndex = components.size() - 1;
+		// 		Entity entityToBeMoved = componentIndexToEntity.at(lastIndex);
 
-			components.pop_back();
-			entityIndex.erase(entity);
-		}
+		// 		size_t removedIndex = entityToComponentIndex[entity];
+		// 		if (std::is_move_assignable<T>::value && std::is_move_constructible<T>::value)
+		// 		{
+		// 			components.at(removedIndex) = std::move(components.back());
+		// 		}
+		// 		else
+		// 		{
+		// 			components.at(removedIndex) = components.back();
+		// 		}
+
+		// 		components.pop_back();
+		// 		entityToComponentIndex.erase(entity);
+		// 		entityToComponentIndex.at(entityToBeMoved) = removedIndex;
+
+		// 		componentIndexToEntity.erase(lastIndex);
+		// 		componentIndexToEntity.at(removedIndex) = entityToBeMoved;
+		// 	}
+		// }
+
+		DEBUG_ASSERT(entityToComponentIndex.find(entity) != entityToComponentIndex.end(), "Removing non-existent component.");
+
+		size_t removedIndex = entityToComponentIndex.at(entity);
+		size_t lastIndex = components.size() - 1;
+
+		components.at(removedIndex) = components.at(lastIndex);
+
+		Entity lastIndexEntity = componentIndexToEntity.at(lastIndex);
+		entityToComponentIndex.at(lastIndexEntity) = removedIndex;
+		componentIndexToEntity.at(removedIndex) = lastIndexEntity;
+
+		entityToComponentIndex.erase(entity);
+		componentIndexToEntity.erase(lastIndex);
+		components.pop_back();
 	}
 
 	void entityDestroyed(Entity entity) override
 	{
-		removeComponent(entity);
+		if (entityToComponentIndex.find(entity) != entityToComponentIndex.end())
+		{
+			removeComponent(entity);
+		}
 	}
 
 	bool hasComponent(Entity entity) const
 	{
-		return entityIndex.find(entity) != entityIndex.end();
+		return entityToComponentIndex.find(entity) != entityToComponentIndex.end();
 	}
 
 	T *getComponent(Entity entity)
 	{
 		// DEBUG_ASSERT(entityIndex.find(entity) != entityIndex.end(), "Entity " + std::to_string(entity.id) + " does not have a " + std::string(typeid(T).name()) + " component.");
 
-		return &components.at(entityIndex.at(entity));
+		return &components.at(entityToComponentIndex.at(entity));
 	}
 
 private:
 	std::vector<T> components;
-	std::unordered_map<Entity, size_t> entityIndex;
+	std::unordered_map<Entity, size_t> entityToComponentIndex;
+	std::unordered_map<size_t, Entity> componentIndexToEntity;
 };
 
 template <typename T>
 inline void ComponentArray<T>::addComponent(Entity entity, T &component)
 {
-	DEBUG_ASSERT(entityIndex.find(entity) == entityIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
+	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
 
 	components.push_back(component);
-	entityIndex.emplace(entity, components.size() - 1);
+	entityToComponentIndex.emplace(entity, components.size() - 1);
+	componentIndexToEntity.emplace(components.size() - 1, entity);
 }
 
 template <typename T>
 inline void ComponentArray<T>::addComponent(Entity entity, T &&component)
 {
-	DEBUG_ASSERT(entityIndex.find(entity) == entityIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
+	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
 
 	components.push_back(component);
-	entityIndex.emplace(entity, components.size() - 1);
+	entityToComponentIndex.emplace(entity, components.size() - 1);
+	componentIndexToEntity.emplace(components.size() - 1, entity);
 }

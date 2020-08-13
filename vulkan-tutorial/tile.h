@@ -44,18 +44,22 @@ public:
 	*/
 	size_t getEntityCount();
 
-	const Position &getPosition() const;
-	const uint32_t &getX() const;
-	const uint32_t &getY() const;
-	const uint32_t &getZ() const;
+	const Position getPosition() const;
+	long getX() const;
+	long getY() const;
+	long getZ() const;
 
 	uint16_t getMapFlags() const;
 	uint16_t getStatFlags() const;
+
+	Entity getOrCreateEntity();
 
 private:
 	TileLocation &tileLocation;
 	std::unique_ptr<Item> ground;
 	std::vector<std::unique_ptr<Item>> items;
+
+	void updateSelectionComponent() const;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
 	union
