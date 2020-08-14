@@ -259,15 +259,15 @@ std::string &Map::getDescription()
 
 void Map::createItemAt(Position pos, uint16_t id)
 {
-  auto item = Item::create(id);
+  Item item(id);
 
-  const SpriteInfo &spriteInfo = item->itemType->appearance->getSpriteInfo();
+  const SpriteInfo &spriteInfo = item.itemType->appearance->getSpriteInfo();
   if (spriteInfo.hasAnimation())
   {
     auto &anim = *spriteInfo.getAnimation();
     // std::cout << anim << std::endl;
     Entity entity = g_ecs.createEntity();
-    item->entity = entity;
+    item.entity = entity;
     g_ecs.addComponent(entity, ItemAnimationComponent(spriteInfo.getAnimation()));
   }
 

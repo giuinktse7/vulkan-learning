@@ -286,7 +286,7 @@ void GUI::createBottomBar()
     std::ostringstream tileInfoString;
     if (tile && tile->getTopItem())
     {
-      Item *topItem = tile->getTopItem();
+      const Item *topItem = tile->getTopItem();
       tileInfoString << "Item \"" << tile->getTopItem()->getName() << "\", id: " << topItem->getId() << ", cid: " << topItem->getClientId();
     }
     else

@@ -232,7 +232,7 @@ void MapIO::saveMap(Map &map)
           Item *ground = tile->getGround();
           if (ground->hasAttributes())
           {
-            serializer.serializeItem(ground);
+            serializer.serializeItem(*ground);
           }
           else
           {
@@ -240,14 +240,9 @@ void MapIO::saveMap(Map &map)
           }
         }
 
-        for (const auto &item : tile->getItems())
+        for (const Item &item : tile->getItems())
         {
-          if (!item)
-          {
-            ABORT_PROGRAM("An item stored by a tile was not present (nullptr).");
-          }
-
-          serializer.serializeItem(item.get());
+          serializer.serializeItem(item);
         }
 
         buffer.endNode();
@@ -292,34 +287,34 @@ void MapIO::saveMap(Map &map)
   stream.close();
 }
 
-void MapIO::Serializer::serializeItem(Item *item)
+void MapIO::Serializer::serializeItem(const Item &item)
 {
   buffer.startNode(OTBM_ITEM);
-  buffer.writeU16(item->getId());
+  buffer.writeU16(item.getId());
 
   serializeItemAttributes(item);
 
   buffer.endNode();
 }
 
-void MapIO::Serializer::serializeItemAttributes(Item *item)
+void MapIO::Serializer::serializeItemAttributes(const Item &item)
 {
   if (mapVersion.otbmVersion >= OTBMVersion::MAP_OTBM_2)
   {
-    const ItemType &itemType = *item->itemType;
+    const ItemType &itemType = *item.itemType;
     if (itemType.usesSubType())
     {
       buffer.writeU8(OTBM_ATTR_COUNT);
-      buffer.writeU8(item->getSubtype());
+      buffer.writeU8(item.getSubtype());
     }
   }
 
   if (mapVersion.otbmVersion >= OTBMVersion::MAP_OTBM_4)
   {
-    if (item->hasAttributes())
+    if (item.hasAttributes())
     {
       buffer.writeU8(OTBM_ATTR_ATTRIBUTE_MAP);
-      serializeItemAttributeMap(item->getAttributes());
+      serializeItemAttributeMap(item.getAttributes());
     }
   }
 }

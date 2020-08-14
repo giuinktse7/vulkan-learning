@@ -160,8 +160,8 @@ int main()
 {
 	try
 	{
-		testy();
-		return 0;
+		// testy();
+		// return 0;
 
 		engine::create();
 

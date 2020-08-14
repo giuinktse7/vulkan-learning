@@ -10,6 +10,33 @@ Item::Item(ItemTypeId itemTypeId)
 {
 	this->itemType = Items::items.getItemType(itemTypeId);
 }
+
+// std::optional<Entity> entity;
+// ItemType *itemType;
+// std::unordered_map<ItemAttribute_t, ItemAttribute> attributes;
+// uint16_t subtype = 1;
+
+Item::Item(Item &&other) noexcept
+		: entity(std::move(other.entity)),
+			itemType(other.itemType),
+			attributes(std::move(other.attributes)),
+			subtype(other.subtype)
+{
+	other.entity = {};
+}
+
+Item &Item::operator=(Item &&other) noexcept
+{
+	entity = std::move(other.entity);
+	itemType = other.itemType;
+	attributes = std::move(other.attributes);
+	subtype = other.subtype;
+
+	other.entity = {};
+
+	return *this;
+}
+
 Item::~Item()
 {
 	if (entity.has_value())
@@ -21,11 +48,6 @@ Item::~Item()
 	{
 		std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity: None" << std::endl;
 	}
-}
-
-std::unique_ptr<Item> Item::create(ItemTypeId serverId)
-{
-	return std::make_unique<Item>(serverId);
 }
 
 const TextureInfo Item::getTextureInfo(const Position &pos) const

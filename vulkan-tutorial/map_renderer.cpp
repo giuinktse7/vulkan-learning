@@ -409,7 +409,7 @@ void MapRenderer::drawMap(const MapView &mapView)
             TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
             if (tile && tile->hasTile())
             {
-              if (mapView.isSelectionMoved())
+              if (!mapView.isSelectionMoved())
               {
                 drawTile(*tile, mapView);
               }
@@ -504,20 +504,20 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
       continue;
     }
 
-    Item *item = items.at(i).get();
+    const Item &item = items.at(i);
 
     ObjectDrawInfo info;
-    info.appearance = item->itemType->appearance;
+    info.appearance = item.itemType->appearance;
     info.color = selection && selection->isItemIndexSelected(i) ? SelectedColor : DefaultColor;
     info.drawOffset = drawOffset;
     info.position = position;
-    info.textureInfo = item->getTextureInfo(position);
+    info.textureInfo = item.getTextureInfo(position);
 
     drawItem(info);
 
-    if (item->itemType->hasElevation())
+    if (item.itemType->hasElevation())
     {
-      uint32_t elevation = item->itemType->getElevation();
+      uint32_t elevation = item.itemType->getElevation();
       drawOffset.x -= elevation;
       drawOffset.y -= elevation;
     }

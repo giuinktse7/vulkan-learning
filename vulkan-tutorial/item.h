@@ -27,10 +27,13 @@ public:
 	Item(ItemTypeId serverId);
 	~Item();
 
-	Item(Item &&item) = default;
-	Item &operator=(Item &&item) = default;
+	Item(const Item &other) = delete;
+	Item &operator=(const Item &other) = delete;
 
-	static std::unique_ptr<Item> create(ItemTypeId serverId);
+	Item(Item &&other) noexcept;
+	Item &operator=(Item &&other) noexcept;
+
+	// Item(Item &&item) = default;
 
 	uint32_t getId() const
 	{
@@ -68,7 +71,7 @@ public:
 		return itemType->alwaysOnTopOrder;
 	}
 
-	const std::unordered_map<ItemAttribute_t, ItemAttribute> &getAttributes()
+	const std::unordered_map<ItemAttribute_t, ItemAttribute> &getAttributes() const
 	{
 		return attributes;
 	}
@@ -77,8 +80,4 @@ private:
 	std::unordered_map<ItemAttribute_t, ItemAttribute> attributes;
 	// Subtype is either fluid type, count, subtype, or charges.
 	uint16_t subtype = 1;
-
-	Item &operator=(const Item &i) = delete;
-	Item(const Item &i) = delete;
-	Item &operator==(const Item &i) = delete;
 };

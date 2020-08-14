@@ -146,8 +146,8 @@ namespace MapIO
 	public:
 		Serializer(SaveBuffer &buffer, MapVersion mapVersion)
 				: buffer(buffer), mapVersion(mapVersion) {}
-		void serializeItem(Item *item);
-		void serializeItemAttributes(Item *item);
+		void serializeItem(const Item &item);
+		void serializeItemAttributes(const Item &item);
 		void serializeItemAttributeMap(const std::unordered_map<ItemAttribute_t, ItemAttribute> &attributes);
 		void serializeItemAttribute(ItemAttribute &attribute);
 

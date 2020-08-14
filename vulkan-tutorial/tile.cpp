@@ -31,11 +31,11 @@ Item *Tile::getGround() const
   return ground.get();
 }
 
-Item *Tile::getTopItem() const
+const Item *Tile::getTopItem() const
 {
   if (items.size() > 0)
   {
-    return items.back().get();
+    return &items.back();
   }
   if (ground)
   {
@@ -45,26 +45,26 @@ Item *Tile::getTopItem() const
   return nullptr;
 }
 
-void Tile::addItem(std::unique_ptr<Item> item)
+void Tile::addItem(Item &&item)
 {
-  std::cout << "Toporder: " << item->getTopOrder() << std::endl;
+  std::cout << "Toporder: " << item.getTopOrder() << std::endl;
 
-  if (item->isGround())
+  if (item.isGround())
   {
-    this->ground = std::move(item);
+    this->ground = std::make_unique<Item>(std::move(item));
     return;
   }
 
-  std::vector<std::unique_ptr<Item>>::iterator cursor;
+  std::vector<Item>::iterator cursor;
 
-  if (item->itemType->alwaysOnTop)
+  if (item.itemType->alwaysOnTop)
   {
     cursor = items.begin();
     while (cursor != items.end())
     {
-      if ((*cursor)->itemType->alwaysOnTop)
+      if (cursor->itemType->alwaysOnTop)
       {
-        if (item->getTopOrder() < (*cursor)->getTopOrder())
+        if (item.getTopOrder() < cursor->getTopOrder())
         {
           break;
         }
@@ -81,7 +81,6 @@ void Tile::addItem(std::unique_ptr<Item> item)
     cursor = items.end();
   }
 
-  // TODO Is the move unnecessary?
   items.insert(cursor, std::move(item));
   updateSelectionComponent();
 }
@@ -145,7 +144,7 @@ int Tile::getTopElevation() const
       items.begin(),
       items.end(),
       0,
-      [](int elevation, const std::unique_ptr<Item> &next) { return elevation + next->itemType->getElevation(); });
+      [](int elevation, const Item &next) { return elevation + next.itemType->getElevation(); });
 }
 
 Entity Tile::getOrCreateEntity()

@@ -21,16 +21,16 @@ public:
 	Tile &operator=(const Tile &) = delete;
 	Tile(Tile &&other) noexcept;
 
-	Item *getTopItem() const;
+	const Item *getTopItem() const;
 	Item *getGround() const;
 
-	void addItem(std::unique_ptr<Item> item);
+	void addItem(Item &&item);
 	void removeItem(size_t index);
 	void removeGround();
 
 	int getTopElevation() const;
 
-	const std::vector<std::unique_ptr<Item>> &getItems() const
+	const std::vector<Item> &getItems() const
 	{
 		return items;
 	}
@@ -58,7 +58,7 @@ public:
 private:
 	TileLocation &tileLocation;
 	std::unique_ptr<Item> ground;
-	std::vector<std::unique_ptr<Item>> items;
+	std::vector<Item> items;
 
 	void updateSelectionComponent() const;
 
