@@ -426,7 +426,7 @@ void MapRenderer::drawMap(const MapView &mapView)
 
 void MapRenderer::drawMovedSelection(const MapView &mapView)
 {
-  g_ecs.getSystem<TileSelectionSystem>().
+  // g_ecs.getSystem<TileSelectionSystem>().
 }
 
 void MapRenderer::drawPreviewCursor(const MapView &mapView)

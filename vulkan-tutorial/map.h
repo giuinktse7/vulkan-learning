@@ -18,6 +18,7 @@
 #include "version.h"
 
 #include <stack>
+#include <optional>
 
 class MapIterator
 {
@@ -94,6 +95,11 @@ public:
 	MapIterator begin();
 	MapIterator end();
 
+	/*
+		Replace the tile at the given tile's location. Returns the old tile if one
+		was present.
+	*/
+	std::unique_ptr<Tile> replaceTile(Tile &&tile);
 	Tile &getOrCreateTile(int x, int y, int z);
 	Tile &getOrCreateTile(Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;

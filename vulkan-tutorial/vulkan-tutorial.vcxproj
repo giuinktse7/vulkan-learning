@@ -162,6 +162,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="action\action.cpp" />
     <ClCompile Include="ecs\ecs.cpp" />
     <ClCompile Include="ecs\item_animation.cpp" />
     <ClCompile Include="ecs\item_selection.cpp" />
@@ -213,6 +214,7 @@
     <ClCompile Include="graphics\vulkan_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="action\action.h" />
     <ClInclude Include="definitions.h" />
     <ClInclude Include="ecs\component_array.h" />
     <ClInclude Include="ecs\entity.h" />

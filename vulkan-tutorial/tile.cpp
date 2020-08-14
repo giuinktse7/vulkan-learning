@@ -11,6 +11,12 @@ Tile::Tile(TileLocation &tileLocation)
   // cout << "Tile()" << endl;
 }
 
+Tile::Tile(Tile &&other) noexcept
+    : items(std::move(other.items)),
+      entity(std::move(other.entity)),
+      ground(std::move(other.ground)),
+      tileLocation(tileLocation){};
+
 Tile::~Tile()
 {
   if (entity.has_value())

@@ -4,6 +4,7 @@
 #include <array>
 #include <memory>
 
+#include "position.h"
 #include "tile_location.h"
 #include "const.h"
 
@@ -54,8 +55,11 @@ namespace quadtree
 		Node *getLeafUnsafe(int x, int y) const;
 		TileLocation *getTile(int x, int y, int z) const;
 
+		Floor &getOrCreateFloor(Position pos);
 		Floor &getOrCreateFloor(int x, int y, int z);
 		Floor *getFloor(uint32_t z) const;
+
+		TileLocation &getOrCreateTileLocation(Position pos);
 
 		bool isLeaf() const;
 		bool isRoot() const;
@@ -65,8 +69,7 @@ namespace quadtree
 
 	protected:
 		NodeType nodeType = NodeType::Root;
-		union
-		{
+		union {
 			std::array<std::unique_ptr<Node>, MAP_TREE_CHILDREN_COUNT> nodes{};
 			std::array<std::unique_ptr<Floor>, MAP_TREE_CHILDREN_COUNT> children;
 		};

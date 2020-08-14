@@ -65,6 +65,11 @@ TileLocation &Floor::getTileLocation(uint32_t index)
   return locations[index];
 }
 
+Floor &Node::getOrCreateFloor(Position pos)
+{
+  return getOrCreateFloor(pos.x, pos.y, pos.z);
+}
+
 Floor &Node::getOrCreateFloor(int x, int y, int z)
 {
   DEBUG_ASSERT(isLeaf(), "Only leaf nodes can create a floor.");
@@ -75,6 +80,18 @@ Floor &Node::getOrCreateFloor(int x, int y, int z)
   }
 
   return *children[z];
+}
+
+TileLocation &Node::getOrCreateTileLocation(Position pos)
+{
+  DEBUG_ASSERT(isLeaf(), "Only leaf nodes can create a tile location.");
+
+  if (!children[pos.z])
+  {
+    children[pos.z] = std::make_unique<Floor>(pos.x, pos.y, pos.z);
+  }
+
+  return children[pos.z]->getTileLocation(pos.x, pos.y);
 }
 
 Floor::Floor(int x, int y, int z)

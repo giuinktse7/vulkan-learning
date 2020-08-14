@@ -86,34 +86,83 @@ void populateTestMap()
 	// }
 }
 
-class X
-{
-};
-
-class Y
-{
-};
-
-enum class AllKeys
-{
-	Ctrl,
-	Alt,
-	P
-};
 #include <functional>
 
 constexpr int IdleFrameTime = 1000 / 60;
 
 #include "type_trait.h"
 
-void panCamera(Input *input)
+class ItemMock
 {
+public:
+	ItemMock(std::string name) : name(name) {}
+	~ItemMock() { std::cout << "~ItemMock(" << name << ")" << std::endl; }
+	ItemMock(ItemMock &&other) : name(std::move(other.name))
+	{
+	}
+
+	std::string name;
+};
+
+class TileLocationMock
+{
+public:
+	TileLocationMock(std::string s) : s(s) {}
+	TileLocationMock(const TileLocationMock &) = delete;
+	TileLocationMock &operator=(const TileLocationMock &) = delete;
+
+	std::string s;
+};
+
+class TileMock
+{
+public:
+	TileMock(TileLocationMock &location) : location(location) {}
+	TileMock(const TileMock &) = delete;
+	TileMock(TileMock &&other) : location(other.location)
+	{
+		items = std::move(other.items);
+		std::cout << "After" << std::endl;
+	};
+	TileMock &operator=(const TileMock &) = delete;
+
+	TileLocationMock &location;
+	std::vector<ItemMock> items;
+
+	TileMock deepCopy()
+	{
+		TileMock copy = TileMock(this->location);
+		return copy;
+	}
+};
+
+class ChangeMock
+{
+public:
+	ChangeMock(TileMock &&tile) : data(std::move(tile)) {}
+	std::variant<TileMock> data;
+};
+
+void testy()
+{
+	TileLocationMock loc("test");
+	TileMock tile(loc);
+	tile.items.emplace_back("what");
+	tile.items.emplace_back("is");
+	tile.items.emplace_back("this");
+
+	ChangeMock change(std::move(tile));
+
+	std::cout << std::get<TileMock>(change.data).location.s << std::endl;
 }
 
 int main()
 {
 	try
 	{
+		testy();
+		return 0;
+
 		engine::create();
 
 		// Register animation

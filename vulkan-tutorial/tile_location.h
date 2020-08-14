@@ -15,6 +15,8 @@ public:
 	TileLocation(const TileLocation &) = delete;
 	TileLocation &operator=(const TileLocation &) = delete;
 
+	std::unique_ptr<Tile> replaceTile(Tile &&tile);
+
 	Tile *getTile() const;
 	const bool hasTile() const;
 

@@ -32,3 +32,10 @@ void TileLocation::removeTile()
 {
   this->tile = nullptr;
 }
+
+std::unique_ptr<Tile> TileLocation::replaceTile(Tile &&newTile)
+{
+  std::unique_ptr<Tile> old = std::move(this->tile);
+  this->tile = std::make_unique<Tile>(std::move(newTile));
+  return old;
+}

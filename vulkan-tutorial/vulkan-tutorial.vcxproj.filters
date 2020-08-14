@@ -162,6 +162,9 @@
     <ClCompile Include="position.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="action\action.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h">
@@ -315,6 +318,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="map_view.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="action\action.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

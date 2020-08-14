@@ -19,6 +19,7 @@ public:
 
 	Tile(const Tile &) = delete;
 	Tile &operator=(const Tile &) = delete;
+	Tile(Tile &&other) noexcept;
 
 	Item *getTopItem() const;
 	Item *getGround() const;
@@ -62,8 +63,7 @@ private:
 	void updateSelectionComponent() const;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
-	union
-	{
+	union {
 		struct
 		{
 			uint16_t mapflags;

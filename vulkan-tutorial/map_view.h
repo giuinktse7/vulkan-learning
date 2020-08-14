@@ -11,6 +11,8 @@
 #include "camera.h"
 #include "position.h"
 
+#include "action/action.h"
+
 struct Viewport
 {
 	struct BoundingRect

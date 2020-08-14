@@ -22,6 +22,14 @@ Tile &Map::getOrCreateTile(Position &pos)
   return getOrCreateTile(pos.x, pos.y, pos.z);
 }
 
+std::unique_ptr<Tile> Map::replaceTile(Tile &&tile)
+{
+  auto pos = tile.getPosition();
+  TileLocation &location = root.getOrCreateTileLocation(tile.getPosition());
+
+  return location.replaceTile(std::move(tile));
+}
+
 void Map::removeTile(Position pos)
 {
   auto leaf = root.getLeafUnsafe(pos.x, pos.y);
