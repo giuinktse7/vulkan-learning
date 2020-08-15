@@ -21,7 +21,7 @@
 
 #include <algorithm>
 
-constexpr uint32_t DEFAULT_PADDING = 4.0f;
+constexpr float DEFAULT_PADDING = 4.0f;
 
 void GUI::renderItem(ItemType *itemType)
 {
