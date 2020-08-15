@@ -35,7 +35,7 @@ void ItemAnimationComponent::synchronizePhase()
   long long res = elapsedTimeMs - (animationInfo->phases[phaseIndex].maxDuration + timeDiff);
   this->state.lastUpdateTime = g_engine->startTime.forwardMs(res);
 
-  std::cout << "lastUpdateTime: " << res << ", elapsedTimeMs: " << elapsedTimeMs << ", startTimeDiff: " << startTimeDiff << ", timeDiff: " << timeDiff << ", startPhase: " << phaseIndex << std::endl;
+  // std::cout << "lastUpdateTime: " << res << ", elapsedTimeMs: " << elapsedTimeMs << ", startTimeDiff: " << startTimeDiff << ", timeDiff: " << timeDiff << ", startPhase: " << phaseIndex << std::endl;
 
   return;
 }

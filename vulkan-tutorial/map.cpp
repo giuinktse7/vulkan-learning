@@ -25,7 +25,8 @@ Tile &Map::getOrCreateTile(Position &pos)
 std::unique_ptr<Tile> Map::replaceTile(Tile &&tile)
 {
   auto pos = tile.getPosition();
-  TileLocation &location = root.getOrCreateTileLocation(tile.getPosition());
+  auto &leaf = root.getLeafWithCreate(pos.x, pos.y);
+  TileLocation &location = leaf.getOrCreateTileLocation(tile.getPosition());
 
   return location.replaceTile(std::move(tile));
 }
@@ -266,9 +267,8 @@ void Map::createItemAt(Position pos, uint16_t id)
   {
     auto &anim = *spriteInfo.getAnimation();
     // std::cout << anim << std::endl;
-    Entity entity = g_ecs.createEntity();
-    item.entity = entity;
-    g_ecs.addComponent(entity, ItemAnimationComponent(spriteInfo.getAnimation()));
+    ecs::EntityId entityId = item.assignNewEntityId();
+    g_ecs.addComponent(entityId, ItemAnimationComponent(spriteInfo.getAnimation()));
   }
 
   getOrCreateTile(pos).addItem(std::move(item));

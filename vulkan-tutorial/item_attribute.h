@@ -19,7 +19,7 @@ class ItemAttribute
 {
 public:
   ItemAttribute(ItemAttribute_t type);
-  const ItemAttribute_t type;
+  ItemAttribute_t type;
 
   template <typename T>
   bool holds() const

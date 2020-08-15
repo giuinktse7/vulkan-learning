@@ -34,11 +34,14 @@ public:
 	MapView(GLFWwindow *window);
 
 	std::optional<Position> moveSelectionOrigin;
+	EditorHistory history;
 
 	Map *getMap() const
 	{
 		return map.get();
 	}
+
+	void addItem(Position pos, uint16_t id);
 
 	bool isSelectionMoved() const
 	{
@@ -62,6 +65,11 @@ public:
 	uint32_t getZ() const
 	{
 		return static_cast<uint32_t>(camera.position.z);
+	}
+
+	void undo()
+	{
+		history.undoLast();
 	}
 
 	/*

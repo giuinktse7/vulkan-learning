@@ -73,6 +73,360 @@ VkCommandBuffer MapRenderer::getCommandBuffer()
   return currentFrame->commandBuffer;
 }
 
+void MapRenderer::drawBatches()
+{
+
+  VkDeviceSize offsets[] = {0};
+  VkBuffer buffers[] = {nullptr};
+
+  std::array<VkDescriptorSet, 2> descriptorSets = {
+      currentFrame->descriptorSet,
+      nullptr};
+
+  vkCmdBindIndexBuffer(currentFrame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+  for (auto &batch : currentFrame->batchDraw.getBatches())
+  {
+    if (!batch.isValid())
+      break;
+
+    buffers[0] = batch.buffer.buffer;
+    vkCmdBindVertexBuffers(currentFrame->commandBuffer, 0, 1, buffers, offsets);
+
+    uint32_t offset = 0;
+    for (const auto &descriptorInfo : batch.descriptorIndices)
+    {
+      descriptorSets[1] = descriptorInfo.descriptor;
+
+      vkCmdBindDescriptorSets(currentFrame->commandBuffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout,
+                              0,
+                              static_cast<uint32_t>(descriptorSets.size()),
+                              descriptorSets.data(),
+                              0,
+                              nullptr);
+
+      // 4 is vertices for one sprite.
+      uint32_t sprites = (descriptorInfo.end - offset + 1) / 4;
+      for (uint32_t spriteIndex = 0; spriteIndex < sprites; ++spriteIndex)
+      {
+        vkCmdDrawIndexed(currentFrame->commandBuffer, 6, 1, 0, offset + spriteIndex * 4, 0);
+      }
+
+      offset = descriptorInfo.end + 1;
+    }
+
+    batch.invalidate();
+  }
+}
+
+void MapRenderer::recordFrame(uint32_t frameIndex, MapView &mapView)
+{
+
+  this->currentFrame = &frames[frameIndex];
+  if (!currentFrame->commandBuffer)
+  {
+    startCommandBuffer();
+  }
+
+  vkResetCommandBuffer(currentFrame->commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  if (vkBeginCommandBuffer(currentFrame->commandBuffer, &beginInfo) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to begin recording command buffer");
+  }
+
+  currentFrame->batchDraw.commandBuffer = currentFrame->commandBuffer;
+
+  vkCmdBindPipeline(currentFrame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+  updateUniformBuffer(mapView);
+
+  drawMap(mapView);
+
+  currentFrame->batchDraw.prepareDraw();
+
+  beginRenderPass();
+  drawBatches();
+  vkCmdEndRenderPass(currentFrame->commandBuffer);
+
+  if (vkEndCommandBuffer(currentFrame->commandBuffer) != VK_SUCCESS)
+  {
+    ABORT_PROGRAM("failed to record command buffer");
+  }
+}
+
+void MapRenderer::drawMap(const MapView &mapView)
+{
+  // std::cout << std::endl << "drawMap()" << std::endl;
+  const auto mapRect = mapView.getGameBoundingRect();
+  int floor = mapView.getZ();
+
+  bool aboveGround = floor <= 7;
+
+  int startZ = aboveGround ? GROUND_FLOOR : MAP_LAYERS - 1;
+  int endZ = aboveGround ? floor : GROUND_FLOOR + 1;
+
+  for (int mapZ = startZ; mapZ >= endZ; --mapZ)
+  {
+    int x1 = mapRect.x1 & ~3;
+    int x2 = (mapRect.x2 & ~3) + 4;
+
+    int y1 = mapRect.y1 & ~3;
+    int y2 = (mapRect.y2 & ~3) + 4;
+
+    for (int mapX = x1; mapX <= x2; mapX += 4)
+    {
+      for (int mapY = y1; mapY <= y2; mapY += 4)
+      {
+        quadtree::Node *node = mapView.getMap()->getLeafUnsafe(mapX, mapY);
+        if (!node)
+          continue;
+
+        for (int x = 0; x < 4; ++x)
+        {
+          for (int y = 0; y < 4; ++y)
+          {
+            TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
+            if (tile && tile->hasTile())
+            {
+              bool selected = tile->getTile()->hasComponent<TileSelectionComponent>();
+              bool isSelectionMoved = mapView.isSelectionMoved();
+              
+              if (!(selected && isSelectionMoved))
+              {
+                drawTile(*tile, mapView, ItemDrawFlags::DrawSelected);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  drawPreviewCursor(mapView);
+  drawMovedSelection(mapView);
+}
+
+void MapRenderer::drawMovedSelection(const MapView &mapView)
+{
+  // g_ecs.getSystem<TileSelectionSystem>().
+}
+
+void MapRenderer::drawPreviewCursor(const MapView &mapView)
+{
+  if (!g_engine->getSelectedServerId().has_value())
+    return;
+
+  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
+
+  Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
+
+  Tile *tile = mapView.getMap()->getTile(pos);
+
+  int elevation = tile ? tile->getTopElevation() : 0;
+
+  ObjectDrawInfo drawInfo;
+  drawInfo.appearance = selectedItemType.appearance;
+  drawInfo.color = PreviewCursorColor;
+  drawInfo.drawOffset = {-elevation, -elevation};
+  drawInfo.position = pos;
+  drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
+
+  drawItem(drawInfo);
+}
+
+void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags)
+{
+  auto position = tileLocation.getPosition();
+  auto tile = tileLocation.getTile();
+
+  TileSelectionComponent *selection = tile->getComponent<TileSelectionComponent>();
+
+  bool drawSelected = drawFlags & ItemDrawFlags::DrawSelected;
+
+  Position selectionMovePosDelta{};
+  if (mapView.moveSelectionOrigin.has_value())
+  {
+    selectionMovePosDelta = g_engine->getCursorPos().toPos(mapView) - mapView.moveSelectionOrigin.value();
+  }
+
+  if (tile->getGround())
+  {
+    bool groundSelected = selection && selection->isGroundSelected();
+    if (drawSelected || !groundSelected)
+    {
+      Item *ground = tile->getGround();
+      ObjectDrawInfo info;
+      info.appearance = ground->itemType->appearance;
+      info.position = position;
+      info.color = groundSelected ? SelectedColor : DefaultColor;
+      info.textureInfo = ground->getTextureInfo(position);
+
+      if (groundSelected)
+      {
+        info.position += selectionMovePosDelta;
+      }
+
+      drawItem(info);
+    }
+  }
+
+  DrawOffset drawOffset{0, 0};
+  auto &items = tile->getItems();
+
+  // The index i is necessary to check whether the item is selected (can't use range-based loop because of this)
+  for (size_t i = 0; i < items.size(); ++i)
+  {
+    bool itemSelected = selection && selection->isItemIndexSelected(i);
+    if (itemSelected && !drawSelected)
+    {
+      continue;
+    }
+
+    const Item &item = items.at(i);
+
+    ObjectDrawInfo info;
+    info.appearance = item.itemType->appearance;
+    info.color = selection && selection->isItemIndexSelected(i) ? SelectedColor : DefaultColor;
+    info.drawOffset = drawOffset;
+    info.position = position;
+    info.textureInfo = item.getTextureInfo(position);
+
+    drawItem(info);
+
+    if (item.itemType->hasElevation())
+    {
+      uint32_t elevation = item.itemType->getElevation();
+      drawOffset.x -= elevation;
+      drawOffset.y -= elevation;
+    }
+  }
+}
+
+void MapRenderer::updateUniformBuffer(const MapView &mapView)
+{
+  const Viewport viewport = mapView.getViewport();
+  glm::mat4 projection = glm::translate(
+      glm::ortho(0.0f, viewport.width * viewport.zoom, viewport.height * viewport.zoom, 0.0f),
+      glm::vec3(-std::floor(viewport.offsetX), -std::floor(viewport.offsetY), 0.0f));
+  ItemUniformBufferObject uniformBufferObject{projection};
+
+  void *data;
+  g_engine->mapMemory(currentFrame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
+  memcpy(data, &uniformBufferObject, sizeof(ItemUniformBufferObject));
+  vkUnmapMemory(g_engine->getDevice(), currentFrame->uniformBuffer.deviceMemory);
+}
+
+void MapRenderer::createFrameBuffers()
+{
+  uint32_t imageViewCount = g_engine->getImageCount();
+
+  for (uint32_t i = 0; i < imageViewCount; ++i)
+  {
+    VkImageView attachments[] = {
+        g_engine->getSwapChain().getImageView(i)};
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = attachments;
+    framebufferInfo.width = g_engine->getWidth();
+    framebufferInfo.height = g_engine->getHeight();
+    framebufferInfo.layers = 1;
+
+    if (vkCreateFramebuffer(g_engine->getDevice(), &framebufferInfo, nullptr, &frames[i].frameBuffer) != VK_SUCCESS)
+    {
+      throw std::runtime_error("failed to create framebuffer!");
+    }
+  }
+}
+
+void MapRenderer::drawItem(ObjectDrawInfo &info)
+{
+  currentFrame->batchDraw.push(info);
+}
+
+/**
+ * 
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * Start of Vulkan rendering setup/teardown
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ *
+ **/
+void MapRenderer::beginRenderPass()
+{
+  VkRenderPassBeginInfo renderPassInfo = {};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.renderPass = renderPass;
+  renderPassInfo.framebuffer = currentFrame->frameBuffer;
+  renderPassInfo.renderArea.offset = {0, 0};
+  renderPassInfo.renderArea.extent = g_engine->getSwapChain().getExtent();
+  renderPassInfo.clearValueCount = 1;
+  VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
+  renderPassInfo.pClearValues = &clearValue;
+
+  vkCmdBeginRenderPass(currentFrame->commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void MapRenderer::startCommandBuffer()
+{
+  VkCommandBufferAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = 1;
+
+  VkCommandBuffer &commandBuffer = currentFrame->commandBuffer;
+
+  if (vkAllocateCommandBuffers(g_engine->getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to allocate command buffer");
+  }
+}
+
+void MapRenderer::cleanup()
+{
+  for (auto &frame : frames)
+  {
+    vkDestroyFramebuffer(g_engine->getDevice(), frame.frameBuffer, nullptr);
+    frame.frameBuffer = VK_NULL_HANDLE;
+  }
+
+  for (auto &frame : frames)
+  {
+    vkFreeCommandBuffers(
+        g_engine->getDevice(),
+        commandPool,
+        1,
+        &frame.commandBuffer);
+    frame.commandBuffer = VK_NULL_HANDLE;
+  }
+
+  vkDestroyPipeline(g_engine->getDevice(), graphicsPipeline, nullptr);
+  vkDestroyPipelineLayout(g_engine->getDevice(), pipelineLayout, nullptr);
+  vkDestroyRenderPass(g_engine->getDevice(), renderPass, nullptr);
+}
+
+void MapRenderer::recreate()
+{
+  cleanup();
+
+  createRenderPass();
+  createGraphicsPipeline();
+  createFrameBuffers();
+}
+
 void MapRenderer::createRenderPass()
 {
   VkAttachmentDescription colorAttachment{};
@@ -254,350 +608,6 @@ void MapRenderer::createGraphicsPipeline()
 
   vkDestroyShaderModule(g_engine->getDevice(), fragShaderModule, nullptr);
   vkDestroyShaderModule(g_engine->getDevice(), vertShaderModule, nullptr);
-}
-
-void MapRenderer::drawBatches()
-{
-
-  VkDeviceSize offsets[] = {0};
-  VkBuffer buffers[] = {nullptr};
-
-  std::array<VkDescriptorSet, 2> descriptorSets = {
-      currentFrame->descriptorSet,
-      nullptr};
-
-  vkCmdBindIndexBuffer(currentFrame->commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-
-  for (auto &batch : currentFrame->batchDraw.getBatches())
-  {
-    if (!batch.isValid())
-      break;
-
-    buffers[0] = batch.buffer.buffer;
-    vkCmdBindVertexBuffers(currentFrame->commandBuffer, 0, 1, buffers, offsets);
-
-    uint32_t offset = 0;
-    for (const auto &descriptorInfo : batch.descriptorIndices)
-    {
-      descriptorSets[1] = descriptorInfo.descriptor;
-
-      vkCmdBindDescriptorSets(currentFrame->commandBuffer,
-                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              pipelineLayout,
-                              0,
-                              static_cast<uint32_t>(descriptorSets.size()),
-                              descriptorSets.data(),
-                              0,
-                              nullptr);
-
-      // 4 is vertices for one sprite.
-      uint32_t sprites = (descriptorInfo.end - offset + 1) / 4;
-      for (uint32_t spriteIndex = 0; spriteIndex < sprites; ++spriteIndex)
-      {
-        vkCmdDrawIndexed(currentFrame->commandBuffer, 6, 1, 0, offset + spriteIndex * 4, 0);
-      }
-
-      offset = descriptorInfo.end + 1;
-    }
-
-    batch.invalidate();
-  }
-}
-
-void MapRenderer::beginRenderPass()
-{
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = renderPass;
-  renderPassInfo.framebuffer = currentFrame->frameBuffer;
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = g_engine->getSwapChain().getExtent();
-  renderPassInfo.clearValueCount = 1;
-  VkClearValue clearValue = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
-  renderPassInfo.pClearValues = &clearValue;
-
-  vkCmdBeginRenderPass(currentFrame->commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-}
-
-void MapRenderer::startCommandBuffer()
-{
-  VkCommandBufferAllocateInfo allocInfo = {};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = commandPool;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = 1;
-
-  VkCommandBuffer &commandBuffer = currentFrame->commandBuffer;
-
-  if (vkAllocateCommandBuffers(g_engine->getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to allocate command buffer");
-  }
-}
-
-void MapRenderer::recordFrame(uint32_t frameIndex, MapView &mapView)
-{
-
-  this->currentFrame = &frames[frameIndex];
-  if (!currentFrame->commandBuffer)
-  {
-    startCommandBuffer();
-  }
-
-  vkResetCommandBuffer(currentFrame->commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  if (vkBeginCommandBuffer(currentFrame->commandBuffer, &beginInfo) != VK_SUCCESS)
-  {
-    throw std::runtime_error("failed to begin recording command buffer");
-  }
-
-  currentFrame->batchDraw.commandBuffer = currentFrame->commandBuffer;
-
-  vkCmdBindPipeline(currentFrame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-  updateUniformBuffer(mapView);
-
-  drawMap(mapView);
-
-  currentFrame->batchDraw.prepareDraw();
-
-  beginRenderPass();
-  drawBatches();
-  vkCmdEndRenderPass(currentFrame->commandBuffer);
-
-  if (vkEndCommandBuffer(currentFrame->commandBuffer) != VK_SUCCESS)
-  {
-    ABORT_PROGRAM("failed to record command buffer");
-  }
-}
-
-void MapRenderer::drawMap(const MapView &mapView)
-{
-  // std::cout << std::endl << "drawMap()" << std::endl;
-  const auto mapRect = mapView.getGameBoundingRect();
-  int floor = mapView.getZ();
-
-  bool aboveGround = floor <= 7;
-
-  int startZ = aboveGround ? GROUND_FLOOR : MAP_LAYERS - 1;
-  int endZ = aboveGround ? floor : GROUND_FLOOR + 1;
-
-  for (int mapZ = startZ; mapZ >= endZ; --mapZ)
-  {
-    int x1 = mapRect.x1 & ~3;
-    int x2 = (mapRect.x2 & ~3) + 4;
-
-    int y1 = mapRect.y1 & ~3;
-    int y2 = (mapRect.y2 & ~3) + 4;
-
-    for (int mapX = x1; mapX <= x2; mapX += 4)
-    {
-      for (int mapY = y1; mapY <= y2; mapY += 4)
-      {
-        quadtree::Node *node = mapView.getMap()->getLeafUnsafe(mapX, mapY);
-        if (!node)
-          continue;
-
-        for (int x = 0; x < 4; ++x)
-        {
-          for (int y = 0; y < 4; ++y)
-          {
-            TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
-            if (tile && tile->hasTile())
-            {
-              if (!mapView.isSelectionMoved())
-              {
-                drawTile(*tile, mapView);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  drawPreviewCursor(mapView);
-  drawMovedSelection(mapView);
-}
-
-void MapRenderer::drawMovedSelection(const MapView &mapView)
-{
-  // g_ecs.getSystem<TileSelectionSystem>().
-}
-
-void MapRenderer::drawPreviewCursor(const MapView &mapView)
-{
-  if (!g_engine->getSelectedServerId().has_value())
-    return;
-
-  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
-
-  Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
-
-  Tile *tile = mapView.getMap()->getTile(pos);
-
-  int elevation = tile ? tile->getTopElevation() : 0;
-
-  ObjectDrawInfo drawInfo;
-  drawInfo.appearance = selectedItemType.appearance;
-  drawInfo.color = PreviewCursorColor;
-  drawInfo.drawOffset = {-elevation, -elevation};
-  drawInfo.position = pos;
-  drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
-
-  drawItem(drawInfo);
-}
-
-void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags)
-{
-  auto position = tileLocation.getPosition();
-  auto tile = tileLocation.getTile();
-
-  TileSelectionComponent *selection = nullptr;
-  if (tile->entity.has_value())
-  {
-    selection = g_ecs.getComponent<TileSelectionComponent>(tile->entity.value());
-  }
-
-  bool drawSelected = drawFlags & ItemDrawFlags::DrawSelected;
-
-  Position selectionMovePosDelta{};
-  if (mapView.moveSelectionOrigin.has_value())
-  {
-    selectionMovePosDelta = g_engine->getCursorPos().toPos(mapView) - mapView.moveSelectionOrigin.value();
-  }
-
-  if (tile->getGround())
-  {
-    bool groundSelected = selection && selection->isGroundSelected();
-    if (drawSelected || !groundSelected)
-    {
-      Item *ground = tile->getGround();
-      ObjectDrawInfo info;
-      info.appearance = ground->itemType->appearance;
-      info.position = position;
-      info.color = groundSelected ? SelectedColor : DefaultColor;
-      info.textureInfo = ground->getTextureInfo(position);
-
-      if (groundSelected)
-      {
-        info.position += selectionMovePosDelta;
-      }
-
-      drawItem(info);
-    }
-  }
-
-  DrawOffset drawOffset{0, 0};
-  auto &items = tile->getItems();
-
-  // The index i is necessary to check whether the item is selected (can't use range-based loop because of this)
-  for (size_t i = 0; i < items.size(); ++i)
-  {
-    bool itemSelected = selection && selection->isItemIndexSelected(i);
-    if (itemSelected && !drawSelected)
-    {
-      continue;
-    }
-
-    const Item &item = items.at(i);
-
-    ObjectDrawInfo info;
-    info.appearance = item.itemType->appearance;
-    info.color = selection && selection->isItemIndexSelected(i) ? SelectedColor : DefaultColor;
-    info.drawOffset = drawOffset;
-    info.position = position;
-    info.textureInfo = item.getTextureInfo(position);
-
-    drawItem(info);
-
-    if (item.itemType->hasElevation())
-    {
-      uint32_t elevation = item.itemType->getElevation();
-      drawOffset.x -= elevation;
-      drawOffset.y -= elevation;
-    }
-  }
-}
-
-void MapRenderer::updateUniformBuffer(const MapView &mapView)
-{
-  const Viewport viewport = mapView.getViewport();
-  glm::mat4 projection = glm::translate(
-      glm::ortho(0.0f, viewport.width * viewport.zoom, viewport.height * viewport.zoom, 0.0f),
-      glm::vec3(-std::floor(viewport.offsetX), -std::floor(viewport.offsetY), 0.0f));
-  ItemUniformBufferObject uniformBufferObject{projection};
-
-  void *data;
-  g_engine->mapMemory(currentFrame->uniformBuffer.deviceMemory, 0, sizeof(ItemUniformBufferObject), 0, &data);
-  memcpy(data, &uniformBufferObject, sizeof(ItemUniformBufferObject));
-  vkUnmapMemory(g_engine->getDevice(), currentFrame->uniformBuffer.deviceMemory);
-}
-
-void MapRenderer::createFrameBuffers()
-{
-  uint32_t imageViewCount = g_engine->getImageCount();
-
-  for (uint32_t i = 0; i < imageViewCount; ++i)
-  {
-    VkImageView attachments[] = {
-        g_engine->getSwapChain().getImageView(i)};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = renderPass;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = attachments;
-    framebufferInfo.width = g_engine->getWidth();
-    framebufferInfo.height = g_engine->getHeight();
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(g_engine->getDevice(), &framebufferInfo, nullptr, &frames[i].frameBuffer) != VK_SUCCESS)
-    {
-      throw std::runtime_error("failed to create framebuffer!");
-    }
-  }
-}
-
-void MapRenderer::drawItem(ObjectDrawInfo &info)
-{
-  currentFrame->batchDraw.push(info);
-}
-
-void MapRenderer::cleanup()
-{
-  for (auto &frame : frames)
-  {
-    vkDestroyFramebuffer(g_engine->getDevice(), frame.frameBuffer, nullptr);
-    frame.frameBuffer = VK_NULL_HANDLE;
-  }
-
-  for (auto &frame : frames)
-  {
-    vkFreeCommandBuffers(
-        g_engine->getDevice(),
-        commandPool,
-        1,
-        &frame.commandBuffer);
-    frame.commandBuffer = VK_NULL_HANDLE;
-  }
-
-  vkDestroyPipeline(g_engine->getDevice(), graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(g_engine->getDevice(), pipelineLayout, nullptr);
-  vkDestroyRenderPass(g_engine->getDevice(), renderPass, nullptr);
-}
-
-void MapRenderer::recreate()
-{
-  cleanup();
-
-  createRenderPass();
-  createGraphicsPipeline();
-  createFrameBuffers();
 }
 
 void MapRenderer::createDescriptorSetLayouts()

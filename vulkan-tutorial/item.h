@@ -12,16 +12,15 @@
 #include "items.h"
 #include "graphics/texture_atlas.h"
 #include "position.h"
-#include "ecs/entity.h"
+#include "ecs/ecs.h"
 
 class Appearances;
 
-class Item
+class Item : public ecs::OptionalEntity
 {
 	using ItemTypeId = uint32_t;
 
 public:
-	std::optional<Entity> entity;
 	ItemType *itemType;
 
 	Item(ItemTypeId serverId);
@@ -32,6 +31,8 @@ public:
 
 	Item(Item &&other) noexcept;
 	Item &operator=(Item &&other) noexcept;
+
+	Item deepCopy() const;
 
 	// Item(Item &&item) = default;
 

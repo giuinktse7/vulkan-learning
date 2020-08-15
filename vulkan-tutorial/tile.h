@@ -5,21 +5,22 @@
 
 #include "tile_location.h"
 #include "item.h"
-#include "ecs/entity.h"
+#include "ecs/ecs.h"
 
 class TileLocation;
 
-class Tile
+class Tile : public ecs::OptionalEntity
 {
 public:
-	std::optional<Entity> entity;
-
 	Tile(TileLocation &location);
 	~Tile();
 
 	Tile(const Tile &) = delete;
 	Tile &operator=(const Tile &) = delete;
 	Tile(Tile &&other) noexcept;
+	Tile &operator=(Tile &&other) noexcept;
+
+	Tile deepCopy() const;
 
 	const Item *getTopItem() const;
 	Item *getGround() const;
@@ -45,25 +46,31 @@ public:
 	*/
 	size_t getEntityCount();
 
+	uint16_t getMapFlags() const;
+	uint16_t getStatFlags() const;
+
+	ecs::EntityId getOrCreateEntity();
+
+	void setLocation(TileLocation &location);
+
 	const Position getPosition() const;
+
 	long getX() const;
 	long getY() const;
 	long getZ() const;
 
-	uint16_t getMapFlags() const;
-	uint16_t getStatFlags() const;
-
-	Entity getOrCreateEntity();
-
 private:
-	TileLocation &tileLocation;
+	Tile(Position position);
+
+	Position position;
 	std::unique_ptr<Item> ground;
 	std::vector<Item> items;
 
 	void updateSelectionComponent() const;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
-	union {
+	union
+	{
 		struct
 		{
 			uint16_t mapflags;

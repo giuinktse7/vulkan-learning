@@ -17,46 +17,52 @@ Item::Item(ItemTypeId itemTypeId)
 // uint16_t subtype = 1;
 
 Item::Item(Item &&other) noexcept
-		: entity(std::move(other.entity)),
+		: ecs::OptionalEntity(std::move(other)),
 			itemType(other.itemType),
 			attributes(std::move(other.attributes)),
 			subtype(other.subtype)
 {
-	other.entity = {};
+	other.entityId.reset();
 }
 
 Item &Item::operator=(Item &&other) noexcept
 {
-	entity = std::move(other.entity);
+	entityId = std::move(other.entityId);
 	itemType = other.itemType;
 	attributes = std::move(other.attributes);
 	subtype = other.subtype;
 
-	other.entity = {};
+	other.entityId.reset();
 
 	return *this;
 }
 
 Item::~Item()
 {
-	if (entity.has_value())
+	auto entityId = getEntityId();
+	if (entityId.has_value())
 	{
-		g_ecs.destroy(entity.value());
-		std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity id: " << entity.value().id << std::endl;
+		g_ecs.destroy(entityId.value());
+		// Logger::debug() << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity id: " << entityId.value() << std::endl;
 	}
-	else
-	{
-		std::cout << "Destroying item " << std::to_string(this->getId()) << "(" << this->getName() << "), entity: None" << std::endl;
-	}
+}
+
+Item Item::deepCopy() const
+{
+	Item item(this->itemType->id);
+	item.attributes = this->attributes;
+	item.subtype = this->subtype;
+
+	return item;
 }
 
 const TextureInfo Item::getTextureInfo(const Position &pos) const
 {
 	// TODO Add more pattern checks like hanging or cumulative item types
 	const SpriteInfo &spriteInfo = itemType->appearance->getSpriteInfo();
-	if (spriteInfo.hasAnimation() && this->entity.has_value())
+	if (spriteInfo.hasAnimation() && isEntity())
 	{
-		auto c = g_ecs.getComponent<ItemAnimationComponent>(this->entity.value());
+		auto c = g_ecs.getComponent<ItemAnimationComponent>(getEntityId().value());
 
 		uint32_t width = spriteInfo.patternWidth;
 		uint32_t height = spriteInfo.patternHeight;

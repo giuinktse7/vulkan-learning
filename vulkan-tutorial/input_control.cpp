@@ -42,13 +42,13 @@ void handleSelectionOnClick(Input *input, Position &pos)
   }
 
   MapView &mapView = *g_engine->getMapView();
-  Entity entity = tile->getOrCreateEntity();
+  ecs::EntityId entityId = tile->getOrCreateEntity();
 
-  auto *selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+  auto *selection = tile->getComponent<TileSelectionComponent>();
   if (selection)
   {
     // Move selection
-    if (selection->isTopSelected())
+    if (selection->isTopSelected() && InputControl::cursorChangedMapTile())
     {
       Position pos = g_engine->getCursorPos().toPos(mapView);
       std::cout << "moveSelectionOrigin: " << pos << std::endl;
@@ -71,8 +71,8 @@ void handleSelectionOnClick(Input *input, Position &pos)
     TileSelectionComponent component{};
     component.position = pos;
     component.tileItemCount = tile->getItemCount();
-    g_ecs.addComponent(entity, component);
-    selection = g_ecs.getComponent<TileSelectionComponent>(entity);
+
+    selection = tile->addComponent(component);
   }
 
   if (input->shift())
@@ -95,7 +95,7 @@ void handleSelectionOnClick(Input *input, Position &pos)
     }
   }
 
-  if (selection)
+  if (selection && InputControl::cursorChangedMapTile())
   {
     // Move selection
     if (selection->isTopSelected())
@@ -170,6 +170,16 @@ void InputControl::cameraMovement(Input *input)
   }
 }
 
+bool InputControl::cursorChangedMapTile()
+{
+  MapView &mapView = *g_engine->getMapView();
+
+  MapPosition oldMapPos = g_engine->getPrevCursorPos().worldPos(mapView).mapPos();
+  MapPosition mapPos = g_engine->getCursorPos().worldPos(mapView).mapPos();
+
+  return oldMapPos != mapPos;
+}
+
 void InputControl::mapEditing(Input *input)
 {
   MapView &mapView = *g_engine->getMapView();
@@ -179,9 +189,14 @@ void InputControl::mapEditing(Input *input)
     g_engine->clearBrush();
   }
 
-  if (input->keyDownEvent(GLFW_KEY_DELETE) == GLFW_PRESS)
+  if (input->keyDownEvent(GLFW_KEY_DELETE))
   {
     g_ecs.getSystem<TileSelectionSystem>().deleteItems();
+  }
+
+  if (input->ctrl() && input->keyDownEvent(GLFW_KEY_Z))
+  {
+    g_engine->getMapView()->undo();
   }
 
   if (input->leftMouseEvent() == GLFW_RELEASE)
@@ -206,12 +221,25 @@ void InputControl::mapEditing(Input *input)
       // Dragging mouse
       if (input->leftMouseDown())
       {
-        map->createItemAt(pos, selectedId.value());
+        if (!mapView.history.hasCurrentGroup())
+        {
+          mapView.history.startGroup(ActionGroupType::AddMapItem);
+        }
+        mapView.addItem(pos, selectedId.value());
       }
     }
     else if (input->leftMouseEvent() == GLFW_PRESS)
     {
-      map->createItemAt(pos, selectedId.value());
+      mapView.history.startGroup(ActionGroupType::AddMapItem);
+      mapView.addItem(pos, selectedId.value());
+    }
+
+    if (input->leftMouseEvent() == GLFW_RELEASE)
+    {
+      if (mapView.history.hasCurrentGroup())
+      {
+        mapView.history.endGroup(ActionGroupType::AddMapItem);
+      }
     }
   }
   else

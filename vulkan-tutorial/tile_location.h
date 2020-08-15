@@ -27,10 +27,10 @@ public:
 
 	void setTile(std::unique_ptr<Tile> tile);
 
-	const Position getPosition() const
-	{
-		return position;
-	}
+	const Position getPosition() const;
+	long getX() const;
+	long getY() const;
+	long getZ() const;
 
 protected:
 	std::unique_ptr<Tile> tile{};

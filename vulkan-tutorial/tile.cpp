@@ -4,25 +4,45 @@
 
 #include "ecs/ecs.h"
 #include "ecs/item_selection.h"
+#include "tile_location.h"
 
 Tile::Tile(TileLocation &tileLocation)
-    : tileLocation(tileLocation)
+    : position(tileLocation.position)
 {
-  // cout << "Tile()" << endl;
 }
 
+Tile::Tile(Position position)
+    : position(position) {}
+
+// TODO BUG? It is possible that entityId from OptionalEntity does not get moved correctly.
+// TODO It should be deleted from "other" and put into the newly constructed Tile.
 Tile::Tile(Tile &&other) noexcept
-    : items(std::move(other.items)),
-      entity(std::move(other.entity)),
+    : ecs::OptionalEntity(std::move(other)),
+      items(std::move(other.items)),
       ground(std::move(other.ground)),
-      tileLocation(tileLocation){};
+      position(other.position)
+{
+  other.entityId.reset();
+}
+
+Tile &Tile::operator=(Tile &&other) noexcept
+{
+  items = std::move(other.items);
+  entityId = std::move(other.entityId);
+  ground = std::move(other.ground);
+  position = std::move(other.position);
+
+  other.entityId = {};
+
+  return *this;
+}
 
 Tile::~Tile()
 {
-  if (entity.has_value())
+  if (isEntity())
   {
-    Logger::debug() << "~Tile() with entity id: " << entity.value().id << std::endl;
-    g_ecs.destroy(entity.value());
+    Logger::debug() << "~Tile() with entity id: " << getEntityId().value() << std::endl;
+    g_ecs.destroy(getEntityId().value());
   }
 }
 
@@ -87,9 +107,9 @@ void Tile::addItem(Item &&item)
 
 void Tile::updateSelectionComponent() const
 {
-  if (entity.has_value())
+  if (isEntity())
   {
-    TileSelectionComponent *component = g_ecs.getComponent<TileSelectionComponent>(entity.value());
+    TileSelectionComponent *component = g_ecs.getComponent<TileSelectionComponent>(getEntityId().value());
     if (component)
     {
       component->tileItemCount = items.size();
@@ -111,24 +131,6 @@ void Tile::removeGround()
   this->ground.reset();
 }
 
-const Position Tile::getPosition() const
-{
-  return tileLocation.position;
-}
-
-long Tile::getX() const
-{
-  return tileLocation.position.x;
-}
-long Tile::getY() const
-{
-  return tileLocation.position.y;
-}
-long Tile::getZ() const
-{
-  return tileLocation.position.z;
-}
-
 size_t Tile::getEntityCount()
 {
   size_t result = items.size();
@@ -147,11 +149,50 @@ int Tile::getTopElevation() const
       [](int elevation, const Item &next) { return elevation + next.itemType->getElevation(); });
 }
 
-Entity Tile::getOrCreateEntity()
+ecs::EntityId Tile::getOrCreateEntity()
 {
-  if (!entity.has_value())
+  if (!isEntity())
   {
-    this->entity = g_ecs.createEntity();
+    assignNewEntityId();
   }
-  return this->entity.value();
+
+  return this->getEntityId().value();
+}
+
+Tile Tile::deepCopy() const
+{
+  Tile tile(this->position);
+  for (const auto &item : this->items)
+  {
+    tile.addItem(item.deepCopy());
+  }
+  tile.flags = this->flags;
+  if (this->getGround()) {
+    tile.ground = std::make_unique<Item>(this->getGround()->deepCopy());
+  }
+
+  return tile;
+}
+
+void Tile::setLocation(TileLocation &location)
+{
+  this->position = location.position;
+}
+
+const Position Tile::getPosition() const
+{
+  return position;
+}
+
+long Tile::getX() const
+{
+  return position.x;
+}
+long Tile::getY() const
+{
+  return position.y;
+}
+long Tile::getZ() const
+{
+  return position.z;
 }

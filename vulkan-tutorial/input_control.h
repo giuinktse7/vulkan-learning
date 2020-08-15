@@ -6,4 +6,7 @@ namespace InputControl
 {
 	void cameraMovement(Input *input);
 	void mapEditing(Input *input);
-};
+
+	bool cursorChangedMapTile();
+
+}; // namespace InputControl

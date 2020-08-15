@@ -14,6 +14,7 @@
 #include "graphics/appearances.h"
 #include "graphics/engine.h"
 #include "item_type.h"
+#include "time.h"
 
 Items Items::items;
 
@@ -46,7 +47,7 @@ ItemType *Items::getItemTypeByClientId(uint16_t clientId)
 
 void Items::loadFromXml(const std::filesystem::path path)
 {
-	TimeMeasure start;
+	TimePoint start;
 
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(path.c_str());
@@ -326,7 +327,7 @@ bool Items::loadItemFromXml(pugi::xml_node itemNode, uint32_t id)
 
 void Items::loadFromOtb(const std::string &file)
 {
-	auto start = TimeMeasure::start();
+	TimePoint start;
 
 	if (!Appearances::isLoaded)
 	{
