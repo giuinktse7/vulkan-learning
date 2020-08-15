@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <bitset>
@@ -30,6 +31,38 @@ namespace ecs
 {
 	using ComponentBitset = std::bitset<MaxEntityComponents>;
 
+	class Entity
+	{
+	public:
+		template <typename T>
+		bool hasComponent() const;
+		template <typename T>
+		T *getComponent() const;
+		template <typename T>
+		T *addComponent(T component) const;
+
+		EntityId assignNewEntityId();
+
+		virtual std::optional<EntityId> getEntityId() const = 0;
+		virtual void destroyEntity() = 0;
+		virtual bool isEntity() const = 0;
+
+		virtual void setEntityId(EntityId id) = 0;
+	};
+
+	class OptionalEntity : public Entity
+	{
+	public:
+		std::optional<ecs::EntityId> getEntityId() const override;
+		bool isEntity() const override;
+		void destroyEntity() override;
+
+		void setEntityId(ecs::EntityId id) override;
+
+	protected:
+		std::optional<EntityId> entityId;
+	};
+
 	class System
 	{
 	public:
@@ -45,7 +78,7 @@ namespace ecs
 		virtual std::vector<const char *> getRequiredComponents() = 0;
 
 		ecs::ComponentBitset componentBitset;
-		std::unordered_set<Entity> entities;
+		std::unordered_set<EntityId> entities;
 	};
 } // namespace ecs
 
@@ -54,7 +87,7 @@ class ECS
 	using ComponentType = uint8_t;
 
 public:
-	Entity createEntity();
+	ecs::EntityId createEntity();
 
 	template <typename T>
 	void registerComponent()
@@ -109,7 +142,7 @@ public:
 	}
 
 	template <typename T>
-	T *getComponent(Entity entity)
+	T *getComponent(ecs::EntityId entity)
 	{
 		ComponentArray<T> *componentArray = getComponentArray<T>();
 		if (componentArray->hasComponent(entity))
@@ -135,16 +168,18 @@ public:
 	}
 
 	template <typename T>
-	void addComponent(Entity entity, T component)
+	T *addComponent(ecs::EntityId entity, T component)
 	{
 		ComponentArray<T> *componentArray = getComponentArray<T>();
 		componentArray->addComponent(entity, component);
 
 		setEntityComponentBit<T>(entity);
+
+		return getComponent<T>(entity);
 	}
 
 	template <typename T>
-	void removeComponent(Entity entity)
+	void removeComponent(ecs::EntityId entity)
 	{
 		ComponentArray<T> *array = getComponentArray<T>();
 		array->removeComponent(entity);
@@ -175,7 +210,7 @@ public:
 	}
 
 	void
-	destroy(Entity entity)
+	destroy(ecs::EntityId entity)
 	{
 		for (const auto &entry : componentArrays)
 		{
@@ -189,16 +224,16 @@ public:
 			system->entities.erase(entity);
 		}
 
-		entityIdQueue.emplace(entity.id);
-		entityComponentBitsets.erase(entity.id);
+		entityIdQueue.emplace(entity);
+		entityComponentBitsets.erase(entity);
 	}
 
 private:
 	uint32_t nextComponentType = 0;
 	uint32_t entityCounter = 0;
 
-	std::queue<uint32_t> entityIdQueue;
-	std::unordered_map<uint32_t, ecs::ComponentBitset> entityComponentBitsets;
+	std::queue<ecs::EntityId> entityIdQueue;
+	std::unordered_map<ecs::EntityId, ecs::ComponentBitset> entityComponentBitsets;
 
 	std::unordered_map<const char *, ComponentType> componentTypes;
 	std::unordered_map<const char *, std::unique_ptr<IComponentArray>> componentArrays;
@@ -215,26 +250,26 @@ private:
 	}
 
 	template <typename T>
-	void setEntityComponentBit(Entity entity)
+	void setEntityComponentBit(ecs::EntityId entity)
 	{
 		ECS::ComponentType componentType = getComponentType<T>();
-		auto &bitset = entityComponentBitsets.at(entity.id);
+		auto &bitset = entityComponentBitsets.at(entity);
 		bitset.set(componentType);
 
 		onEntityBitsetChanged(entity, bitset);
 	}
 
 	template <typename T>
-	void unsetEntityComponentBit(Entity entity)
+	void unsetEntityComponentBit(ecs::EntityId entity)
 	{
 		ECS::ComponentType componentType = getComponentType<T>();
-		auto &bitset = entityComponentBitsets.at(entity.id);
+		auto &bitset = entityComponentBitsets.at(entity);
 		bitset.reset(componentType);
 
 		onEntityBitsetChanged(entity, bitset);
 	}
 
-	void onEntityBitsetChanged(Entity entity, ecs::ComponentBitset bitset)
+	void onEntityBitsetChanged(ecs::EntityId entity, ecs::ComponentBitset bitset)
 	{
 		for (const auto &entry : systems)
 		{
@@ -250,3 +285,23 @@ private:
 		}
 	}
 };
+
+template <typename T>
+bool ecs::Entity::hasComponent() const
+{
+	return isEntity() && g_ecs.getComponent<T>(getEntityId().value()) != nullptr;
+}
+
+template <typename T>
+T *ecs::Entity::getComponent() const
+{
+	return isEntity() ? g_ecs.getComponent<T>(getEntityId().value()) : nullptr;
+}
+
+template <typename T>
+T *ecs::Entity::addComponent(T component) const
+{
+	DEBUG_ASSERT(isEntity(), "A non-existing entity can not add a component in ECS.");
+
+	return g_ecs.addComponent(getEntityId().value(), component);
+}

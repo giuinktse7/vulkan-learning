@@ -14,7 +14,7 @@ constexpr size_t InitialCapacity = 32;
 class IComponentArray
 {
 public:
-	virtual void entityDestroyed(Entity entity) = 0;
+	virtual void entityDestroyed(ecs::EntityId entity) = 0;
 	virtual ~IComponentArray() = default;
 };
 
@@ -35,8 +35,8 @@ public:
 		Logger::debug("~ComponentArray()");
 	}
 
-	void addComponent(Entity entity, T &component);
-	void addComponent(Entity entity, T &&component);
+	void addComponent(ecs::EntityId entity, T &component);
+	void addComponent(ecs::EntityId entity, T &&component);
 
 	void clear()
 	{
@@ -45,7 +45,7 @@ public:
 		componentIndexToEntity.clear();
 	}
 
-	void removeComponent(Entity entity)
+	void removeComponent(ecs::EntityId entity)
 	{
 		// if (entityToComponentIndex.find(entity) != entityToComponentIndex.end())
 		// {
@@ -84,7 +84,7 @@ public:
 
 		components.at(removedIndex) = components.at(lastIndex);
 
-		Entity lastIndexEntity = componentIndexToEntity.at(lastIndex);
+		ecs::EntityId lastIndexEntity = componentIndexToEntity.at(lastIndex);
 		entityToComponentIndex.at(lastIndexEntity) = removedIndex;
 		componentIndexToEntity.at(removedIndex) = lastIndexEntity;
 
@@ -93,7 +93,7 @@ public:
 		components.pop_back();
 	}
 
-	void entityDestroyed(Entity entity) override
+	void entityDestroyed(ecs::EntityId entity) override
 	{
 		if (entityToComponentIndex.find(entity) != entityToComponentIndex.end())
 		{
@@ -101,12 +101,12 @@ public:
 		}
 	}
 
-	bool hasComponent(Entity entity) const
+	bool hasComponent(ecs::EntityId entity) const
 	{
 		return entityToComponentIndex.find(entity) != entityToComponentIndex.end();
 	}
 
-	T *getComponent(Entity entity)
+	T *getComponent(ecs::EntityId entity)
 	{
 		// DEBUG_ASSERT(entityIndex.find(entity) != entityIndex.end(), "Entity " + std::to_string(entity.id) + " does not have a " + std::string(typeid(T).name()) + " component.");
 
@@ -115,14 +115,14 @@ public:
 
 private:
 	std::vector<T> components;
-	std::unordered_map<Entity, size_t> entityToComponentIndex;
-	std::unordered_map<size_t, Entity> componentIndexToEntity;
+	std::unordered_map<ecs::EntityId, size_t> entityToComponentIndex;
+	std::unordered_map<size_t, ecs::EntityId> componentIndexToEntity;
 };
 
 template <typename T>
-inline void ComponentArray<T>::addComponent(Entity entity, T &component)
+inline void ComponentArray<T>::addComponent(ecs::EntityId entity, T &component)
 {
-	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
+	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity) + " already has a component of type " + typeid(T).name());
 
 	components.push_back(component);
 	entityToComponentIndex.emplace(entity, components.size() - 1);
@@ -130,9 +130,9 @@ inline void ComponentArray<T>::addComponent(Entity entity, T &component)
 }
 
 template <typename T>
-inline void ComponentArray<T>::addComponent(Entity entity, T &&component)
+inline void ComponentArray<T>::addComponent(ecs::EntityId entity, T &&component)
 {
-	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity.id) + " already has a component of type " + typeid(T).name());
+	DEBUG_ASSERT(entityToComponentIndex.find(entity) == entityToComponentIndex.end(), "The entity " + std::to_string(entity) + " already has a component of type " + typeid(T).name());
 
 	components.push_back(component);
 	entityToComponentIndex.emplace(entity, components.size() - 1);

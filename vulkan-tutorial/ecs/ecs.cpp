@@ -5,7 +5,7 @@
 
 ECS g_ecs;
 
-Entity ECS::createEntity()
+ecs::EntityId ECS::createEntity()
 {
   uint32_t id;
   if (entityIdQueue.empty())
@@ -19,5 +19,46 @@ Entity ECS::createEntity()
   }
 
   entityComponentBitsets.emplace(id, ecs::ComponentBitset{});
-  return {id};
+  return id;
+}
+
+ecs::EntityId ecs::Entity::assignNewEntityId()
+{
+  auto id = getEntityId();
+
+  if (id.has_value())
+  {
+    ABORT_PROGRAM("Should this be allowed? Probably not.");
+    // g_ecs.destroy(id.value());
+  }
+
+  ecs::EntityId newId = g_ecs.createEntity();
+  setEntityId(newId);
+
+  return newId;
+}
+
+std::optional<ecs::EntityId> ecs::OptionalEntity::getEntityId() const
+{
+  return entityId;
+}
+
+bool ecs::OptionalEntity::isEntity() const
+{
+  return entityId.has_value();
+}
+
+void ecs::OptionalEntity::setEntityId(ecs::EntityId id)
+{
+  this->entityId = id;
+}
+
+void ecs::OptionalEntity::destroyEntity()
+{
+  if (getEntityId().has_value())
+  {
+    g_ecs.destroy(getEntityId().value());
+  }
+
+  entityId.reset();
 }
