@@ -81,7 +81,7 @@ void Engine::initialize(GLFWwindow *window)
   this->window = window;
   this->mapView = std::make_unique<MapView>(window);
 
-  TimeMeasure start;
+  TimePoint start;
   createVulkanInstance();
   Logger::info() << "Created vulkan instance in " << start.elapsedMillis() << " ms." << std::endl;
 

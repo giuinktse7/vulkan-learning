@@ -14,6 +14,7 @@
 
 #include "texture_atlas.h"
 #include "../items.h"
+#include "../time.h"
 #include "engine.h"
 
 #include <algorithm>
@@ -31,7 +32,7 @@ bool Appearances::isLoaded;
 
 void Appearances::loadAppearanceData(const std::filesystem::path path)
 {
-    TimeMeasure start;
+    TimePoint start;
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -134,7 +135,7 @@ TextureAtlas *Appearances::getTextureAtlas(const uint32_t spriteId)
 
 void Appearances::loadTextureAtlases(const std::filesystem::path catalogContentsPath)
 {
-    auto start = TimeMeasure::start();
+    TimePoint start;
 
     if (!std::filesystem::exists(catalogContentsPath))
     {
