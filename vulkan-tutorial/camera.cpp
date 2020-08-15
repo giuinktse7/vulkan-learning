@@ -34,7 +34,7 @@ void Camera::translate(glm::vec3 delta)
 
 void Camera::translateZ(int z)
 {
-	this->position.z = std::clamp(static_cast<int>(position.z + z), 0, 15);
+	this->position.z = static_cast<float>(std::clamp(static_cast<int>(position.z + z), 0, 15));
 }
 
 void Camera::zoomIn()
