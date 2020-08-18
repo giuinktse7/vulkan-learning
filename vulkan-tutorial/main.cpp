@@ -156,6 +156,10 @@ void testy()
 	std::cout << std::get<TileMock>(change.data).location.s << std::endl;
 }
 
+class K
+{
+};
+
 int main()
 {
 	try

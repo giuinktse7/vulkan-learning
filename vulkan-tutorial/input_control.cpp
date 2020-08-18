@@ -246,8 +246,25 @@ void InputControl::mapEditing(Input *input)
   {
     if (input->leftMouseEvent() == GLFW_PRESS)
     {
+
+      mapView.setDragStart(input->getCursorPos().worldPos(mapView));
+      auto [from, to] = mapView.getDragPoints().value();
+      std::cout << "Drag start: " << from << std::endl;
+
       std::cout << "input->leftMouseEvent() == GLFW_PRESS" << std::endl;
       handleSelectionOnClick(input, pos);
+    }
+    else if (input->leftMouseDown())
+    {
+      mapView.setDragEnd(input->getCursorPos().worldPos(mapView));
+    }
+    else if (input->leftMouseEvent() == GLFW_RELEASE)
+    {
+        if (mapView.getDragPoints().has_value()) {
+            auto [from, to] = mapView.getDragPoints().value();
+            std::cout << "Drag finished! " << from << " to " << to << std::endl;
+            mapView.endDragging();
+        }
     }
   }
 }

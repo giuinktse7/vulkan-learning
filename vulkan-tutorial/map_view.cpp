@@ -2,7 +2,11 @@
 
 #include "const.h"
 
-MapView::MapView(GLFWwindow *window) : window(window), map(std::make_shared<Map>()), moveSelectionOrigin{}
+MapView::MapView(GLFWwindow *window)
+    : window(window),
+      map(std::make_shared<Map>()),
+      moveSelectionOrigin{},
+      dragState{}
 {
 }
 
@@ -44,7 +48,6 @@ void MapView::removeItems(const Position position, const std::set<size_t, std::g
   }
 
   action.addChange(std::move(newTile));
-
 
   history.commit(std::move(action));
 }
@@ -112,17 +115,46 @@ void MapView::translateCameraZ(int z)
   camera.translateZ(z);
 }
 
-Viewport::BoundingRect MapView::getGameBoundingRect() const
+util::Rectangle<int> MapView::getGameBoundingRect() const
 {
   WorldPosition worldPos{static_cast<double>(viewport.offsetX), static_cast<double>(viewport.offsetY)};
   MapPosition mapPos = worldPos.mapPos();
 
   auto [width, height] = ScreenPosition{static_cast<double>(viewport.width), static_cast<double>(viewport.height)}.mapPos(*this);
-  Viewport::BoundingRect rect;
+  util::Rectangle<int> rect;
   rect.x1 = mapPos.x;
   rect.y1 = mapPos.y;
   rect.x2 = mapPos.x + width;
   rect.y2 = mapPos.y + height;
 
   return rect;
+}
+
+void MapView::setDragStart(WorldPosition position)
+{
+  if (dragState.has_value())
+  {
+    dragState.value().from = position;
+  }
+  else
+  {
+    dragState = {position, position};
+  }
+}
+
+void MapView::setDragEnd(WorldPosition position)
+{
+  DEBUG_ASSERT(dragState.has_value(), "There is no current dragging operation.");
+
+  dragState.value().to = position;
+}
+
+void MapView::endDragging()
+{
+  dragState.reset();
+}
+
+bool MapView::isDragging() const
+{
+  return dragState.has_value();
 }

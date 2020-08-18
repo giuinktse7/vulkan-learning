@@ -52,4 +52,18 @@ namespace util
 	// explicit deduction guide (not needed as of C++20)
 	template <class... Ts>
 	overloaded(Ts...) -> overloaded<Ts...>;
+
+	template <typename T>
+	struct Rectangle
+	{
+		static_assert(std::is_arithmetic<T>::value, "T must be numeric.");
+		T x1, y1, x2, y2;
+	};
+
+	template <typename T>
+	struct Point
+	{
+		static_assert(std::is_arithmetic<T>::value, "T must be numeric.");
+		T x, y;
+	};
 } // namespace util

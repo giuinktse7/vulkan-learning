@@ -117,6 +117,13 @@ inline bool operator!=(const BasePosition<T> &pos1, const BasePosition<T> &pos2)
 	return !(pos1 == pos2);
 }
 
+template <typename T>
+inline std::ostream &operator<<(std::ostream &os, const BasePosition<T> &pos)
+{
+	os << "{ x=" << pos.x << ", y=" << pos.y << " }";
+	return os;
+}
+
 namespace std
 {
 	template <>

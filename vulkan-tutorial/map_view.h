@@ -11,15 +11,12 @@
 #include "map.h"
 #include "camera.h"
 #include "position.h"
+#include "util.h"
 
 #include "action/action.h"
 
 struct Viewport
 {
-	struct BoundingRect
-	{
-		int x1, y1, x2, y2;
-	};
 
 	int width;
 	int height;
@@ -106,11 +103,34 @@ public:
 		return viewport;
 	}
 
-	Viewport::BoundingRect getGameBoundingRect() const;
+	util::Rectangle<int> getGameBoundingRect() const;
+
+	void setDragStart(WorldPosition position);
+	void setDragEnd(WorldPosition position);
+	std::optional<std::pair<WorldPosition, WorldPosition>> getDragPoints() const
+	{
+		if (dragState.has_value())
+		{
+			std::pair<WorldPosition, WorldPosition> result;
+			result.first = dragState.value().from;
+			result.second = dragState.value().to;
+			return result;
+		}
+
+		return {};
+	}
+	void endDragging();
+	bool isDragging() const;
 
 private:
 	GLFWwindow *window;
 	Viewport viewport;
+
+	struct DragData
+	{
+		WorldPosition from, to;
+	};
+	std::optional<DragData> dragState;
 
 	Camera camera;
 
@@ -122,7 +142,7 @@ private:
 	}
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Viewport::BoundingRect &rect)
+inline std::ostream &operator<<(std::ostream &os, const util::Rectangle<int> &rect)
 {
 	os << "{ x1=" << rect.x1 << ", y1=" << rect.y1 << ", x2=" << rect.x2 << ", y2=" << rect.y2 << "}";
 	return os;

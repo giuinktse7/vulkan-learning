@@ -85,6 +85,11 @@ public:
 
 	TimePoint lastUpdateTime;
 
+	ScreenPosition getCursorPos() const
+	{
+		return currentCursorPos;
+	}
+
 private:
 	GLFWwindow *window;
 	std::array<GLFWKey, GLFW_KEY_LAST> keyState{GLFW_RELEASE};
