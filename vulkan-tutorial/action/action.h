@@ -14,12 +14,8 @@ class EditorHistory;
 
 enum class ActionGroupType
 {
-  AddMapItem
-};
-
-enum class ChangeType
-{
-  Tile
+  AddMapItem,
+  RemoveMapItem
 };
 
 enum class MapActionType
@@ -106,45 +102,51 @@ struct ECSTileComponent
   // std::variant<TileSelectionComponent, ItemAnimationComponent> data;
 };
 
+struct RemovedTile
+{
+  /* Holds either:
+      1. The tile that was deleted.
+      2. The position for where a tile should be deleted.
+  */
+  std::variant<Tile, Position> data;
+};
+
 class Change
 {
 public:
   Change(Tile &&tile);
 
+  static Change removeTile(const Position pos);
+
   Change(const Change &other) = delete;
   Change &operator=(const Change &other) = delete;
 
   Change(Change &&other) noexcept
-      : changeType(other.changeType),
-        data(std::move(other.data))
+      : data(std::move(other.data))
   {
   }
 
   Change &operator=(Change &&other)
   {
-    changeType = other.changeType;
     data = std::move(other.data);
     return *this;
   }
-
-  ChangeType changeType;
 
   /*
     If the change has not yet been committed, this member contains the new data.
     If the change has been committed, this member contains the old data, i.e.
     the data necessary to undo the change.
   */
-  std::variant<Tile, ECSTileComponent> data;
+  std::variant<std::monostate, Tile, ECSTileComponent, RemovedTile> data;
 
-  bool isTileChange() const
+  template <typename T>
+  bool ofType() const
   {
-    return std::holds_alternative<Tile>(data);
+    return std::holds_alternative<T>(data);
   }
 
-  bool isEcsComponentChange() const
-  {
-    return std::holds_alternative<ECSTileComponent>(data);
-  }
+private:
+  Change();
 };
 
 class EditorHistory
@@ -170,7 +172,10 @@ inline std::ostream &operator<<(std::ostream &os, ActionGroupType type)
   switch (type)
   {
   case ActionGroupType::AddMapItem:
-    os << "KeyState::Release";
+    os << "ActionGroupType::AddMapItem";
+    break;
+  case ActionGroupType::RemoveMapItem:
+    os << "ActionGroupType::RemoveMapItem";
     break;
   default:
     os << "Unknown ActionGroupType: " << to_underlying(type);

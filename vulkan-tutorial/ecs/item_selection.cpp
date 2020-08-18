@@ -15,49 +15,43 @@ void TileSelectionSystem::update()
 
 void TileSelectionSystem::clearAllSelections()
 {
-    g_ecs.removeAllComponents<TileSelectionComponent>();
+  g_ecs.removeAllComponents<TileSelectionComponent>();
 }
 
 void TileSelectionSystem::deleteItems()
 {
-    std::vector<TileLocation *> toBeRemoved;
-    for (const auto &entity : entities)
+  MapView *mapView = g_engine->getMapView();
+
+  mapView->history.startGroup(ActionGroupType::RemoveMapItem);
+  for (const auto &entity : entities)
+  {
+    auto &selection = *g_ecs.getComponent<TileSelectionComponent>(entity);
+    const Position position = selection.position;
+
+    if (selection.isAllSelected())
     {
-        auto &selection = *g_ecs.getComponent<TileSelectionComponent>(entity);
-
-        // Tile *tile = g_engine->getMapRenderer()->map->getTile(selection.position);
-        TileLocation *location = g_engine->getMapView()->getMap()->getTileLocation(selection.position);
-
-        DEBUG_ASSERT(location->hasTile(), "The location has no tile.");
-        Tile *tile = location->getTile();
-
-        if (selection.isAllSelected())
-        {
-            toBeRemoved.emplace_back(location);
-        }
-        else
-        {
-            for (const auto index : selection.itemIndices)
-            {
-                tile->removeItem(index);
-            }
-
-            if (selection.isGroundSelected())
-            {
-                tile->removeGround();
-            }
-        }
+      mapView->removeTile(position);
     }
-
-    for (auto p : toBeRemoved)
+    else
     {
-        p->removeTile();
-    }
+      if (!selection.itemIndices.empty())
+      {
+        mapView->removeItems(position, selection.itemIndices);
+      }
 
-    g_ecs.removeAllComponents<TileSelectionComponent>();
+      if (selection.isGroundSelected())
+      {
+        mapView->removeGround(position);
+      }
+    }
+  }
+
+  g_ecs.destroyMarkedEntities();
+  g_ecs.removeAllComponents<TileSelectionComponent>();
+  mapView->history.endGroup(ActionGroupType::RemoveMapItem);
 }
 
 std::vector<const char *> TileSelectionSystem::getRequiredComponents()
 {
-    return requiredComponents.typeNames();
+  return requiredComponents.typeNames();
 }

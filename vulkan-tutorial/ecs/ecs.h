@@ -42,6 +42,7 @@ namespace ecs
 		T *addComponent(T component) const;
 
 		EntityId assignNewEntityId();
+		void markForDestruction();
 
 		virtual std::optional<EntityId> getEntityId() const = 0;
 		virtual void destroyEntity() = 0;
@@ -209,8 +210,7 @@ public:
 		}
 	}
 
-	void
-	destroy(ecs::EntityId entity)
+	void destroy(ecs::EntityId entity)
 	{
 		for (const auto &entry : componentArrays)
 		{
@@ -228,9 +228,40 @@ public:
 		entityComponentBitsets.erase(entity);
 	}
 
+	/*
+		Destroy entities that are marked for destruction.
+	*/
+	void destroyMarkedEntities()
+	{
+		for (const ecs::EntityId id : entityIdsMarkedForDestruction)
+		{
+			destroy(id);
+		}
+	}
+
+	/*
+		Marks an entity for destruction. This is useful in places where entities are
+		iterated and potentially being destroyed in the iteration.
+	*/
+	void markEntityForDestruction(ecs::EntityId id)
+	{
+		entityIdsMarkedForDestruction.emplace(id);
+	}
+
+	bool isMarkedForDestruction(ecs::EntityId id) const
+	{
+		return entityIdsMarkedForDestruction.find(id) != entityIdsMarkedForDestruction.end();
+	}
+
 private:
 	uint32_t nextComponentType = 0;
 	uint32_t entityCounter = 0;
+
+	/*
+		Used to mark entity ids as destroyed when iterating over entities,
+		because entities can't be destroyed while they are being iterated over.
+	*/
+	std::unordered_set<ecs::EntityId> entityIdsMarkedForDestruction;
 
 	std::queue<ecs::EntityId> entityIdQueue;
 	std::unordered_map<ecs::EntityId, ecs::ComponentBitset> entityComponentBitsets;

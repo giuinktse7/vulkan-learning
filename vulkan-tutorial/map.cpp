@@ -17,7 +17,7 @@ Map::Map()
 {
 }
 
-Tile &Map::getOrCreateTile(Position &pos)
+Tile &Map::getOrCreateTile(const Position &pos)
 {
   return getOrCreateTile(pos.x, pos.y, pos.z);
 }
@@ -31,7 +31,7 @@ std::unique_ptr<Tile> Map::replaceTile(Tile &&tile)
   return location.replaceTile(std::move(tile));
 }
 
-void Map::removeTile(Position pos)
+void Map::removeTile(const Position pos)
 {
   auto leaf = root.getLeafUnsafe(pos.x, pos.y);
   if (leaf)
@@ -48,7 +48,7 @@ void Map::removeTile(Position pos)
   }
 }
 
-Tile *Map::getTile(Position pos) const
+Tile *Map::getTile(const Position pos) const
 {
   auto leaf = root.getLeafUnsafe(pos.x, pos.y);
   if (!leaf)
@@ -79,7 +79,7 @@ Tile &Map::getOrCreateTile(int x, int y, int z)
   return *location.getTile();
 }
 
-TileLocation *Map::getTileLocation(Position &pos) const
+TileLocation *Map::getTileLocation(const Position &pos) const
 {
   return getTileLocation(pos.x, pos.y, pos.z);
 }

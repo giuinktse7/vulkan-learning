@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include <optional>
+#include <set>
 
 #include "map.h"
 #include "camera.h"
@@ -41,7 +42,14 @@ public:
 		return map.get();
 	}
 
-	void addItem(Position pos, uint16_t id);
+	void addItem(const Position position, uint16_t id);
+
+	/* Note: The indices must be in descending order (std::greater), because
+		otherwise the wrong items could be removed.
+	*/
+	void removeItems(const Position position, const std::set<size_t, std::greater<size_t>> &indices);
+	void removeGround(const Position position);
+	void removeTile(const Position position);
 
 	bool isSelectionMoved() const
 	{
@@ -107,6 +115,11 @@ private:
 	Camera camera;
 
 	std::shared_ptr<Map> map;
+
+	Tile deepCopyTile(const Position position) const
+	{
+		return map->getTile(position)->deepCopy();
+	}
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Viewport::BoundingRect &rect)

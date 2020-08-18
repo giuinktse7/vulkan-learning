@@ -101,11 +101,11 @@ public:
 	*/
 	std::unique_ptr<Tile> replaceTile(Tile &&tile);
 	Tile &getOrCreateTile(int x, int y, int z);
-	Tile &getOrCreateTile(Position &pos);
+	Tile &getOrCreateTile(const Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
-	TileLocation *getTileLocation(Position &pos) const;
-	Tile *getTile(Position pos) const;
-	void removeTile(Position pos);
+	TileLocation *getTileLocation(const Position &pos) const;
+	Tile *getTile(const Position pos) const;
+	void removeTile(const Position pos);
 
 	MapVersion getMapVersion();
 	std::string &getDescription();

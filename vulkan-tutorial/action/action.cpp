@@ -25,23 +25,27 @@ void MapAction::commit()
 
   for (auto &change : changes)
   {
-    switch (change.changeType)
-    {
-    case ChangeType::Tile:
-    {
-      Tile &newTile = std::get<Tile>(change.data);
+    std::visit(util::overloaded{
+                   [this, &change](Tile &newTile) {
+                     std::unique_ptr<Tile> oldTilePtr = mapView.getMap()->replaceTile(std::move(newTile));
+                     Tile *oldTile = oldTilePtr.release();
+                     // TODO Also store ECS component changes
+                     oldTile->markForDestruction();
+                     change.data = std::move(*oldTile);
+                   },
+                   [this, &change](RemovedTile &tileChange) {
+                     Position &position = std::get<Position>(tileChange.data);
+                     Tile *oldTile = mapView.getMap()->getTile(position);
+                     change.data = RemovedTile{std::move(*oldTile)};
 
-      std::unique_ptr<Tile> oldTilePtr = mapView.getMap()->replaceTile(std::move(newTile));
-      Tile *oldTile = oldTilePtr.release();
-      // TODO Also store ECS component changes
-      oldTile->destroyEntity();
-      change.data = std::move(*oldTile);
+                     oldTile->markForDestruction();
 
-      break;
-    }
-    default:
-      ABORT_PROGRAM("Unknown ChangeType.");
-    }
+                     mapView.getMap()->removeTile(position);
+                   },
+                   [](auto &arg) {
+                     ABORT_PROGRAM("Unknown change!");
+                   }},
+               change.data);
   }
 
   committed = true;
@@ -58,23 +62,25 @@ void MapAction::undo()
   {
     Change &change = *it;
 
-    switch (change.changeType)
-    {
-    case ChangeType::Tile:
-    {
-      Tile &oldTile = std::get<Tile>(change.data);
+    std::visit(util::overloaded{
+                   [this, &change](Tile &oldTile) {
+                     std::unique_ptr<Tile> newTilePtr = mapView.getMap()->replaceTile(std::move(oldTile));
+                     Tile *newTile = newTilePtr.release();
+                     // TODO Also store ECS component changes
+                     newTile->markForDestruction();
+                     change.data = std::move(*newTile);
+                   },
 
-      std::unique_ptr<Tile> newTilePtr = mapView.getMap()->replaceTile(std::move(oldTile));
-      Tile *newTile = newTilePtr.release();
-      // TODO Also store ECS component changes
-      newTile->destroyEntity();
-      change.data = std::move(*newTile);
+                   [this, &change](RemovedTile &tileChange) {
+                     Tile &removedTile = std::get<Tile>(tileChange.data);
+                     std::unique_ptr<Tile> currentTile = mapView.getMap()->replaceTile(std::move(removedTile));
+                     change.data = RemovedTile{removedTile.getPosition()};
+                   },
 
-      break;
-    }
-    default:
-      ABORT_PROGRAM("Unknown ChangeType.");
-    }
+                   [](auto &arg) {
+                     ABORT_PROGRAM("Unknown change!");
+                   }},
+               change.data);
   }
 
   committed = false;
@@ -84,10 +90,21 @@ void MapAction::redo()
   commit();
 }
 
-Change::Change(Tile &&tile)
-    : changeType(ChangeType::Tile),
-      data(std::move(tile))
+Change::Change()
+    : data({})
 {
+}
+
+Change::Change(Tile &&tile)
+    : data(std::move(tile))
+{
+}
+
+Change Change::removeTile(const Position pos)
+{
+  Change change;
+  change.data = RemovedTile{pos};
+  return change;
 }
 
 MapActionGroup::MapActionGroup(ActionGroupType groupType) : groupType(groupType)

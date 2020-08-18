@@ -6,7 +6,7 @@ MapView::MapView(GLFWwindow *window) : window(window), map(std::make_shared<Map>
 {
 }
 
-void MapView::addItem(Position pos, uint16_t id)
+void MapView::addItem(const Position pos, uint16_t id)
 {
   Item item(id);
 
@@ -24,6 +24,55 @@ void MapView::addItem(Position pos, uint16_t id)
 
   MapAction action(*this, MapActionType::CreateTiles);
   action.addChange(std::move(newTile));
+  history.commit(std::move(action));
+}
+
+void MapView::removeItems(const Position position, const std::set<size_t, std::greater<size_t>> &indices)
+{
+  TileLocation *location = map->getTileLocation(position);
+
+  DEBUG_ASSERT(location->hasTile(), "The location has no tile.");
+  Tile *tile = location->getTile();
+
+  MapAction action(*this, MapActionType::DeleteTiles);
+
+  Tile newTile = deepCopyTile(position);
+
+  for (const auto index : indices)
+  {
+    newTile.removeItem(index);
+  }
+
+  action.addChange(std::move(newTile));
+
+
+  history.commit(std::move(action));
+}
+
+void MapView::removeTile(const Position position)
+{
+  MapAction action(*this, MapActionType::DeleteTiles);
+
+  action.addChange(Change::removeTile(position));
+
+  history.commit(std::move(action));
+}
+
+void MapView::removeGround(Position position)
+{
+  TileLocation *location = map->getTileLocation(position);
+
+  DEBUG_ASSERT(location->hasTile(), "The location has no tile.");
+  Tile *tile = location->getTile();
+
+  DEBUG_ASSERT(tile->getGround() != nullptr, "There is no ground to remove.");
+
+  MapAction action(*this, MapActionType::DeleteTiles);
+
+  Tile newTile = deepCopyTile(position);
+  newTile.removeGround();
+  action.addChange(std::move(newTile));
+
   history.commit(std::move(action));
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+#include <variant>
 #include <string>
 #include <vector>
 #include <chrono>
@@ -35,4 +37,19 @@ namespace util
 												 std::make_move_iterator(std::begin(source)),
 												 std::make_move_iterator(std::end(source)));
 	}
+
+	template <typename T, typename... Args>
+	struct is_one_of : std::disjunction<std::is_same<std::decay_t<T>, Args>...>
+	{
+	};
+
+	// helper type for the visitor #4
+	template <class... Ts>
+	struct overloaded : Ts...
+	{
+		using Ts::operator()...;
+	};
+	// explicit deduction guide (not needed as of C++20)
+	template <class... Ts>
+	overloaded(Ts...) -> overloaded<Ts...>;
 } // namespace util

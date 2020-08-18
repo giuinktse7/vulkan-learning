@@ -42,7 +42,7 @@ Tile::~Tile()
   if (isEntity())
   {
     Logger::debug() << "~Tile() with entity id: " << getEntityId().value() << std::endl;
-    g_ecs.destroy(getEntityId().value());
+    destroyEntity();
   }
 }
 
@@ -167,7 +167,8 @@ Tile Tile::deepCopy() const
     tile.addItem(item.deepCopy());
   }
   tile.flags = this->flags;
-  if (this->getGround()) {
+  if (this->getGround())
+  {
     tile.ground = std::make_unique<Item>(this->getGround()->deepCopy());
   }
 

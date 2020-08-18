@@ -38,6 +38,14 @@ ecs::EntityId ecs::Entity::assignNewEntityId()
   return newId;
 }
 
+void ecs::Entity::markForDestruction()
+{
+  if (isEntity())
+  {
+    g_ecs.markEntityForDestruction(getEntityId().value());
+  }
+}
+
 std::optional<ecs::EntityId> ecs::OptionalEntity::getEntityId() const
 {
   return entityId;
@@ -55,7 +63,7 @@ void ecs::OptionalEntity::setEntityId(ecs::EntityId id)
 
 void ecs::OptionalEntity::destroyEntity()
 {
-  if (getEntityId().has_value())
+  if (isEntity() && !g_ecs.isMarkedForDestruction(getEntityId().value()))
   {
     g_ecs.destroy(getEntityId().value());
   }
