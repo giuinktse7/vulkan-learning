@@ -107,6 +107,8 @@ public:
 	Tile *getTile(const Position pos) const;
 	void removeTile(const Position pos);
 
+	bool isTileEmpty(const Position pos) const;
+
 	MapVersion getMapVersion();
 	std::string &getDescription();
 

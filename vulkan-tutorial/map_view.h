@@ -48,6 +48,8 @@ public:
 	void removeGround(const Position position);
 	void removeTile(const Position position);
 
+	bool isEmpty(Position position) const;
+
 	bool isSelectionMoved() const
 	{
 		return moveSelectionOrigin.has_value();

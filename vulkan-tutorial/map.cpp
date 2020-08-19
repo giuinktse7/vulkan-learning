@@ -48,6 +48,12 @@ void Map::removeTile(const Position pos)
   }
 }
 
+bool Map::isTileEmpty(const Position pos) const
+{
+  Tile *tile = getTile(pos);
+  return !tile || tile->isEmpty();
+}
+
 Tile *Map::getTile(const Position pos) const
 {
   auto leaf = root.getLeafUnsafe(pos.x, pos.y);

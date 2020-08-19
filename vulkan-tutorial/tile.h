@@ -29,6 +29,11 @@ public:
 	void removeItem(size_t index);
 	void removeGround();
 
+	bool isEmpty() const
+	{
+		return !ground && items.empty();
+	}
+
 	int getTopElevation() const;
 
 	const std::vector<Item> &getItems() const

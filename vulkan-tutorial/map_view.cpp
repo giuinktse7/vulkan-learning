@@ -142,6 +142,11 @@ void MapView::setDragStart(WorldPosition position)
   }
 }
 
+bool MapView::isEmpty(Position position) const
+{
+  return map->isTileEmpty(position);
+}
+
 void MapView::setDragEnd(WorldPosition position)
 {
   DEBUG_ASSERT(dragState.has_value(), "There is no current dragging operation.");
