@@ -74,14 +74,14 @@ public:
 		non-consumed event (events are consumed at the end of each call to update).
 		Returns -1 if the key was not the latest changed key.
 	*/
-	int keyEvent(GLFWKey key);
+	int keyEvent(GLFWKey key) const;
 
 	int leftMouseEvent() const;
 	int rightMouseEvent() const;
 
-	bool keyDownEvent(GLFWKey key);
+	bool keyDownEvent(GLFWKey key) const;
 
-	ScreenPosition cursorPos();
+	ScreenPosition cursorPos() const;
 
 	TimePoint lastUpdateTime;
 

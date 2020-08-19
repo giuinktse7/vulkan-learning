@@ -165,16 +165,18 @@ bool Input::ctrl() const
 {
   return getKeyState(GLFW_KEY_LEFT_CONTROL) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_CONTROL) != KeyState::Release;
 }
+
 bool Input::shift() const
 {
   return getKeyState(GLFW_KEY_LEFT_SHIFT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_SHIFT) != KeyState::Release;
 }
+
 bool Input::alt() const
 {
   return getKeyState(GLFW_KEY_LEFT_ALT) != KeyState::Release || getKeyState(GLFW_KEY_RIGHT_ALT) != KeyState::Release;
 }
 
-int Input::keyEvent(GLFWKey key)
+int Input::keyEvent(GLFWKey key) const
 {
   if (currentKeyChange.key == key)
     return currentKeyChange.state;
@@ -184,7 +186,7 @@ int Input::keyEvent(GLFWKey key)
   }
 }
 
-bool Input::keyDownEvent(GLFWKey key)
+bool Input::keyDownEvent(GLFWKey key) const
 {
   return currentKeyChange.key == key && (currentKeyChange.state != GLFW_RELEASE);
 }
@@ -194,6 +196,43 @@ std::pair<double, double> Input::scrollOfset() const
   return {currentScrollOffset.x, currentScrollOffset.y};
 }
 
+ScreenPosition Input::cursorPos() const
+{
+  return currentCursorPos;
+}
+
+bool Input::leftMouseDown() const
+{
+  int status = g_engine->captureMouse ? glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) : currentLeftMouseEvent;
+  return status == GLFW_PRESS;
+}
+bool Input::rightMouseDown() const
+{
+  int status = g_engine->captureMouse ? glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) : currentRightMouseEvent;
+  return status == GLFW_PRESS;
+}
+
+int Input::leftMouseEvent() const
+{
+  return currentLeftMouseEvent;
+}
+
+int Input::rightMouseEvent() const
+{
+  return currentLeftMouseEvent;
+}
+
+/**
+ * 
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * Callback handlers
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ *
+ **/
 void Input::handleScrollCallback(double xOffset, double yOffset)
 {
   if (!g_engine->captureMouse)
@@ -221,11 +260,6 @@ void Input::handleKeyCallback(int key, int scancode, int action, int mods)
   setKeyState(key, action);
 }
 
-ScreenPosition Input::cursorPos()
-{
-  return currentCursorPos;
-}
-
 void Input::handleCursorPosCallback(double x, double y)
 {
   if (!g_engine->captureMouse)
@@ -233,25 +267,6 @@ void Input::handleCursorPosCallback(double x, double y)
 
   currentCursorPos.x = x;
   currentCursorPos.y = y;
-}
-
-bool Input::leftMouseDown() const
-{
-  return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-}
-bool Input::rightMouseDown() const
-{
-  return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-}
-
-int Input::leftMouseEvent() const
-{
-  return currentLeftMouseEvent;
-}
-
-int Input::rightMouseEvent() const
-{
-  return currentLeftMouseEvent;
 }
 
 void Input::handleMouseButtonCallback(int button, int action, int mods)
