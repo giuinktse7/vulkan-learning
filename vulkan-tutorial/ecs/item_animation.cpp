@@ -86,11 +86,11 @@ ItemAnimationComponent::ItemAnimationComponent(SpriteAnimation *animationInfo)
   setPhase(state.phaseIndex, state.lastUpdateTime);
 }
 
-void ItemAnimationComponent::setPhase(uint32_t phaseIndex, TimePoint updateTime)
+void ItemAnimationComponent::setPhase(size_t phaseIndex, TimePoint updateTime)
 {
   SpritePhase phase = animationInfo->phases.at(phaseIndex);
 
-  state.phaseIndex = phaseIndex;
+  state.phaseIndex = static_cast<uint32_t>(phaseIndex);
   if (phase.minDuration != phase.maxDuration)
   {
     state.phaseDurationMs = g_engine->random.nextInt<uint32_t>(phase.minDuration, phase.maxDuration + 1);

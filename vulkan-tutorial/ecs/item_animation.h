@@ -32,7 +32,7 @@ struct ItemAnimationComponent
 {
 	ItemAnimationComponent(SpriteAnimation *animationInfo);
 
-	void setPhase(uint32_t phaseIndex, TimePoint updateTime);
+	void setPhase(size_t phaseIndex, TimePoint updateTime);
 
 	SpriteAnimation *animationInfo;
 	// Should not be changed after construction
