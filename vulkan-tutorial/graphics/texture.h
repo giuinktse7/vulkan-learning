@@ -10,6 +10,12 @@
 
 #include "device_manager.h"
 
+enum class SolidColor : uint32_t
+{
+  Black = 0xFF000000,
+  Blue = 0xFF039BE5
+};
+
 struct TextureWindow
 {
   float x0;
@@ -42,7 +48,7 @@ public:
     return sampler;
   }
 
-  static Texture *getBlackTexture();
+  static Texture *getSolidTexture(SolidColor color);
 
 private:
   void init(uint32_t width, uint32_t height, uint8_t *pixels);

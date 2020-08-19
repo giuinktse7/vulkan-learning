@@ -24,14 +24,14 @@ Batch::Batch()
     : vertexCount(0), descriptorSet(nullptr), valid(true)
 {
   this->stagingBuffer = Buffer::create(
-      BATCH_DEVICE_SIZE,
+      BatchDeviceSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   // std::cout << "Creating buffer at 0x" << std::hex << this->stagingBuffer.deviceMemory << std::endl;
 
   this->buffer = Buffer::create(
-      BATCH_DEVICE_SIZE,
+      BatchDeviceSize,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -56,7 +56,7 @@ void Batch::reset()
 void Batch::mapStagingBuffer()
 {
   void *data;
-  g_engine->mapMemory(this->stagingBuffer.deviceMemory, 0, BATCH_DEVICE_SIZE, 0, &data);
+  g_engine->mapMemory(this->stagingBuffer.deviceMemory, 0, BatchDeviceSize, 0, &data);
   this->vertices = reinterpret_cast<Vertex *>(data);
   this->current = vertices;
 
@@ -85,7 +85,7 @@ void Batch::copyStagingToDevice(VkCommandBuffer commandBuffer)
   vkCmdCopyBuffer(commandBuffer, stagingBuffer.buffer, buffer.buffer, 1, &copyRegion);
 }
 
-void BatchDraw::push(ObjectDrawInfo &info)
+void BatchDraw::addItem(ObjectDrawInfo &info)
 {
   auto [appearance, textureInfo, position, color, drawOffset] = info;
   auto [atlas, window] = textureInfo;
@@ -105,25 +105,67 @@ void BatchDraw::push(ObjectDrawInfo &info)
 
   uint32_t width = atlas->spriteWidth;
   uint32_t height = atlas->spriteHeight;
-
-  glm::vec2 atlasSize = {atlas->width, atlas->height};
-  const float offsetX = 0.5f / atlasSize.x;
-  const float offsetY = 0.5f / atlasSize.y;
-
-  const glm::vec4 rect = {
-      window.x0 + offsetX,
-      window.y0 - offsetY,
-      window.x1 - offsetX,
-      window.y1 + offsetY};
+  const glm::vec4 fragmentBounds = atlas->getFragmentBounds(window);
 
   Batch &batch = getBatch(4);
   batch.setDescriptor(atlas->getDescriptorSet());
 
   std::array<Vertex, 4> vertices{{
-      {{worldPos.x, worldPos.y}, color, {window.x0, window.y0}, rect},
-      {{worldPos.x, worldPos.y + height}, color, {window.x0, window.y1}, rect},
-      {{worldPos.x + width, worldPos.y + height}, color, {window.x1, window.y1}, rect},
-      {{worldPos.x + width, worldPos.y}, color, {window.x1, window.y0}, rect},
+      {{worldPos.x, worldPos.y}, color, {window.x0, window.y0}, fragmentBounds},
+      {{worldPos.x, worldPos.y + height}, color, {window.x0, window.y1}, fragmentBounds},
+      {{worldPos.x + width, worldPos.y + height}, color, {window.x1, window.y1}, fragmentBounds},
+      {{worldPos.x + width, worldPos.y}, color, {window.x1, window.y0}, fragmentBounds},
+  }};
+
+  batch.addVertices(vertices);
+}
+
+void BatchDraw::addRectangle(RectangleDrawInfo &info)
+{
+  Batch &batch = getBatch(4);
+
+  TextureWindow window;
+  glm::vec4 fragmentBounds;
+
+  DEBUG_ASSERT(std::holds_alternative<Texture *>(info.texture) || std::holds_alternative<TextureInfo>(info.texture), "Unknown texture in addRectangle.");
+
+  if (std::holds_alternative<Texture *>(info.texture))
+  {
+    window = {0, 0, 1, 1};
+    fragmentBounds = {0, 0, 1, 1};
+    batch.setDescriptor(std::get<Texture *>(info.texture)->getDescriptorSet());
+  }
+  else if (std::holds_alternative<TextureInfo>(info.texture))
+  {
+    const TextureInfo textureInfo = std::get<TextureInfo>(info.texture);
+    window = textureInfo.window;
+    fragmentBounds = textureInfo.atlas->getFragmentBounds(window);
+
+    batch.setDescriptor(textureInfo.atlas->getDescriptorSet());
+  }
+
+  auto [x1, y1] = info.from;
+  auto [x2, y2] = info.to;
+
+  // Handle the possible quadrants to draw the texture correctly
+  if (x1 > x2)
+  {
+    std::swap(x1, x2);
+    if (y1 > y2)
+    {
+      std::swap(y1, y2);
+    }
+  }
+  else if (x1 < x2 && y1 > y2)
+  {
+    std::swap(y1, y2);
+  }
+
+  std::array<Vertex, 4> vertices{{
+      {{x1, y1}, info.color, {window.x0, window.y0}, fragmentBounds},
+      {{x1, y2}, info.color, {window.x0, window.y1}, fragmentBounds},
+      {{x2, y2}, info.color, {window.x1, window.y1}, fragmentBounds},
+      {{x2, y1}, info.color, {window.x1, window.y0}, fragmentBounds},
   }};
 
   batch.addVertices(vertices);

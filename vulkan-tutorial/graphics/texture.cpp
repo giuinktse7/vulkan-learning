@@ -7,13 +7,14 @@
 #include <string>
 #include <stdexcept>
 #include <ostream>
+#include <unordered_map>
 
 #include "engine.h"
 #include "vulkan_helpers.h"
 
 #include "buffer.h"
 
-std::unique_ptr<Texture> Texture::blackSquare;
+std::unordered_map<SolidColor, std::unique_ptr<Texture>> solidColorTextures;
 
 Texture::Texture(uint32_t width, uint32_t height, std::vector<uint8_t> pixels)
 {
@@ -52,7 +53,7 @@ void Texture::init(uint32_t width, uint32_t height, uint8_t *pixels)
 {
   this->width = width;
   this->height = height;
-  VkDeviceSize imageSize = width * height * 4;
+  VkDeviceSize imageSize = static_cast<uint64_t>(width) * height * 4;
 
   VkDevice device = g_engine->getDevice();
 
@@ -223,14 +224,25 @@ TextureWindow Texture::getTextureWindow()
   return TextureWindow{0.0f, 0.0f, 1.0f, 1.0f};
 }
 
-Texture *Texture::getBlackTexture()
+uint32_t asArgb(SolidColor color)
 {
-    if (!Texture::blackSquare) {
-        std::vector<uint32_t> buffer(32 * 32);
-        std::fill(buffer.begin(), buffer.end(), 0xFF000000);
+  return to_underlying(color);
+}
 
-        Texture::blackSquare = std::make_unique<Texture>(32, 32, (uint8_t*)buffer.data());
-    }
-  
-    return Texture::blackSquare.get();
+Texture *Texture::getSolidTexture(SolidColor color)
+{
+  auto found = solidColorTextures.find(color);
+  if (found != solidColorTextures.end())
+  {
+    return found->second.get();
+  }
+  else
+  {
+    std::vector<uint32_t> buffer(32 * 32);
+    std::fill(buffer.begin(), buffer.end(), asArgb(color));
+
+    solidColorTextures.emplace(color, std::make_unique<Texture>(32, 32, (uint8_t *)buffer.data()));
+
+    return solidColorTextures.at(color).get();
+  }
 }

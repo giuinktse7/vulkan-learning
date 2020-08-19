@@ -18,13 +18,14 @@
 
 constexpr int GROUND_FLOOR = 7;
 
-constexpr glm::vec4 PreviewCursorColor{0.6f,
-                                       0.6f,
-                                       0.6f,
-                                       0.7f};
+namespace colors
+{
+  constexpr glm::vec4 Default{1.0f, 1.0f, 1.0f, 1.0f};
+  constexpr glm::vec4 Selected{0.45f, 0.45f, 0.45f, 1.0f};
+  constexpr glm::vec4 SeeThrough{1.0f, 1.0f, 1.0f, 0.35f};
+  constexpr glm::vec4 ItemPreview{0.6f, 0.6f, 0.6f, 0.7f};
 
-constexpr glm::vec4 DefaultColor{1.0f, 1.0f, 1.0f, 1.0f};
-constexpr glm::vec4 SelectedColor{0.45f, 0.45f, 0.45f, 1.0f};
+} // namespace colors
 
 void MapRenderer::initialize()
 {
@@ -197,7 +198,7 @@ void MapRenderer::drawMap(const MapView &mapView)
             {
               bool selected = tile->getTile()->hasComponent<TileSelectionComponent>();
               bool isSelectionMoved = mapView.isSelectionMoved();
-              
+
               if (!(selected && isSelectionMoved))
               {
                 drawTile(*tile, mapView, ItemDrawFlags::DrawSelected);
@@ -211,34 +212,7 @@ void MapRenderer::drawMap(const MapView &mapView)
 
   drawPreviewCursor(mapView);
   drawMovedSelection(mapView);
-}
-
-void MapRenderer::drawMovedSelection(const MapView &mapView)
-{
-  // g_ecs.getSystem<TileSelectionSystem>().
-}
-
-void MapRenderer::drawPreviewCursor(const MapView &mapView)
-{
-  if (!g_engine->getSelectedServerId().has_value())
-    return;
-
-  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
-
-  Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
-
-  Tile *tile = mapView.getMap()->getTile(pos);
-
-  int elevation = tile ? tile->getTopElevation() : 0;
-
-  ObjectDrawInfo drawInfo;
-  drawInfo.appearance = selectedItemType.appearance;
-  drawInfo.color = PreviewCursorColor;
-  drawInfo.drawOffset = {-elevation, -elevation};
-  drawInfo.position = pos;
-  drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
-
-  drawItem(drawInfo);
+  drawSelectionRectangle(mapView);
 }
 
 void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags)
@@ -265,7 +239,7 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
       ObjectDrawInfo info;
       info.appearance = ground->itemType->appearance;
       info.position = position;
-      info.color = groundSelected ? SelectedColor : DefaultColor;
+      info.color = groundSelected ? colors::Selected : colors::Default;
       info.textureInfo = ground->getTextureInfo(position);
 
       if (groundSelected)
@@ -293,7 +267,7 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
 
     ObjectDrawInfo info;
     info.appearance = item.itemType->appearance;
-    info.color = selection && selection->isItemIndexSelected(i) ? SelectedColor : DefaultColor;
+    info.color = selection && selection->isItemIndexSelected(i) ? colors::Selected : colors::Default;
     info.drawOffset = drawOffset;
     info.position = position;
     info.textureInfo = item.getTextureInfo(position);
@@ -306,6 +280,51 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
       drawOffset.x -= elevation;
       drawOffset.y -= elevation;
     }
+  }
+}
+
+void MapRenderer::drawPreviewCursor(const MapView &mapView)
+{
+  if (!g_engine->getSelectedServerId().has_value())
+    return;
+
+  ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
+
+  Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
+
+  Tile *tile = mapView.getMap()->getTile(pos);
+
+  int elevation = tile ? tile->getTopElevation() : 0;
+
+  ObjectDrawInfo drawInfo;
+  drawInfo.appearance = selectedItemType.appearance;
+  drawInfo.color = colors::ItemPreview;
+  drawInfo.drawOffset = {-elevation, -elevation};
+  drawInfo.position = pos;
+  drawInfo.textureInfo = selectedItemType.getTextureInfo(pos);
+
+  drawItem(drawInfo);
+}
+
+void MapRenderer::drawMovedSelection(const MapView &mapView)
+{
+  // g_ecs.getSystem<TileSelectionSystem>().
+}
+
+void MapRenderer::drawSelectionRectangle(const MapView &mapView)
+{
+  if (mapView.isDragging())
+  {
+    RectangleDrawInfo info;
+
+    const auto [from, to] = mapView.getDragPoints().value();
+    info.from = from;
+    info.to = to;
+    // info.texture = Items::items.getItemType(2554)->getTextureInfo();
+    info.texture = Texture::getSolidTexture(SolidColor::Blue);
+    info.color = colors::SeeThrough;
+
+    currentFrame->batchDraw.addRectangle(info);
   }
 }
 
@@ -350,7 +369,7 @@ void MapRenderer::createFrameBuffers()
 
 void MapRenderer::drawItem(ObjectDrawInfo &info)
 {
-  currentFrame->batchDraw.push(info);
+  currentFrame->batchDraw.addItem(info);
 }
 
 /**

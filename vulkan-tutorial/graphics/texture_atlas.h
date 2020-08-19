@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #include <filesystem>
 #include <memory>
 #include <variant>
@@ -53,6 +55,8 @@ struct TextureAtlas
 	uint32_t spriteHeight;
 
 	DrawOffset drawOffset;
+
+	glm::vec4 getFragmentBounds(const TextureWindow window) const;
 
 	const TextureWindow getTextureWindow(uint32_t spriteId) const;
 

@@ -28,8 +28,8 @@ void GUI::renderItem(ItemType *itemType)
   if (itemType == nullptr || !itemType->isValid())
   {
     ImGui::Image(
-        (ImTextureID)Texture::getBlackTexture()->getDescriptorSet(),
-        {static_cast<float>(32), static_cast<float>(32)});
+        (ImTextureID)Texture::getSolidTexture(SolidColor::Black)->getDescriptorSet(),
+        {32.0f, 32.0f});
   }
   else
   {

@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include <vector>
+#include <variant>
 
 #include "vertex.h"
 #include "../debug.h"
@@ -16,8 +17,7 @@
 #include "../item.h"
 #include "../position.h"
 
-constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 128 * sizeof(Vertex);
-// constexpr uint32_t BATCH_DEVICE_SIZE = 4 * 144 * sizeof(Vertex);
+constexpr uint32_t BatchDeviceSize = 4 * 128 * sizeof(Vertex);
 
 struct ObjectDrawInfo
 {
@@ -26,6 +26,14 @@ struct ObjectDrawInfo
 	Position position;
 	glm::vec4 color;
 	DrawOffset drawOffset = {0, 0};
+};
+
+struct RectangleDrawInfo
+{
+	WorldPosition from;
+	WorldPosition to;
+	glm::vec4 color;
+	std::variant<Texture *, TextureInfo> texture;
 };
 
 struct Batch
@@ -94,7 +102,7 @@ struct Batch
 
 	const bool canHold(uint32_t vertexCount) const
 	{
-		return (this->vertexCount + vertexCount) * sizeof(Vertex) < BATCH_DEVICE_SIZE;
+		return (this->vertexCount + vertexCount) * sizeof(Vertex) < BatchDeviceSize;
 	}
 
 	void invalidate();
@@ -113,7 +121,8 @@ public:
 
 	BatchDraw();
 
-	void push(ObjectDrawInfo &info);
+	void addItem(ObjectDrawInfo &info);
+	void addRectangle(RectangleDrawInfo &info);
 
 	void reset();
 

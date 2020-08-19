@@ -169,3 +169,16 @@ Texture &TextureAtlas::getTexture()
 
   return std::get<Texture>(this->texture);
 }
+
+glm::vec4 TextureAtlas::getFragmentBounds(const TextureWindow window) const
+{
+  const float offsetX = 0.5f / this->width;
+  const float offsetY = 0.5f / this->height;
+
+  return {
+      window.x0 + offsetX,
+      window.y0 - offsetY,
+      window.x1 - offsetX,
+      window.y1 + offsetY,
+  };
+}

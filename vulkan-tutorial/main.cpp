@@ -194,10 +194,19 @@ int main()
 		g_engine->initialize(window);
 		Logger::info() << "Loading finished in " << g_engine->startTime.elapsedMillis() << " ms." << std::endl;
 
+		bool captureMouse = g_engine->captureMouse;
+
 		while (!glfwWindowShouldClose(window))
 		{
 			g_engine->gui.captureIO();
 			glfwPollEvents();
+
+			if (captureMouse != g_engine->captureMouse)
+			{
+				Logger::debug() << "captureMouse changed to " << g_engine->captureMouse << std::endl;
+			}
+
+			captureMouse = g_engine->captureMouse;
 
 			FrameResult res = g_engine->nextFrame();
 			if (res == FrameResult::Success)

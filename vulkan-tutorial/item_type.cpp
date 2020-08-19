@@ -24,24 +24,25 @@ const uint32_t ItemType::getPatternIndex(const Position &pos) const
 const TextureInfo ItemType::getTextureInfo() const
 {
   uint32_t spriteId = appearance->getFirstSpriteId();
-  TextureAtlas *atlas = getTextureAtlas(spriteId);
-
-  TextureInfo info;
-  info.atlas = atlas;
-  info.window = atlas->getTextureWindow(spriteId);
-  return info;
+  return getTextureInfo(spriteId);
 }
 
 const TextureInfo ItemType::getTextureInfo(uint32_t spriteId) const
 {
   TextureAtlas *atlas = getTextureAtlas(spriteId);
 
-  return TextureInfo{atlas, atlas->getTextureWindow(spriteId)};
+  float offsetX = 0.5f / atlas->width;
+  float offsetY = 0.5f / atlas->height;
+
+  TextureInfo info;
+  info.atlas = atlas;
+  info.window = atlas->getTextureWindow(spriteId);
+
+  return info;
 }
 
 const TextureInfo ItemType::getTextureInfo(const Position &pos) const
 {
-  auto k = this;
   if (!appearance->hasFlag(AppearanceFlag::Take) && appearance->hasFlag(AppearanceFlag::Unmove))
   {
     const SpriteInfo &spriteInfo = appearance->getSpriteInfo();
