@@ -17,6 +17,16 @@ Map::Map()
 {
 }
 
+void Map::clear()
+{
+  root.clear();
+}
+
+MapRegion Map::getRegion(Position from, Position to)
+{
+  return MapRegion(*this, from, to);
+}
+
 Tile &Map::getOrCreateTile(const Position &pos)
 {
   return getOrCreateTile(pos.x, pos.y, pos.z);
@@ -278,4 +288,106 @@ void Map::createItemAt(Position pos, uint16_t id)
   }
 
   getOrCreateTile(pos).addItem(std::move(item));
+}
+
+MapRegion::Iterator::Iterator(Map &map, Position from, Position to, bool isEnd)
+    : map(map), from(from), to(to), isEnd(isEnd)
+{
+  if (!isEnd)
+  {
+    x1 = from.x & ~3;
+    x2 = (to.x & ~3) + 4;
+
+    y1 = from.y & ~3;
+    y2 = (to.y & ~3) + 4;
+
+    endZ = std::min(from.z, to.z);
+
+    state.mapX = x1;
+    state.mapY = y1;
+    state.mapZ = std::max(from.z, to.z);
+
+    nextChunk();
+    updateValue();
+  }
+}
+
+MapRegion::Iterator MapRegion::Iterator::operator++()
+{
+  ++state.chunk.y;
+  updateValue();
+
+  return *this;
+}
+
+MapRegion::Iterator MapRegion::Iterator::operator++(int junk)
+{
+  Iterator previous(map, *this);
+
+  ++state.chunk.y;
+  updateValue();
+
+  return previous;
+}
+
+bool MapRegion::Iterator::operator==(const MapRegion::Iterator &rhs) const
+{
+  if (isEnd && rhs.isEnd)
+    return true;
+
+  return from == rhs.from && to == rhs.to && value == rhs.value;
+}
+
+void MapRegion::Iterator::nextChunk()
+{
+  for (; state.mapZ >= endZ; --state.mapZ)
+  {
+    for (; state.mapX <= x2; state.mapX += 4)
+    {
+      for (; state.mapY <= y2; state.mapY += 4)
+      {
+        quadtree::Node *node = map.getLeafUnsafe(state.mapX, state.mapY);
+        if (node)
+        {
+          state.chunk.x = 0;
+          state.chunk.y = 0;
+          state.chunk.node = node;
+          return;
+        }
+      }
+      state.mapY = y1;
+    }
+    state.mapX = x1;
+  }
+
+  state.chunk.node = nullptr;
+  isEnd = true;
+}
+
+void MapRegion::Iterator::updateValue()
+{
+  if (isEnd)
+  {
+    return;
+  }
+
+  for (int &x = state.chunk.x; x < 4; ++x)
+  {
+    for (int &y = state.chunk.y; y < 4; ++y)
+    {
+      Pointer tileLocation = state.chunk.node->getTile(state.mapX + x, state.mapY + y, state.mapZ);
+      if (tileLocation)
+      {
+        value = tileLocation;
+        // The function can return because the next TileLocation was found
+        return;
+      }
+    }
+    state.chunk.y = 0;
+  }
+  state.chunk.x = 0;
+
+  state.mapY += 4;
+  nextChunk();
+  updateValue();
 }

@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <iostream>
 #include <string>
+#include <stack>
+#include <optional>
 
 #include "debug.h"
 
@@ -12,13 +14,92 @@
 #include "tile_location.h"
 #include "quad_tree.h"
 #include "position.h"
+#include "util.h"
 
 #include "town.h"
 
 #include "version.h"
 
-#include <stack>
-#include <optional>
+class MapRegion
+{
+public:
+	MapRegion(Map &map, Position from, Position to)
+			: map(map), from(from), to(to) {}
+
+	class Iterator
+	{
+	public:
+		using ValueType = TileLocation;
+		using Reference = TileLocation &;
+		using Pointer = TileLocation *;
+		using IteratorCategory = std::forward_iterator_tag;
+
+		Iterator(Map &map, Position from, Position to, bool isEnd = false);
+
+		Iterator operator++();
+		Iterator operator++(int junk);
+
+		Reference operator*() { return *value; }
+		Pointer operator->() { return value; }
+
+		bool operator==(const Iterator &rhs) const;
+		bool operator!=(const Iterator &rhs) const { return !(*this == rhs); }
+
+	private:
+		Map &map;
+		Position from;
+		Position to;
+
+		int x1, x2, y1, y2;
+		int endZ;
+
+		struct
+		{
+			int mapX, mapY, mapZ;
+			struct
+			{
+				int x, y;
+				quadtree::Node *node;
+			} chunk;
+		} state;
+
+		Pointer value;
+
+		bool isEnd;
+
+		// For postfix operator
+		Iterator(Map &map, const Iterator &iterator)
+				: map(map), from(iterator.from), to(iterator.to), isEnd(iterator.isEnd)
+		{
+			x1 = iterator.x1;
+			x2 = iterator.x2;
+
+			y1 = iterator.y1;
+			y2 = iterator.y2;
+
+			state = iterator.state;
+		}
+
+		void nextChunk();
+		void updateValue();
+	};
+
+	Iterator begin()
+	{
+		return Iterator(map, from, to);
+	}
+
+	Iterator end()
+	{
+		return Iterator(map, from, to, true);
+	}
+
+private:
+	Map &map;
+
+	Position from;
+	Position to;
+};
 
 class MapIterator
 {
@@ -95,6 +176,8 @@ public:
 	MapIterator begin();
 	MapIterator end();
 
+	MapRegion getRegion(Position from, Position to);
+
 	/*
 		Replace the tile at the given tile's location. Returns the old tile if one
 		was present.
@@ -121,6 +204,11 @@ public:
 	{
 		return towns;
 	}
+
+	/*
+		Clear the map.
+	*/
+	void clear();
 
 	quadtree::Node *getLeafUnsafe(int x, int y);
 
