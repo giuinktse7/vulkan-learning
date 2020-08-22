@@ -5,7 +5,10 @@
 
 void Camera::updateZoom()
 {
-	auto [cursorX, cursorY] = g_engine->getCursorPos();
+	ScreenPosition cursorPos = g_engine->getCursorPos();
+	float cursorX = static_cast<float>(cursorPos.x);
+	float cursorY = static_cast<float>(cursorPos.y);
+
 	float n = 0.1f;
 	float zoomFactor = n * exp(log(1 / n) / 10 * zoomStep);
 
