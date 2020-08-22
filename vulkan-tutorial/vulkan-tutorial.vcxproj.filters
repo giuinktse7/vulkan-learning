@@ -147,9 +147,6 @@
     <ClCompile Include="ecs\ecs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ecs\item_selection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -163,6 +160,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="action\action.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="selection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -308,9 +308,6 @@
     <ClInclude Include="type_trait.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ecs\item_selection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -321,6 +318,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="action\action.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="selection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

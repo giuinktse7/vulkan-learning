@@ -58,10 +58,6 @@ void Appearances::loadAppearanceData(const std::filesystem::path path)
         const tibia::protobuf::appearances::Appearance &object = parsed.object(i);
         auto info = object.frame_group().at(0).sprite_info();
 
-        if (object.id() == 7441)
-        {
-            std::cout << object.flags() << std::endl;
-        }
         // if (object.id() == 3031 || object.id() == 103)
         // {
         //     std::cout << "\n(cid: " << object.id() << "): " << std::endl;
@@ -108,6 +104,9 @@ void Appearances::loadAppearanceData(const std::filesystem::path path)
 TextureAtlas *Appearances::getTextureAtlas(const uint32_t spriteId)
 {
     size_t i = textureAtlasSpriteRanges.size() >> 1;
+
+    // Perform a binary search to find the Texture atlas containing the spriteId.
+
     SpriteRange range = textureAtlasSpriteRanges[i];
     size_t change = (textureAtlasSpriteRanges.size() >> 2) + (textureAtlasSpriteRanges.size() & 1);
 
@@ -271,6 +270,11 @@ Appearance::Appearance(tibia::protobuf::appearances::Appearance protobufAppearan
     this->clientId = protobufAppearance.id();
     this->name = protobufAppearance.name();
 
+    // if (this->clientId == 447 || this->clientId == 5750)
+    // {
+    //     std::cout << protobufAppearance.flags() << std::endl;
+    // }
+
     if (protobufAppearance.frame_group_size() == 1)
     {
         this->appearanceData = SpriteInfo::fromProtobufData(protobufAppearance.frame_group().at(0).sprite_info());
@@ -292,7 +296,7 @@ Appearance::Appearance(tibia::protobuf::appearances::Appearance protobufAppearan
     } while (false)
 
         ADD_FLAG_UTIL(bank, AppearanceFlag::Bank);
-        ADD_FLAG_UTIL(clip, AppearanceFlag::Clip);
+        ADD_FLAG_UTIL(clip, AppearanceFlag::GroundBorder);
         ADD_FLAG_UTIL(bottom, AppearanceFlag::Bottom);
         ADD_FLAG_UTIL(top, AppearanceFlag::Top);
         ADD_FLAG_UTIL(container, AppearanceFlag::Container);

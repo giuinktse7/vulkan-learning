@@ -284,10 +284,10 @@ void GUI::createBottomBar()
 
     Tile *tile = mapView.getMap()->getTile(cursorMapPos);
     std::ostringstream tileInfoString;
-    if (tile && tile->getTopItem())
+    if (tile && tile->hasTopItem())
     {
       const Item *topItem = tile->getTopItem();
-      tileInfoString << "Item \"" << tile->getTopItem()->getName() << "\", id: " << topItem->getId() << ", cid: " << topItem->getClientId();
+      tileInfoString << "Item \"" << topItem->getName() << "\", id: " << topItem->getId() << ", cid: " << topItem->getClientId();
     }
     else
     {

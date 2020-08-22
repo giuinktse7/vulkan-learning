@@ -34,7 +34,6 @@
 #include "graphics/texture.h"
 #include "graphics/appearances.h"
 #include "ecs/item_animation.h"
-#include "ecs/item_selection.h"
 #include "map.h"
 #include "ecs/ecs.h"
 #include "input_control.h"
@@ -172,10 +171,6 @@ int main()
 		// Register animation
 		g_ecs.registerComponent<ItemAnimationComponent>();
 		g_ecs.registerSystem<ItemAnimationSystem>();
-
-		// Register selection
-		g_ecs.registerComponent<TileSelectionComponent>();
-		g_ecs.registerSystem<TileSelectionSystem>();
 
 		Appearances::loadTextureAtlases("data/catalog-content.json");
 		Appearances::loadAppearanceData("data/appearances.dat");

@@ -165,7 +165,6 @@
     <ClCompile Include="action\action.cpp" />
     <ClCompile Include="ecs\ecs.cpp" />
     <ClCompile Include="ecs\item_animation.cpp" />
-    <ClCompile Include="ecs\item_selection.cpp" />
     <ClCompile Include="graphics\appearances.cpp" />
     <ClCompile Include="graphics\batch_item_draw.cpp" />
     <ClCompile Include="graphics\buffer.cpp" />
@@ -204,6 +203,7 @@
     <ClCompile Include="position.cpp" />
     <ClCompile Include="quad_tree.cpp" />
     <ClCompile Include="random.cpp" />
+    <ClCompile Include="selection.cpp" />
     <ClCompile Include="tile.cpp" />
     <ClCompile Include="tile_location.cpp" />
     <ClCompile Include="time.cpp" />
@@ -220,7 +220,6 @@
     <ClInclude Include="ecs\entity.h" />
     <ClInclude Include="ecs\item_animation.h" />
     <ClInclude Include="ecs\ecs.h" />
-    <ClInclude Include="ecs\item_selection.h" />
     <ClInclude Include="graphics\batch_item_draw.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="graphics\appearances.h" />
@@ -254,6 +253,7 @@
     <ClInclude Include="position.h" />
     <ClInclude Include="quad_tree.h" />
     <ClInclude Include="random.h" />
+    <ClInclude Include="selection.h" />
     <ClInclude Include="tile.h" />
     <ClInclude Include="tile_location.h" />
     <ClInclude Include="time.h" />

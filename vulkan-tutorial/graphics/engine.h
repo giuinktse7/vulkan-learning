@@ -264,6 +264,11 @@ public:
 		return gui.brushServerId;
 	}
 
+	bool hasBrush() const
+	{
+		return gui.brushServerId.has_value();
+	}
+
 	/*
 	Remove selected item from the brush
 	*/

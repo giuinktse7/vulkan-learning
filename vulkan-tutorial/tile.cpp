@@ -3,47 +3,38 @@
 #include <numeric>
 
 #include "ecs/ecs.h"
-#include "ecs/item_selection.h"
 #include "tile_location.h"
 
 Tile::Tile(TileLocation &tileLocation)
-    : position(tileLocation.position)
+    : position(tileLocation.position), selectionCount(0)
 {
 }
 
 Tile::Tile(Position position)
-    : position(position) {}
+    : position(position), selectionCount(0) {}
 
 // TODO BUG? It is possible that entityId from OptionalEntity does not get moved correctly.
 // TODO It should be deleted from "other" and put into the newly constructed Tile.
 Tile::Tile(Tile &&other) noexcept
-    : ecs::OptionalEntity(std::move(other)),
-      items(std::move(other.items)),
+    : items(std::move(other.items)),
       ground(std::move(other.ground)),
-      position(other.position)
+      position(other.position),
+      selectionCount(other.selectionCount)
 {
-  other.entityId.reset();
 }
 
 Tile &Tile::operator=(Tile &&other) noexcept
 {
   items = std::move(other.items);
-  entityId = std::move(other.entityId);
   ground = std::move(other.ground);
   position = std::move(other.position);
-
-  other.entityId = {};
+  selectionCount = other.selectionCount;
 
   return *this;
 }
 
 Tile::~Tile()
 {
-  if (isEntity())
-  {
-    Logger::debug() << "~Tile() with entity id: " << getEntityId().value() << std::endl;
-    destroyEntity();
-  }
 }
 
 Item *Tile::getGround() const
@@ -51,11 +42,16 @@ Item *Tile::getGround() const
   return ground.get();
 }
 
-const Item *Tile::getTopItem() const
+bool Tile::hasTopItem() const
+{
+  return !isEmpty();
+}
+
+Item *Tile::getTopItem() const
 {
   if (items.size() > 0)
   {
-    return &items.back();
+    return const_cast<Item *>(&items.back());
   }
   if (ground)
   {
@@ -65,10 +61,42 @@ const Item *Tile::getTopItem() const
   return nullptr;
 }
 
+bool Tile::topItemSelected() const
+{
+  if (!hasTopItem())
+    return false;
+
+  const Item *topItem = getTopItem();
+  return allSelected() || topItem->selected;
+}
+
+void Tile::removeItem(size_t index)
+{
+  if (index == items.size() - 1)
+  {
+    items.pop_back();
+  }
+  else
+  {
+    items.erase(items.begin() + index);
+  }
+}
+
+void Tile::deselect()
+{
+  if (ground)
+    ground->selected = false;
+
+  for (Item &item : items)
+  {
+    item.selected = false;
+  }
+
+  selectionCount = 0;
+}
+
 void Tile::addItem(Item &&item)
 {
-  std::cout << "Toporder: " << item.getTopOrder() << std::endl;
-
   if (item.isGround())
   {
     this->ground = std::make_unique<Item>(std::move(item));
@@ -84,10 +112,29 @@ void Tile::addItem(Item &&item)
     {
       if (cursor->itemType->alwaysOnTop)
       {
-        if (item.getTopOrder() < cursor->getTopOrder())
+        if (item.itemType->isGroundBorder())
         {
-          break;
+          if (!cursor->itemType->isGroundBorder())
+          {
+            break;
+          }
         }
+        else // New item is not a border
+        {
+          if (cursor->itemType->alwaysOnTop)
+          {
+            if (!cursor->itemType->isGroundBorder())
+            {
+              // Replace the current item at cursor with the new item
+              *(cursor) = std::move(item);
+              return;
+            }
+          }
+        }
+        // if (item.getTopOrder() < cursor->getTopOrder())
+        // {
+        //   break;
+        // }
       }
       else
       {
@@ -102,28 +149,6 @@ void Tile::addItem(Item &&item)
   }
 
   items.insert(cursor, std::move(item));
-  updateSelectionComponent();
-}
-
-void Tile::updateSelectionComponent() const
-{
-  if (isEntity())
-  {
-    TileSelectionComponent *component = g_ecs.getComponent<TileSelectionComponent>(getEntityId().value());
-    if (component)
-    {
-      component->tileItemCount = items.size();
-    }
-  }
-}
-
-void Tile::removeItem(size_t index)
-{
-  auto pos = items.begin();
-  std::advance(pos, index);
-  items.erase(pos);
-
-  updateSelectionComponent();
 }
 
 void Tile::removeGround()
@@ -147,16 +172,6 @@ int Tile::getTopElevation() const
       items.end(),
       0,
       [](int elevation, const Item &next) { return elevation + next.itemType->getElevation(); });
-}
-
-ecs::EntityId Tile::getOrCreateEntity()
-{
-  if (!isEntity())
-  {
-    assignNewEntityId();
-  }
-
-  return this->getEntityId().value();
 }
 
 Tile Tile::deepCopy() const
@@ -196,4 +211,89 @@ long Tile::getY() const
 long Tile::getZ() const
 {
   return position.z;
+}
+
+bool Tile::isEmpty() const
+{
+  return !ground && items.empty();
+}
+
+bool Tile::allSelected() const
+{
+  size_t size = items.size();
+  if (ground)
+    ++size;
+
+  return selectionCount == size;
+}
+
+bool Tile::hasSelection() const
+{
+  return selectionCount != 0;
+}
+
+void Tile::selectAll()
+{
+  size_t count = 0;
+  if (ground)
+  {
+    ++count;
+    ground->selected = true;
+  }
+
+  count += items.size();
+  for (Item &item : items)
+  {
+    item.selected = true;
+  }
+
+  selectionCount = count;
+}
+
+void Tile::selectTopItem()
+{
+  if (items.empty())
+  {
+    if (ground)
+    {
+      if (!ground->selected)
+      {
+        ++selectionCount;
+      }
+      ground->selected = true;
+    }
+  }
+  else
+  {
+    if (!items.back().selected)
+    {
+      ++selectionCount;
+    }
+
+    items.back().selected = true;
+  }
+}
+
+void Tile::deselectTopItem()
+{
+  if (items.empty())
+  {
+    if (ground)
+    {
+      if (ground->selected)
+      {
+        --selectionCount;
+      }
+      ground->selected = false;
+    }
+  }
+  else
+  {
+    if (items.back().selected)
+    {
+      --selectionCount;
+    }
+
+    items.back().selected = false;
+  }
 }

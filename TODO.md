@@ -15,8 +15,14 @@
 ## Editing functionality
 
 - [x] Implement multi-select
-- [ ] Delete selected items
+- [x] Delete selected items
 - [ ] Move selected items
+- [ ] topItem **not** selected: PRESS selects.
+- [ ] topItem selected: RELEASE deselects, but ONLY if mouse has been outside of this tile since the PRESS event.
+
+### GUI
+
+- [ ] Replace Dear ImGui with QT
 
 ## General
 
