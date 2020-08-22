@@ -34,11 +34,16 @@ Tile &Map::getOrCreateTile(const Position &pos)
 
 std::unique_ptr<Tile> Map::replaceTile(Tile &&tile)
 {
-  auto pos = tile.getPosition();
-  auto &leaf = root.getLeafWithCreate(pos.x, pos.y);
-  TileLocation &location = leaf.getOrCreateTileLocation(tile.getPosition());
+  TileLocation &location = getOrCreateTileLocation(tile.getPosition());
 
   return location.replaceTile(std::move(tile));
+}
+
+void Map::insertTile(Tile &&tile)
+{
+  TileLocation &location = getOrCreateTileLocation(tile.getPosition());
+
+  location.setTile(std::make_unique<Tile>(std::move(tile)));
 }
 
 void Map::removeTile(const Position pos)
@@ -56,6 +61,25 @@ void Map::removeTile(const Position pos)
       }
     }
   }
+}
+
+std::unique_ptr<Tile> Map::dropTile(const Position pos)
+{
+  auto leaf = root.getLeafUnsafe(pos.x, pos.y);
+  if (leaf)
+  {
+    Floor *floor = leaf->getFloor(pos.z);
+    if (floor)
+    {
+      auto &loc = floor->getTileLocation(pos.x, pos.y);
+      if (loc.hasTile())
+      {
+        return loc.dropTile();
+      }
+    }
+  }
+
+  return {};
 }
 
 bool Map::isTileEmpty(const Position pos) const
@@ -111,6 +135,14 @@ TileLocation *Map::getTileLocation(int x, int y, int z) const
   }
 
   return nullptr;
+}
+
+TileLocation &Map::getOrCreateTileLocation(const Position &pos)
+{
+  auto &leaf = root.getLeafWithCreate(pos.x, pos.y);
+  TileLocation &location = leaf.getOrCreateTileLocation(pos);
+
+  return location;
 }
 
 quadtree::Node *Map::getLeafUnsafe(int x, int y)
@@ -295,16 +327,16 @@ MapRegion::Iterator::Iterator(Map &map, Position from, Position to, bool isEnd)
 {
   if (!isEnd)
   {
-    x1 = from.x & ~3;
-    x2 = (to.x & ~3) + 4;
+    x1 = std::min(from.x, to.x);
+    x2 = std::max(from.x, to.x);
 
-    y1 = from.y & ~3;
-    y2 = (to.y & ~3) + 4;
+    y1 = std::min(from.y, to.y);
+    y2 = std::max(from.y, to.y);
 
     endZ = std::min(from.z, to.z);
 
-    state.mapX = x1;
-    state.mapY = y1;
+    state.mapX = x1 & (~3);
+    state.mapY = y1 & (~3);
     state.mapZ = std::max(from.z, to.z);
 
     nextChunk();
@@ -355,12 +387,17 @@ void MapRegion::Iterator::nextChunk()
           return;
         }
       }
-      state.mapY = y1;
+      state.mapY = y1 & (~3);
     }
-    state.mapX = x1;
+    state.mapX = x1 & (~3);
   }
 
   state.chunk.node = nullptr;
+  isEnd = true;
+}
+
+void MapRegion::Iterator::reachedEnd()
+{
   isEnd = true;
 }
 
@@ -373,8 +410,16 @@ void MapRegion::Iterator::updateValue()
 
   for (int &x = state.chunk.x; x < 4; ++x)
   {
+    if (state.mapX + x < x1 || state.mapX + x > x2)
+    {
+      continue;
+    }
     for (int &y = state.chunk.y; y < 4; ++y)
     {
+      if (state.mapY + y < y1 || state.mapY + y > y2)
+      {
+        continue;
+      }
       Pointer tileLocation = state.chunk.node->getTile(state.mapX + x, state.mapY + y, state.mapZ);
       if (tileLocation)
       {

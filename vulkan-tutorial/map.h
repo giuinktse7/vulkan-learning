@@ -20,6 +20,8 @@
 
 #include "version.h"
 
+class MapView;
+
 class MapRegion
 {
 public:
@@ -53,7 +55,7 @@ public:
 		int x1, x2, y1, y2;
 		int endZ;
 
-		struct
+		struct State
 		{
 			int mapX, mapY, mapZ;
 			struct
@@ -82,6 +84,7 @@ public:
 
 		void nextChunk();
 		void updateValue();
+		void reachedEnd();
 	};
 
 	Iterator begin()
@@ -178,24 +181,14 @@ public:
 
 	MapRegion getRegion(Position from, Position to);
 
-	/*
-		Replace the tile at the given tile's location. Returns the old tile if one
-		was present.
-	*/
-	std::unique_ptr<Tile> replaceTile(Tile &&tile);
-	Tile &getOrCreateTile(int x, int y, int z);
-	Tile &getOrCreateTile(const Position &pos);
 	TileLocation *getTileLocation(int x, int y, int z) const;
 	TileLocation *getTileLocation(const Position &pos) const;
 	Tile *getTile(const Position pos) const;
-	void removeTile(const Position pos);
 
 	bool isTileEmpty(const Position pos) const;
 
 	MapVersion getMapVersion();
 	std::string &getDescription();
-
-	void createItemAt(Position pos, uint16_t id);
 
 	uint16_t getWidth() const;
 	uint16_t getHeight() const;
@@ -213,6 +206,7 @@ public:
 	quadtree::Node *getLeafUnsafe(int x, int y);
 
 private:
+	friend class MapView;
 	Towns towns;
 	MapVersion mapVersion;
 	std::string description;
@@ -220,6 +214,22 @@ private:
 	uint16_t width, height;
 
 	quadtree::Node root;
+
+	/*
+		Replace the tile at the given tile's location. Returns the old tile if one
+		was present.
+	*/
+	std::unique_ptr<Tile> replaceTile(Tile &&tile);
+	void insertTile(Tile &&tile);
+	Tile &getOrCreateTile(int x, int y, int z);
+	Tile &getOrCreateTile(const Position &pos);
+	TileLocation &getOrCreateTileLocation(const Position &pos);
+	void removeTile(const Position pos);
+	/*
+		Remove and release ownership of the tile
+	*/
+	std::unique_ptr<Tile> dropTile(const Position pos);
+	void createItemAt(Position pos, uint16_t id);
 };
 
 inline uint16_t Map::getWidth() const
