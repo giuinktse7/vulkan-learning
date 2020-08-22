@@ -2,7 +2,7 @@
 
 #include "map_view.h"
 
-WorldPosition ScreenPosition::worldPos(const MapView &mapView)
+WorldPosition ScreenPosition::worldPos(const MapView &mapView) const
 {
   double newX = mapView.getX() + this->x / mapView.getZoomFactor();
   double newY = mapView.getY() + this->y / mapView.getZoomFactor();
@@ -10,7 +10,7 @@ WorldPosition ScreenPosition::worldPos(const MapView &mapView)
   return WorldPosition{newX, newY};
 }
 
-MapPosition ScreenPosition::mapPos(const MapView &mapView)
+MapPosition ScreenPosition::mapPos(const MapView &mapView) const
 {
   double newX = this->x / mapView.getZoomFactor();
   double newY = this->y / mapView.getZoomFactor();
@@ -21,19 +21,19 @@ MapPosition ScreenPosition::mapPos(const MapView &mapView)
   return MapPosition{static_cast<long>(newX), static_cast<long>(newY)};
 }
 
-MapPosition WorldPosition::mapPos()
+MapPosition WorldPosition::mapPos() const
 {
   return MapPosition{
       static_cast<long>(std::floor(this->x / MapTileSize)),
       static_cast<long>(std::floor(this->y / MapTileSize))};
 }
 
-WorldPosition MapPosition::worldPos()
+WorldPosition MapPosition::worldPos() const
 {
   return WorldPosition{static_cast<double>(this->x * MapTileSize), static_cast<double>(this->y * MapTileSize)};
 }
 
-Position MapPosition::floor(int floor)
+Position MapPosition::floor(int floor) const
 {
   Position pos;
   pos.x = this->x;
@@ -43,7 +43,17 @@ Position MapPosition::floor(int floor)
   return pos;
 }
 
-Position ScreenPosition::toPos(const MapView &mapView)
+Position ScreenPosition::toPos(const MapView &mapView) const
 {
   return worldPos(mapView).mapPos().floor(mapView.getFloor());
+}
+
+Position WorldPosition::toPos(const MapView &mapView) const
+{
+  return toPos(mapView.getFloor());
+}
+
+Position WorldPosition::toPos(int floor) const
+{
+  return mapPos().floor(floor);
 }

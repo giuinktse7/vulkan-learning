@@ -42,6 +42,12 @@ struct Position : public BasePosition<long>
 		return *this;
 	}
 
+	Position operator+(const Position &rhs)
+	{
+		*this += rhs;
+		return *this;
+	}
+
 	template <int I>
 	auto get() const
 	{
@@ -56,21 +62,23 @@ struct Position : public BasePosition<long>
 
 struct ScreenPosition : public BasePosition<double>
 {
-	WorldPosition worldPos(const MapView &mapView);
-	MapPosition mapPos(const MapView &mapView);
-	Position toPos(const MapView &mapView);
+	WorldPosition worldPos(const MapView &mapView) const;
+	MapPosition mapPos(const MapView &mapView) const;
+	Position toPos(const MapView &mapView) const;
 };
 
 struct WorldPosition : public BasePosition<double>
 {
-	MapPosition mapPos();
+	MapPosition mapPos() const;
+	Position toPos(const MapView &mapView) const;
+	Position toPos(int floor) const;
 };
 
 struct MapPosition : public BasePosition<long>
 {
-	WorldPosition worldPos();
+	WorldPosition worldPos() const;
 
-	Position floor(int floor);
+	Position floor(int floor) const;
 };
 
 enum GameDirection : uint8_t
