@@ -200,6 +200,11 @@ public:
   bool usesSubType() const;
   bool isStackable() const;
 
+  bool hasFlag(AppearanceFlag flag) const
+  {
+    return appearance->hasFlag(flag);
+  }
+
   /*
     The items.otb may report a client ID that is incorrect. One such example
     is server ID 2812 that according to the items.otb has client ID 395.
@@ -240,6 +245,11 @@ public:
 
   // std::unique_ptr<Abilities> abilities;
   // std::unique_ptr<ConditionDamage> conditionDamage;
+
+  bool isGroundBorder() const
+  {
+    return hasFlag(AppearanceFlag::GroundBorder);
+  }
 
   bool decays = false;
 
