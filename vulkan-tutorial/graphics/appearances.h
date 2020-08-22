@@ -101,8 +101,13 @@ enum class AppearancePlayerDefaultAction
 enum class AppearanceFlag : uint64_t
 {
   Bank = 1ULL << 0,
-  // If the appearance is ground but only partially covers it, for example the top tile where 2 different grounds are displayed.
-  Clip = 1ULL << 1,
+  /*
+    If the appearance is ground but only partially covers it, for example the
+    top tile where 2 different grounds are displayed.
+    
+    Corresponds to Clip in the protobuf Appearance data.
+  */
+  GroundBorder = 1ULL << 1,
   // If the appearance is the bottom-most appearance, only above the ground (bank).
   Bottom = 1ULL << 2,
   // If the appearance is the top-most appearance.
@@ -336,8 +341,7 @@ public:
 
 private:
   // Most (if not all) objects have only one FrameGroup. This avoids having to create a vector to store a single element (perf not tested as of 2020/08/02).
-  std::variant<SpriteInfo, std::vector<FrameGroup>>
-      appearanceData;
+  std::variant<SpriteInfo, std::vector<FrameGroup>> appearanceData;
   AppearanceFlag flags;
 };
 
@@ -394,6 +398,113 @@ inline uint32_t Appearance::getSpriteId(uint32_t frameGroup, Position pos)
   uint32_t index = pos.x % x + pos.y % y;
 
   return 0;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const HookType &hookType)
+{
+  std::ostringstream s;
+
+  switch (hookType)
+  {
+  case HookType::East:
+    s << "East";
+    break;
+  case HookType::South:
+    s << "South";
+    break;
+  case HookType::None:
+    s << "None";
+    break;
+  default:
+    s << "Unknown HookType";
+    break;
+  }
+
+  os << s.str();
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const AppearancePlayerDefaultAction &action)
+{
+  std::ostringstream s;
+
+  switch (action)
+  {
+  case AppearancePlayerDefaultAction::AutowalkHighlight:
+    s << "AutowalkHighlight";
+    break;
+  case AppearancePlayerDefaultAction::Look:
+    s << "Look";
+    break;
+  case AppearancePlayerDefaultAction::None:
+    s << "None";
+    break;
+  case AppearancePlayerDefaultAction::Open:
+    s << "Open";
+    break;
+  case AppearancePlayerDefaultAction::Use:
+    s << "Use";
+    break;
+  default:
+    s << "Unknown AppearancePlayerDefaultAction";
+    break;
+  }
+
+  os << s.str();
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Appearance::AppearanceFlagData &flags)
+{
+  std::ostringstream s;
+  s << "{\n";
+
+#define WRITE_INT(flag)                                      \
+  do                                                         \
+  {                                                          \
+    if (flags.flag != 0)                                     \
+    {                                                        \
+      s << "\t" << #flag << ": " << flags.flag << std::endl; \
+    }                                                        \
+  } while (false)
+
+  WRITE_INT(bankWaypoints);
+  WRITE_INT(maxTextLength);
+  WRITE_INT(maxTextLengthOnce);
+  WRITE_INT(brightness);
+  WRITE_INT(color);
+  WRITE_INT(shiftX);
+  WRITE_INT(shiftY);
+  WRITE_INT(itemSlot);
+  WRITE_INT(market.tradeAsId);
+  WRITE_INT(market.showAsId);
+  WRITE_INT(market.minLevel);
+  WRITE_INT(automapColor);
+  WRITE_INT(lenshelp);
+  WRITE_INT(changedToExpireFormerObjectTypeId);
+  WRITE_INT(cyclopediaClientId);
+  if (flags.defaultAction != AppearancePlayerDefaultAction::None)
+  {
+    s << "\tdefaultAction: " << flags.defaultAction << std::endl;
+  }
+  if (flags.hookDirection != HookType::None)
+  {
+    s << "\thookDirection: " << flags.hookDirection << std::endl;
+  }
+
+  s << "}" << std::endl;
+
+  os << s.str();
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Appearance &appearance)
+{
+  std::ostringstream s;
+
+  s << "{\n";
+  s << "\tclientId: " << appearance.clientId << std::endl;
+  s << "\tflags: " << appearance.flagData << std::endl;
 }
 
 inline std::ostream &operator<<(std::ostream &os, const tibia::protobuf::appearances::SpriteInfo &info)
