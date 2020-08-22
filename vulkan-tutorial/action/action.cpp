@@ -23,24 +23,26 @@ void MapAction::commit()
 {
   DEBUG_ASSERT(!committed, "Attempted to commit an already committed action.");
 
+  Map &map = *mapView.getMap();
+
   for (auto &change : changes)
   {
     std::visit(util::overloaded{
-                   [this, &change](Tile &newTile) {
-                     std::unique_ptr<Tile> oldTilePtr = mapView.getMap()->replaceTile(std::move(newTile));
+                   [this, &map, &change](Tile &newTile) {
+                     Position pos = newTile.getPosition();
+
+                     std::unique_ptr<Tile> oldTilePtr = mapView.setTileInternal(std::move(newTile));
+
                      Tile *oldTile = oldTilePtr.release();
-                     // TODO Also store ECS component changes
-                     oldTile->markForDestruction();
+                     // TODO Destroy ECS components for the items of the Tile
                      change.data = std::move(*oldTile);
                    },
-                   [this, &change](RemovedTile &tileChange) {
+                   [this, &map, &change](RemovedTile &tileChange) {
                      Position &position = std::get<Position>(tileChange.data);
-                     Tile *oldTile = mapView.getMap()->getTile(position);
-                     change.data = RemovedTile{std::move(*oldTile)};
+                     std::unique_ptr<Tile> tilePtr = mapView.removeTileInternal(position);
+                     change.data = RemovedTile{std::move(*tilePtr.release())};
 
-                     oldTile->markForDestruction();
-
-                     mapView.getMap()->removeTile(position);
+                     // TODO Destroy ECS components for the items of the Tile
                    },
                    [](auto &arg) {
                      ABORT_PROGRAM("Unknown change!");
@@ -64,17 +66,21 @@ void MapAction::undo()
 
     std::visit(util::overloaded{
                    [this, &change](Tile &oldTile) {
-                     std::unique_ptr<Tile> newTilePtr = mapView.getMap()->replaceTile(std::move(oldTile));
+                     std::unique_ptr<Tile> newTilePtr = mapView.setTileInternal(std::move(oldTile));
                      Tile *newTile = newTilePtr.release();
-                     // TODO Also store ECS component changes
-                     newTile->markForDestruction();
+
+                     // TODO Destroy ECS components for the items of the Tile
+
                      change.data = std::move(*newTile);
                    },
 
                    [this, &change](RemovedTile &tileChange) {
                      Tile &removedTile = std::get<Tile>(tileChange.data);
-                     std::unique_ptr<Tile> currentTile = mapView.getMap()->replaceTile(std::move(removedTile));
-                     change.data = RemovedTile{removedTile.getPosition()};
+                     Position pos = removedTile.getPosition();
+
+                     mapView.setTileInternal(std::move(removedTile));
+
+                     change.data = RemovedTile{pos};
                    },
 
                    [](auto &arg) {

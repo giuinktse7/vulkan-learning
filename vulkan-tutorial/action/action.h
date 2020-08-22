@@ -6,7 +6,6 @@
 
 #include "../tile_location.h"
 #include "../ecs/item_animation.h"
-#include "../ecs/item_selection.h"
 
 class Change;
 class MapView;
@@ -20,12 +19,12 @@ enum class ActionGroupType
 
 enum class MapActionType
 {
-  CreateTiles,
+  SetTile,
   Move,
   Select,
-  DeleteTiles,
-  CutTiles,
-  PasteTiles
+  RemoveTile,
+  CutTile,
+  PasteTile
 };
 
 class MapAction
@@ -96,12 +95,6 @@ private:
   std::vector<MapAction> actions;
 };
 
-struct ECSTileComponent
-{
-  std::variant<uint32_t, bool> data;
-  // std::variant<TileSelectionComponent, ItemAnimationComponent> data;
-};
-
 struct RemovedTile
 {
   /* Holds either:
@@ -137,7 +130,7 @@ public:
     If the change has been committed, this member contains the old data, i.e.
     the data necessary to undo the change.
   */
-  std::variant<std::monostate, Tile, ECSTileComponent, RemovedTile> data;
+  std::variant<std::monostate, Tile, RemovedTile> data;
 
   template <typename T>
   bool ofType() const
