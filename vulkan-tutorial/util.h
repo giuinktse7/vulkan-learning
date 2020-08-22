@@ -66,4 +66,11 @@ namespace util
 		static_assert(std::is_arithmetic<T>::value, "T must be numeric.");
 		T x, y;
 	};
+
+	template <class T>
+	inline void combineHash(std::size_t &seed, const T &v)
+	{
+		std::hash<T> hasher;
+		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	}
 } // namespace util
