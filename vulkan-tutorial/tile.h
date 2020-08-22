@@ -5,11 +5,11 @@
 
 #include "tile_location.h"
 #include "item.h"
-#include "ecs/ecs.h"
 
+class MapView;
 class TileLocation;
 
-class Tile : public ecs::OptionalEntity
+class Tile
 {
 public:
 	Tile(TileLocation &location);
@@ -22,17 +22,24 @@ public:
 
 	Tile deepCopy() const;
 
-	const Item *getTopItem() const;
+	/*
+		Deselect entire tile
+	*/
+	void deselect();
+	void deselectTopItem();
+	void selectTopItem();
+
+	bool hasSelection() const;
+
+	Item *getTopItem() const;
+	bool hasTopItem() const;
 	Item *getGround() const;
 
 	void addItem(Item &&item);
 	void removeItem(size_t index);
 	void removeGround();
 
-	bool isEmpty() const
-	{
-		return !ground && items.empty();
-	}
+	bool isEmpty() const;
 
 	int getTopElevation() const;
 
@@ -54,9 +61,9 @@ public:
 	uint16_t getMapFlags() const;
 	uint16_t getStatFlags() const;
 
-	ecs::EntityId getOrCreateEntity();
-
 	void setLocation(TileLocation &location);
+
+	void selectAll();
 
 	const Position getPosition() const;
 
@@ -64,14 +71,19 @@ public:
 	long getY() const;
 	long getZ() const;
 
+	bool topItemSelected() const;
+
+	bool allSelected() const;
+
 private:
+	friend class MapView;
 	Tile(Position position);
 
 	Position position;
 	std::unique_ptr<Item> ground;
 	std::vector<Item> items;
 
-	void updateSelectionComponent() const;
+	size_t selectionCount;
 
 	// This structure makes it possible to access all flags, or map/stat flags separately.
 	union

@@ -6,7 +6,7 @@
 
 #include "graphics/engine.h"
 Item::Item(ItemTypeId itemTypeId)
-		: subtype(1)
+		: subtype(1), selected(false)
 {
 	this->itemType = Items::items.getItemType(itemTypeId);
 }
@@ -20,7 +20,8 @@ Item::Item(Item &&other) noexcept
 		: ecs::OptionalEntity(std::move(other)),
 			itemType(other.itemType),
 			attributes(std::move(other.attributes)),
-			subtype(other.subtype)
+			subtype(other.subtype),
+			selected(other.selected)
 {
 	other.entityId.reset();
 }
@@ -31,6 +32,7 @@ Item &Item::operator=(Item &&other) noexcept
 	itemType = other.itemType;
 	attributes = std::move(other.attributes);
 	subtype = other.subtype;
+	selected = other.selected;
 
 	other.entityId.reset();
 
@@ -52,6 +54,7 @@ Item Item::deepCopy() const
 	Item item(this->itemType->id);
 	item.attributes = this->attributes;
 	item.subtype = this->subtype;
+	item.selected = this->selected;
 
 	return item;
 }
