@@ -28,6 +28,16 @@ Node::Node(Node::NodeType nodeType, int level)
   // cout << "Construct node" << endl;
 }
 
+void Node::clear()
+{
+  DEBUG_ASSERT(isRoot(), "Only a root can be cleared.");
+
+  for (auto &ptr : nodes)
+  {
+    ptr.reset();
+  }
+}
+
 Node::~Node()
 {
 
