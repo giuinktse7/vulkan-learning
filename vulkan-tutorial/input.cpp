@@ -4,7 +4,6 @@
 
 #include "graphics/engine.h"
 #include "ecs/ecs.h"
-#include "ecs/item_selection.h"
 #include "util.h"
 
 Input::Input(GLFWwindow *window)
