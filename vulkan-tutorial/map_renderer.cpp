@@ -8,7 +8,6 @@
 #include "graphics/appearances.h"
 
 #include "ecs/ecs.h"
-#include "ecs/item_selection.h"
 
 #include "debug.h"
 
@@ -164,6 +163,8 @@ void MapRenderer::recordFrame(uint32_t frameIndex, MapView &mapView)
 
 void MapRenderer::drawMap(const MapView &mapView)
 {
+  bool isSelectionMoving = mapView.selection.moving;
+
   // std::cout << std::endl << "drawMap()" << std::endl;
   const auto mapRect = mapView.getGameBoundingRect();
   int floor = mapView.getZ();
@@ -171,48 +172,76 @@ void MapRenderer::drawMap(const MapView &mapView)
   bool aboveGround = floor <= 7;
 
   int startZ = aboveGround ? GROUND_FLOOR : MAP_LAYERS - 1;
-  int endZ = aboveGround ? floor : GROUND_FLOOR + 1;
+  int endZ = floor;
 
-  for (int mapZ = startZ; mapZ >= endZ; --mapZ)
+  // for (int mapZ = startZ; mapZ >= endZ; --mapZ)
+  // {
+  //   int x1 = mapRect.x1 & ~3;
+  //   int x2 = (mapRect.x2 & ~3) + 4;
+
+  //   int y1 = mapRect.y1 & ~3;
+  //   int y2 = (mapRect.y2 & ~3) + 4;
+
+  //   for (int mapX = x1; mapX <= x2; mapX += 4)
+  //   {
+  //     for (int mapY = y1; mapY <= y2; mapY += 4)
+  //     {
+  //       quadtree::Node *node = mapView.getMap()->getLeafUnsafe(mapX, mapY);
+  //       if (!node)
+  //         continue;
+
+  //       for (int x = 0; x < 4; ++x)
+  //       {
+  //         for (int y = 0; y < 4; ++y)
+  //         {
+  //           TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
+  //           if (tile && tile->hasTile())
+  //           {
+  //             /* Avoid drawing the tile only if the whole tile is selected
+  //                and the selection is moving
+  //             */
+  //             if (!(tile->getTile()->allSelected() && isSelectionMoving))
+  //             {
+  //               drawTile(*tile, mapView, ItemDrawFlags::DrawSelected);
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  Position from{mapRect.x1, mapRect.y1, startZ};
+  Position to{mapRect.x2, mapRect.y2, endZ};
+  for (auto &tileLocation : mapView.getMap()->getRegion(from, to))
   {
-    int x1 = mapRect.x1 & ~3;
-    int x2 = (mapRect.x2 & ~3) + 4;
-
-    int y1 = mapRect.y1 & ~3;
-    int y2 = (mapRect.y2 & ~3) + 4;
-
-    for (int mapX = x1; mapX <= x2; mapX += 4)
+    if (!tileLocation.hasTile())
     {
-      for (int mapY = y1; mapY <= y2; mapY += 4)
-      {
-        quadtree::Node *node = mapView.getMap()->getLeafUnsafe(mapX, mapY);
-        if (!node)
-          continue;
-
-        for (int x = 0; x < 4; ++x)
-        {
-          for (int y = 0; y < 4; ++y)
-          {
-            TileLocation *tile = node->getTile(mapX + x, mapY + y, mapZ);
-            if (tile && tile->hasTile())
-            {
-              bool selected = tile->getTile()->hasComponent<TileSelectionComponent>();
-              bool isSelectionMoved = mapView.isSelectionMoved();
-
-              if (!(selected && isSelectionMoved))
-              {
-                drawTile(*tile, mapView, ItemDrawFlags::DrawSelected);
-              }
-            }
-          }
-        }
-      }
+      continue;
+    }
+    /* Avoid drawing the tile only if the whole tile is selected
+                 and the selection is moving
+              */
+    if (!(tileLocation.getTile()->allSelected() && isSelectionMoving))
+    {
+      drawTile(tileLocation, mapView, ItemDrawFlags::DrawSelected);
     }
   }
 
-  drawPreviewCursor(mapView);
-  drawMovedSelection(mapView);
-  drawSelectionRectangle(mapView);
+  if (g_engine->hasBrush())
+  {
+    drawPreviewCursor(mapView);
+  }
+
+  if (mapView.selection.moving)
+  {
+    drawMovingSelection(mapView);
+  }
+
+  if (mapView.isDragging())
+  {
+    drawSelectionRectangle(mapView);
+  }
 }
 
 void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags)
@@ -220,32 +249,27 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
   auto position = tileLocation.getPosition();
   auto tile = tileLocation.getTile();
 
-  TileSelectionComponent *selection = tile->getComponent<TileSelectionComponent>();
-
   bool drawSelected = drawFlags & ItemDrawFlags::DrawSelected;
 
   Position selectionMovePosDelta{};
-  if (mapView.moveSelectionOrigin.has_value())
+  if (mapView.selection.moving)
   {
-    selectionMovePosDelta = g_engine->getCursorPos().toPos(mapView) - mapView.moveSelectionOrigin.value();
+    selectionMovePosDelta = g_engine->getCursorPos().toPos(mapView) - mapView.selection.moveOrigin.value();
   }
 
   if (tile->getGround())
   {
-    bool groundSelected = selection && selection->isGroundSelected();
-    if (drawSelected || !groundSelected)
+    Item *ground = tile->getGround();
+    if (drawSelected || !ground->selected)
     {
-      Item *ground = tile->getGround();
       ObjectDrawInfo info;
       info.appearance = ground->itemType->appearance;
       info.position = position;
-      info.color = groundSelected ? colors::Selected : colors::Default;
-      info.textureInfo = ground->getTextureInfo(position);
-
-      if (groundSelected)
-      {
+      if (ground->selected)
         info.position += selectionMovePosDelta;
-      }
+
+      info.color = ground->selected ? colors::Selected : colors::Default;
+      info.textureInfo = ground->getTextureInfo(info.position);
 
       drawItem(info);
     }
@@ -254,22 +278,20 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
   DrawOffset drawOffset{0, 0};
   auto &items = tile->getItems();
 
-  // The index i is necessary to check whether the item is selected (can't use range-based loop because of this)
-  for (size_t i = 0; i < items.size(); ++i)
+  for (const Item &item : items)
   {
-    bool itemSelected = selection && selection->isItemIndexSelected(i);
-    if (itemSelected && !drawSelected)
+    if (item.selected && !drawSelected)
     {
       continue;
     }
 
-    const Item &item = items.at(i);
-
     ObjectDrawInfo info;
     info.appearance = item.itemType->appearance;
-    info.color = selection && selection->isItemIndexSelected(i) ? colors::Selected : colors::Default;
+    info.color = item.selected ? colors::Selected : colors::Default;
     info.drawOffset = drawOffset;
     info.position = position;
+    if (item.selected)
+      info.position += selectionMovePosDelta;
     info.textureInfo = item.getTextureInfo(position);
 
     drawItem(info);
@@ -285,9 +307,6 @@ void MapRenderer::drawTile(const TileLocation &tileLocation, const MapView &mapV
 
 void MapRenderer::drawPreviewCursor(const MapView &mapView)
 {
-  if (!g_engine->getSelectedServerId().has_value())
-    return;
-
   ItemType &selectedItemType = *Items::items.getItemType(g_engine->getSelectedServerId().value());
 
   Position pos = g_engine->getCursorPos().worldPos(mapView).mapPos().floor(mapView.getFloor());
@@ -306,26 +325,56 @@ void MapRenderer::drawPreviewCursor(const MapView &mapView)
   drawItem(drawInfo);
 }
 
-void MapRenderer::drawMovedSelection(const MapView &mapView)
+void MapRenderer::drawMovingSelection(const MapView &mapView)
 {
-  // g_ecs.getSystem<TileSelectionSystem>().
+  auto mapRect = mapView.getGameBoundingRect();
+
+  Position moveOrigin = mapView.selection.moveOrigin.value();
+  Position cursorPos = g_engine->getCursorPos().toPos(mapView);
+
+  Position deltaPos = cursorPos - moveOrigin;
+
+  mapRect.x1 -= deltaPos.x;
+  mapRect.x1 = std::max(0, mapRect.x1);
+  mapRect.x2 -= deltaPos.x;
+
+  mapRect.y1 -= deltaPos.y;
+  mapRect.y1 = std::max(0, mapRect.y1);
+
+  mapRect.y2 -= deltaPos.y;
+
+  // TODO: Use selection Z bounds instead of all floors
+  int startZ = MAP_LAYERS - 1;
+  int endZ = 0;
+
+  Position from{mapRect.x1, mapRect.y1, startZ};
+  Position to{mapRect.x2, mapRect.y2, endZ};
+
+  for (auto &tileLocation : mapView.getMap()->getRegion(from, to))
+  {
+    if (tileLocation.hasTile())
+    {
+      // Draw only if the tile has a selection.
+      if ((tileLocation.getTile()->hasSelection() && mapView.selection.moving))
+      {
+        drawTile(tileLocation, mapView, ItemDrawFlags::DrawSelected);
+      }
+    }
+  }
 }
 
 void MapRenderer::drawSelectionRectangle(const MapView &mapView)
 {
-  if (mapView.isDragging())
-  {
-    RectangleDrawInfo info;
+  RectangleDrawInfo info;
 
-    const auto [from, to] = mapView.getDragPoints().value();
-    info.from = from;
-    info.to = to;
-    // info.texture = Items::items.getItemType(2554)->getTextureInfo();
-    info.texture = Texture::getSolidTexture(SolidColor::Blue);
-    info.color = colors::SeeThrough;
+  const auto [from, to] = mapView.getDragPoints().value();
+  info.from = from;
+  info.to = to;
+  // info.texture = Items::items.getItemType(2554)->getTextureInfo();
+  info.texture = Texture::getSolidTexture(SolidColor::Blue);
+  info.color = colors::SeeThrough;
 
-    currentFrame->batchDraw.addRectangle(info);
-  }
+  currentFrame->batchDraw.addRectangle(info);
 }
 
 void MapRenderer::updateUniformBuffer(const MapView &mapView)

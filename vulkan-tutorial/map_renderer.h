@@ -130,7 +130,7 @@ private:
 
 	void drawMap(const MapView &mapView);
 	void drawPreviewCursor(const MapView &mapView);
-	void drawMovedSelection(const MapView &mapView);
+	void drawMovingSelection(const MapView &mapView);
 	void drawSelectionRectangle(const MapView &mapView);
 
 	void drawTile(const TileLocation &tileLocation, const MapView &mapView, uint32_t drawFlags = ItemDrawFlags::None);
