@@ -12,8 +12,11 @@
 #include "camera.h"
 #include "position.h"
 #include "util.h"
+#include "selection.h"
 
 #include "action/action.h"
+
+class MapAction;
 
 struct Viewport
 {
@@ -31,13 +34,17 @@ class MapView
 public:
 	MapView(GLFWwindow *window);
 
-	std::optional<Position> moveSelectionOrigin;
 	EditorHistory history;
+
+	Selection selection;
 
 	Map *getMap() const
 	{
 		return map.get();
 	}
+
+	void insertTile(Tile &&tile);
+	void removeTile(const Position pos);
 
 	void addItem(const Position position, uint16_t id);
 
@@ -45,15 +52,9 @@ public:
 		otherwise the wrong items could be removed.
 	*/
 	void removeItems(const Position position, const std::set<size_t, std::greater<size_t>> &indices);
-	void removeGround(const Position position);
-	void removeTile(const Position position);
+	void removeSelectedItems(const Tile &tile);
 
 	bool isEmpty(Position position) const;
-
-	bool isSelectionMoved() const
-	{
-		return moveSelectionOrigin.has_value();
-	}
 
 	void zoomOut();
 	void zoomIn();
@@ -105,6 +106,8 @@ public:
 		return viewport;
 	}
 
+	void deleteSelectedItems();
+
 	util::Rectangle<int> getGameBoundingRect() const;
 
 	void setDragStart(WorldPosition position);
@@ -124,7 +127,10 @@ public:
 	void endDragging();
 	bool isDragging() const;
 
+	bool hasSelection() const;
+
 private:
+	friend class MapAction;
 	GLFWwindow *window;
 	Viewport viewport;
 
@@ -142,6 +148,13 @@ private:
 	{
 		return map->getTile(position)->deepCopy();
 	}
+
+	/*
+		Returns the old tile at the location of the tile.
+	*/
+	std::unique_ptr<Tile> setTileInternal(Tile &&tile);
+	std::unique_ptr<Tile> removeTileInternal(const Position position);
+	void removeSelectionInternal(Tile *tile);
 };
 
 inline std::ostream &operator<<(std::ostream &os, const util::Rectangle<int> &rect)
