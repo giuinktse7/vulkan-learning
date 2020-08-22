@@ -28,17 +28,31 @@ Tile *TileLocation::getTile() const
 
 const bool TileLocation::hasTile() const
 {
-  return getTile() != nullptr;
+  if (tile)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void TileLocation::removeTile()
 {
-  this->tile = nullptr;
+  this->tile.reset();
+}
+
+std::unique_ptr<Tile> TileLocation::dropTile()
+{
+  std::unique_ptr<Tile> result = std::move(this->tile);
+  this->tile.reset();
+  return result;
 }
 
 std::unique_ptr<Tile> TileLocation::replaceTile(Tile &&newTile)
 {
-  DEBUG_ASSERT(newTile.getPosition() == this->tile->getPosition(), "The new tile must have the same position as the old tile.");
+  DEBUG_ASSERT(!this->tile || (newTile.getPosition() == this->tile->getPosition()), "The new tile must have the same position as the old tile.");
 
   std::unique_ptr<Tile> old = std::move(this->tile);
   this->tile = std::make_unique<Tile>(std::move(newTile));

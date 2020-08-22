@@ -21,6 +21,7 @@ public:
 	const bool hasTile() const;
 
 	void removeTile();
+	std::unique_ptr<Tile> dropTile();
 
 	friend class Floor;
 	friend class Tile;
