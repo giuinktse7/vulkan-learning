@@ -22,6 +22,32 @@ void Map::clear()
   root.clear();
 }
 
+void Map::moveSelectedItems(const Position source, const Position destination)
+{
+  TileLocation *from = getTileLocation(source);
+  if (!from)
+  {
+    ABORT_PROGRAM("No tile to move.");
+  }
+
+  TileLocation &to = getOrCreateTileLocation(destination);
+
+  if (from->getTile()->allSelected())
+  {
+    std::unique_ptr<Tile> fromTile = from->dropTile();
+    to.setTile(std::move(fromTile));
+  }
+  else
+  {
+    if (!to.hasTile())
+    {
+      to.setEmptyTile();
+    }
+
+    from->getTile()->moveSelected(*to.getTile());
+  }
+}
+
 MapRegion Map::getRegion(Position from, Position to)
 {
   return MapRegion(*this, from, to);
@@ -113,7 +139,7 @@ Tile &Map::getOrCreateTile(int x, int y, int z)
 
   if (!location.getTile())
   {
-    location.setTile(std::move(std::make_unique<Tile>(location)));
+    location.setTile(std::make_unique<Tile>(location));
   }
 
   return *location.getTile();

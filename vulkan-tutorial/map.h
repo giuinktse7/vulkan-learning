@@ -225,6 +225,8 @@ private:
 	Tile &getOrCreateTile(const Position &pos);
 	TileLocation &getOrCreateTileLocation(const Position &pos);
 	void removeTile(const Position pos);
+
+	void moveSelectedItems(const Position source, const Position destination);
 	/*
 		Remove and release ownership of the tile
 	*/

@@ -25,8 +25,8 @@ struct Viewport
 	int height;
 	float zoom;
 
-	uint32_t offsetX;
-	uint32_t offsetY;
+	float offsetX;
+	float offsetY;
 };
 
 class MapView
@@ -46,7 +46,15 @@ public:
 	Tile *getTile(const Position pos) const;
 	void insertTile(Tile &&tile);
 	void removeTile(const Position pos);
+	void selectTopItem(Tile &tile);
 	void deselectTopItem(Tile &tile);
+	void selectAll(Tile &tile);
+	void clearSelection();
+	bool hasSelectionMoveOrigin() const;
+	bool isSelectionMoving() const;
+	bool isEmpty(Position position) const;
+
+	void finishMoveSelection(const Position moveDestination);
 
 	void addItem(const Position position, uint16_t id);
 
@@ -55,8 +63,6 @@ public:
 	*/
 	void removeItems(const Position position, const std::set<size_t, std::greater<size_t>> &indices);
 	void removeSelectedItems(const Tile &tile);
-
-	bool isEmpty(Position position) const;
 
 	void zoomOut();
 	void zoomIn();
@@ -157,6 +163,8 @@ private:
 	std::unique_ptr<Tile> setTileInternal(Tile &&tile);
 	std::unique_ptr<Tile> removeTileInternal(const Position position);
 	void removeSelectionInternal(Tile *tile);
+
+	MapAction newAction(MapActionType actionType) const;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const util::Rectangle<int> &rect)

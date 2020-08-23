@@ -10,13 +10,41 @@ MapView::MapView(GLFWwindow *window)
 {
 }
 
+void MapView::selectTopItem(Tile &tile)
+{
+  MapAction action = newAction(MapActionType::Selection);
+  action.addChange(Change::selectTopItem(tile));
+
+  history.commit(std::move(action));
+}
+
 void MapView::deselectTopItem(Tile &tile)
 {
-  tile.deselectTopItem();
-  if (!tile.hasSelection())
-  {
-    selection.deselect(tile.getPosition());
-  }
+  MapAction action = newAction(MapActionType::Selection);
+  action.addChange(Change::deselectTopItem(tile));
+
+  history.commit(std::move(action));
+}
+
+void MapView::selectAll(Tile &tile)
+{
+  tile.selectAll();
+  selection.select(tile.position);
+}
+
+void MapView::clearSelection()
+{
+  selection.deselectAll();
+}
+
+bool MapView::hasSelectionMoveOrigin() const
+{
+  return selection.moveOrigin.has_value();
+}
+
+bool MapView::isSelectionMoving() const
+{
+  return selection.moving;
 }
 
 void MapView::addItem(const Position pos, uint16_t id)
@@ -216,6 +244,26 @@ void MapView::setDragEnd(WorldPosition position)
   dragState.value().to = position;
 }
 
+void MapView::finishMoveSelection(const Position moveDestination)
+{
+  if (selection.moving)
+  {
+    Position deltaPos = moveDestination - selection.moveOrigin.value();
+
+    for (const Position pos : selection.getPositions())
+    {
+      Position newPos = pos + deltaPos;
+      DEBUG_ASSERT(getTile(pos)->hasSelection(), "The tile at each position of a selection should have a selection.");
+
+      selection.deselect(pos);
+      map->moveSelectedItems(pos, newPos);
+      selection.select(newPos);
+    }
+  }
+  selection.moving = false;
+  selection.moveOrigin.reset();
+}
+
 void MapView::endDragging()
 {
   auto [fromWorldPos, toWorldPos] = dragState.value();
@@ -248,6 +296,8 @@ void MapView::endDragging()
   }
 
   dragState.reset();
+  // This prevents having the mouse release trigger a deselect of the tile being hovered
+  selection.blockDeselect = true;
 }
 
 bool MapView::isDragging() const
@@ -294,4 +344,10 @@ void MapView::removeSelectionInternal(Tile *tile)
 {
   if (tile && tile->hasSelection())
     selection.deselect(tile->position);
+}
+
+MapAction MapView::newAction(MapActionType actionType) const
+{
+  MapAction action(const_cast<MapView &>(*this), actionType);
+  return action;
 }
