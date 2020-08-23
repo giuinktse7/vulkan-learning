@@ -55,7 +55,11 @@ void handleBrush(Input *input, Position &pos)
 
   if (input->leftMouseEvent() == GLFW_PRESS) // Mouse press event
   {
-    mapView.history.startGroup(ActionGroupType::AddMapItem);
+    Logger::debug("handleBrush GLFW_PRESS");
+    if (!mapView.history.currentGroupType(ActionGroupType::AddMapItem))
+    {
+      mapView.history.startGroup(ActionGroupType::AddMapItem);
+    }
     mapView.addItem(pos, selectedId.value());
   }
   else if (input->leftMouseDown()) // Mouse down event (fast)
@@ -73,6 +77,8 @@ void handleBrush(Input *input, Position &pos)
   }
   else if (input->leftMouseEvent() == GLFW_RELEASE) // Mouse release event
   {
+    Logger::debug("handleBrush GLFW_RELEASE");
+
     if (mapView.history.hasCurrentGroup())
     {
       mapView.history.endGroup(ActionGroupType::AddMapItem);
@@ -114,7 +120,6 @@ void handleSelection(Input *input, Position &pos)
             mapView.selection.deselectAll();
           }
           mapView.selection.blockDeselect = true;
-          mapView.selection.addTile(tile);
 
           if (input->shift())
           {
@@ -124,6 +129,8 @@ void handleSelection(Input *input, Position &pos)
           {
             tile->selectTopItem();
           }
+
+          mapView.selection.select(tile->getPosition());
         }
       }
     }
@@ -165,19 +172,12 @@ void handleSelection(Input *input, Position &pos)
     {
       mapView.selection.blockDeselect = false;
     }
-    else
-    { // Deselect not blocked
+    else // Deselect not blocked
+    {
       Tile *tile = map->getTile(pos);
-      if (tile)
+      if (tile && tile->topItemSelected())
       {
-        if (tile->topItemSelected())
-        {
-          tile->deselectTopItem();
-          if (!tile->hasSelection())
-          {
-            mapView.selection.removeTile(tile);
-          }
-        }
+        mapView.deselectTopItem(*tile);
       }
     }
   }

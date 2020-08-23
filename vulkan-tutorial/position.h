@@ -4,6 +4,7 @@
 #include <ostream>
 
 #include "const.h"
+#include "util.h"
 
 class MapView;
 struct WorldPosition;
@@ -60,6 +61,19 @@ struct Position : public BasePosition<long>
 	}
 };
 
+struct PositionHash
+{
+	std::size_t operator()(const Position &pos) const noexcept
+	{
+		size_t hash = 0;
+		util::combineHash(hash, pos.x);
+		util::combineHash(hash, pos.y);
+		util::combineHash(hash, pos.z);
+
+		return hash;
+	}
+};
+
 struct ScreenPosition : public BasePosition<double>
 {
 	WorldPosition worldPos(const MapView &mapView) const;
@@ -102,7 +116,8 @@ inline bool operator==(const Position &pos1, const Position &pos2)
 	return pos1.x == pos2.x && pos1.y == pos2.y && pos1.z == pos2.z;
 }
 
-inline bool operator!=(const Position &pos1, const Position &pos2)
+inline bool
+operator!=(const Position &pos1, const Position &pos2)
 {
 	return !(pos1 == pos2);
 }

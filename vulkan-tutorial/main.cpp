@@ -198,7 +198,7 @@ int main()
 
 			if (captureMouse != g_engine->captureMouse)
 			{
-				Logger::debug() << "captureMouse changed to " << g_engine->captureMouse << std::endl;
+				// Logger::debug() << "captureMouse changed to " << g_engine->captureMouse << std::endl;
 			}
 
 			captureMouse = g_engine->captureMouse;

@@ -6,6 +6,7 @@
 
 #include "../tile_location.h"
 #include "../ecs/item_animation.h"
+#include "../position.h"
 
 class Change;
 class MapView;
@@ -13,15 +14,17 @@ class EditorHistory;
 
 enum class ActionGroupType
 {
+  Selection,
   AddMapItem,
   RemoveMapItem
 };
 
 enum class MapActionType
 {
+  Selection,
+  ModifyTile,
   SetTile,
   Move,
-  Select,
   RemoveTile,
   CutTile,
   PasteTile
@@ -46,6 +49,7 @@ public:
   void addChange(Change &&change);
 
   void commit();
+  void markAsCommitted();
 
   void undo();
   void redo();
@@ -107,9 +111,29 @@ struct RemovedTile
 class Change
 {
 public:
+  struct FullSelectionData
+  {
+    std::unordered_set<Position, PositionHash> positions;
+    bool isDeselect;
+  };
+  using TileData = Tile;
+  using RemovedTileData = RemovedTile;
+
+  struct SelectionData
+  {
+    Position position;
+    std::vector<uint16_t> indices;
+    bool groundSelected;
+  };
+
   Change(Tile &&tile);
 
   static Change removeTile(const Position pos);
+  static Change setTile(Tile &&tile);
+  static Change selection(std::unordered_set<Position, PositionHash> positions);
+  static Change deselection(std::unordered_set<Position, PositionHash> positions);
+
+  static Change selection(const Tile &tile);
 
   Change(const Change &other) = delete;
   Change &operator=(const Change &other) = delete;
@@ -130,7 +154,7 @@ public:
     If the change has been committed, this member contains the old data, i.e.
     the data necessary to undo the change.
   */
-  std::variant<std::monostate, Tile, RemovedTile> data;
+  std::variant<std::monostate, TileData, RemovedTileData, SelectionData, FullSelectionData> data;
 
   template <typename T>
   bool ofType() const
@@ -152,6 +176,7 @@ public:
   void endGroup(ActionGroupType groupType);
 
   bool hasCurrentGroup() const;
+  bool currentGroupType(ActionGroupType groupType) const;
 
 private:
   std::optional<MapActionGroup> currentGroup;

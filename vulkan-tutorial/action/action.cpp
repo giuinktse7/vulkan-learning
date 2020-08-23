@@ -19,6 +19,11 @@ void MapAction::addChange(Change &&change)
   changes.push_back(std::move(change));
 }
 
+void MapAction::markAsCommitted()
+{
+  committed = true;
+}
+
 void MapAction::commit()
 {
   DEBUG_ASSERT(!committed, "Attempted to commit an already committed action.");
@@ -28,7 +33,7 @@ void MapAction::commit()
   for (auto &change : changes)
   {
     std::visit(util::overloaded{
-                   [this, &map, &change](Tile &newTile) {
+                   [this, &change](Change::TileData &newTile) {
                      Position pos = newTile.getPosition();
 
                      std::unique_ptr<Tile> oldTilePtr = mapView.setTileInternal(std::move(newTile));
@@ -37,12 +42,47 @@ void MapAction::commit()
                      // TODO Destroy ECS components for the items of the Tile
                      change.data = std::move(*oldTile);
                    },
-                   [this, &map, &change](RemovedTile &tileChange) {
+                   [this, &change](Change::RemovedTileData &tileChange) {
                      Position &position = std::get<Position>(tileChange.data);
                      std::unique_ptr<Tile> tilePtr = mapView.removeTileInternal(position);
                      change.data = RemovedTile{std::move(*tilePtr.release())};
 
                      // TODO Destroy ECS components for the items of the Tile
+                   },
+                   [this, &change](Change::FullSelectionData &data) {
+                     if (data.isDeselect)
+                     {
+                       for (const auto pos : data.positions)
+                       {
+                         mapView.getTile(pos)->deselectAll();
+                       }
+                       mapView.selection.deselect(data.positions);
+                     }
+                     else
+                     {
+                       for (const auto pos : data.positions)
+                       {
+                         mapView.getTile(pos)->selectAll();
+                       }
+                       mapView.selection.merge(data.positions);
+                     }
+                   },
+                   [this, &change](Change::SelectionData &data) {
+                     Tile *tile = mapView.getTile(data.position);
+                     for (const auto i : data.indices)
+                     {
+                       tile->selectItemAtIndex(i);
+                     }
+                     Item *ground = tile->getGround();
+                     if (ground)
+                     {
+                       ground->selected = data.groundSelected;
+                     }
+
+                     if (tile->hasSelection())
+                     {
+                       mapView.selection.select(data.position);
+                     }
                    },
                    [](auto &arg) {
                      ABORT_PROGRAM("Unknown change!");
@@ -82,7 +122,41 @@ void MapAction::undo()
 
                      change.data = RemovedTile{pos};
                    },
+                   [this, &change](Change::FullSelectionData &data) {
+                     if (data.isDeselect)
+                     {
+                       for (const auto pos : data.positions)
+                       {
+                         mapView.getTile(pos)->selectAll();
+                       }
+                       mapView.selection.merge(data.positions);
+                     }
+                     else
+                     {
+                       for (const auto pos : data.positions)
+                       {
+                         mapView.getTile(pos)->deselectAll();
+                       }
+                       mapView.selection.deselect(data.positions);
+                     }
+                   },
+                   [this, &change](Change::SelectionData &data) {
+                     Tile *tile = mapView.getTile(data.position);
+                     for (const auto i : data.indices)
+                     {
+                       tile->deselectItemAtIndex(i);
+                     }
+                     Item *ground = tile->getGround();
+                     if (ground)
+                     {
+                       ground->selected = !data.groundSelected;
+                     }
 
+                     if (!tile->hasSelection())
+                     {
+                       mapView.selection.deselect(data.position);
+                     }
+                   },
                    [](auto &arg) {
                      ABORT_PROGRAM("Unknown change!");
                    }},
@@ -104,6 +178,58 @@ Change::Change()
 Change::Change(Tile &&tile)
     : data(std::move(tile))
 {
+}
+
+Change Change::setTile(Tile &&tile)
+{
+  Change change;
+  change.data = std::move(tile);
+  return change;
+}
+
+Change Change::selection(const Tile &tile)
+{
+  Change change;
+  Change::SelectionData data;
+  data.position = tile.getPosition();
+
+  Item *ground = tile.getGround();
+  data.groundSelected = ground && ground->selected;
+
+  auto &items = tile.getItems();
+  for (size_t i = 0; i < items.size(); ++i)
+  {
+    const Item &item = items.at(i);
+    if (item.selected)
+    {
+      data.indices.emplace_back(i);
+    }
+  }
+
+  change.data = data;
+  return change;
+}
+
+Change Change::selection(std::unordered_set<Position, PositionHash> positions)
+{
+  Change change;
+  FullSelectionData data;
+  data.positions = positions;
+  data.isDeselect = false;
+
+  change.data = data;
+  return change;
+}
+
+Change Change::deselection(std::unordered_set<Position, PositionHash> positions)
+{
+  Change change;
+  FullSelectionData data;
+  data.positions = positions;
+  data.isDeselect = true;
+
+  change.data = data;
+  return change;
 }
 
 Change Change::removeTile(const Position pos)
@@ -135,6 +261,7 @@ void MapActionGroup::commit()
 
 void MapActionGroup::undo()
 {
+  auto &k = *this;
   for (auto it = actions.rbegin(); it != actions.rend(); ++it)
   {
     MapAction &action = *it;
@@ -158,7 +285,11 @@ void EditorHistory::commit(MapAction &&action)
 {
   DEBUG_ASSERT(currentGroup.has_value(), "There is no current group.");
 
-  action.commit();
+  if (!action.committed)
+  {
+    action.commit();
+  }
+
   MapAction *currentAction = getLatestAction();
   if (currentAction && currentAction->getType() == action.getType())
   {
@@ -171,10 +302,15 @@ void EditorHistory::commit(MapAction &&action)
   }
 }
 
+bool EditorHistory::currentGroupType(ActionGroupType groupType) const
+{
+  return currentGroup.has_value() && currentGroup.value().groupType == groupType;
+}
+
 void EditorHistory::startGroup(ActionGroupType groupType)
 {
   DEBUG_ASSERT(currentGroup.has_value() == false, "The previous group was not ended.");
-  Logger::debug("startGroup()");
+  Logger::debug() << "startGroup " << groupType << std::endl;
 
   currentGroup.emplace(groupType);
 }
@@ -185,7 +321,7 @@ void EditorHistory::endGroup(ActionGroupType groupType)
   std::ostringstream s;
   s << "Tried to end group type " << groupType << ", but the current group type is " << currentGroup.value().groupType;
   DEBUG_ASSERT(currentGroup.value().groupType == groupType, s.str());
-  Logger::debug("endGroup()");
+  Logger::debug() << "endGroup " << groupType << std::endl;
 
   actionGroups.emplace(std::move(currentGroup.value()));
   currentGroup.reset();

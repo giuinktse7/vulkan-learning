@@ -43,8 +43,10 @@ public:
 		return map.get();
 	}
 
+	Tile *getTile(const Position pos) const;
 	void insertTile(Tile &&tile);
 	void removeTile(const Position pos);
+	void deselectTopItem(Tile &tile);
 
 	void addItem(const Position position, uint16_t id);
 

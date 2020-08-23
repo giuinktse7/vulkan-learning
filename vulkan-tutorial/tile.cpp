@@ -82,7 +82,7 @@ void Tile::removeItem(size_t index)
   }
 }
 
-void Tile::deselect()
+void Tile::deselectAll()
 {
   if (ground)
     ground->selected = false;
@@ -230,6 +230,16 @@ bool Tile::allSelected() const
 bool Tile::hasSelection() const
 {
   return selectionCount != 0;
+}
+
+void Tile::selectItemAtIndex(size_t index)
+{
+  items.at(index).selected = true;
+}
+
+void Tile::deselectItemAtIndex(size_t index)
+{
+  items.at(index).selected = false;
 }
 
 void Tile::selectAll()

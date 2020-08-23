@@ -1,50 +1,75 @@
 #include "selection.h"
 
-bool Selection::contains(Tile *tile) const
+#include "map_view.h"
+#include "debug.h"
+#include "action/action.h"
+
+Selection::Selection(MapView &mapView) : mapView(mapView)
 {
-  return selectedTiles.find(tile) != selectedTiles.end();
 }
 
-void Selection::select(Tile *tile)
+void Selection::merge(std::unordered_set<Position, PositionHash> &positions)
 {
-  selectedTiles.emplace(tile);
+  for (const auto &pos : positions)
+  {
+    positionsWithSelection.emplace(pos);
+  }
 }
 
-void Selection::deselect(Tile *tile)
+void Selection::deselect(std::unordered_set<Position, PositionHash> &positions)
 {
-  selectedTiles.erase(tile);
+  for (const auto &pos : positions)
+  {
+    positionsWithSelection.erase(pos);
+  }
 }
 
-void Selection::addTile(Tile *tile)
+bool Selection::contains(const Position pos) const
 {
-  select(tile);
-}
-void Selection::removeTile(Tile *tile)
-{
-  deselect(tile);
+  return positionsWithSelection.find(pos) != positionsWithSelection.end();
 }
 
-std::unordered_set<Tile *, TileHash, TileEquality> Selection::getTiles() const
+void Selection::select(const Position pos)
 {
-  return selectedTiles;
+  DEBUG_ASSERT(mapView.getTile(pos)->hasSelection(), "The tile does not have a selection.");
+
+  positionsWithSelection.emplace(pos);
+}
+
+void Selection::deselect(const Position pos)
+{
+  positionsWithSelection.erase(pos);
+}
+
+std::unordered_set<Position, PositionHash> Selection::getPositions() const
+{
+  return positionsWithSelection;
 }
 
 void Selection::clear()
 {
-  selectedTiles.clear();
+  positionsWithSelection.clear();
 }
 
 void Selection::deselectAll()
 {
-  for (Tile *tile : selectedTiles)
+  // There is no need to commit an action if there are no selections
+  if (positionsWithSelection.empty())
   {
-    tile->deselect();
+    return;
   }
 
-  selectedTiles.clear();
+  mapView.history.startGroup(ActionGroupType::Selection);
+  MapAction action(mapView, MapActionType::Selection);
+
+  action.addChange(Change::deselection(positionsWithSelection));
+  positionsWithSelection.clear();
+
+  mapView.history.commit(std::move(action));
+  mapView.history.endGroup(ActionGroupType::Selection);
 }
 
 bool Selection::empty() const
 {
-  return selectedTiles.empty();
+  return positionsWithSelection.empty();
 }

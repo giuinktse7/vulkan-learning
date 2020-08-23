@@ -25,7 +25,7 @@ public:
 	/*
 		Deselect entire tile
 	*/
-	void deselect();
+	void deselectAll();
 	void deselectTopItem();
 	void selectTopItem();
 
@@ -63,6 +63,8 @@ public:
 
 	void setLocation(TileLocation &location);
 
+	void selectItemAtIndex(size_t index);
+	void deselectItemAtIndex(size_t index);
 	void selectAll();
 
 	const Position getPosition() const;
