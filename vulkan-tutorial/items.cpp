@@ -598,10 +598,11 @@ void Items::loadFromOtb(const std::string &file)
 			ABORT_PROGRAM(DEFAULT_ERROR);
 		}
 
-		// if (appearance.hasFlag(AppearanceFlag::Bottom))
-		// {
-		// 	Logger::debug() << serverId << std::endl;
-		// }
+		if (serverId == 4526 || serverId == 103)
+		{
+			Logger::debug() << serverId << ":" << std::endl;
+			std::cout << appearance << std::endl;
+		}
 
 		// TODO: Check for items that do not have matching flags in .otb and appearances.dat
 		iType.blockSolid = hasBitSet(FLAG_BLOCK_SOLID, flags);

@@ -123,7 +123,8 @@ public:
   {
     Position position;
     std::vector<uint16_t> indices;
-    bool groundSelected;
+    bool includesGround;
+    bool select = true;
   };
 
   Change(Tile &&tile);
@@ -132,6 +133,9 @@ public:
   static Change setTile(Tile &&tile);
   static Change selection(std::unordered_set<Position, PositionHash> positions);
   static Change deselection(std::unordered_set<Position, PositionHash> positions);
+
+  static Change selectTopItem(Tile &tile);
+  static Change deselectTopItem(Tile &tile);
 
   static Change selection(const Tile &tile);
 
@@ -189,6 +193,9 @@ inline std::ostream &operator<<(std::ostream &os, ActionGroupType type)
 {
   switch (type)
   {
+  case ActionGroupType::Selection:
+    os << "ActionGroupType::Selection";
+    break;
   case ActionGroupType::AddMapItem:
     os << "ActionGroupType::AddMapItem";
     break;

@@ -37,16 +37,18 @@ struct Position : public BasePosition<long>
 		return *this;
 	}
 
-	Position operator-(const Position &rhs)
+	friend Position operator-(const Position &lhs, const Position rhs)
 	{
-		*this -= rhs;
-		return *this;
+		Position pos(lhs);
+		pos -= rhs;
+		return pos;
 	}
 
-	Position operator+(const Position &rhs)
+	friend Position operator+(const Position &lhs, const Position rhs)
 	{
-		*this += rhs;
-		return *this;
+		Position pos(lhs);
+		pos += rhs;
+		return pos;
 	}
 
 	template <int I>

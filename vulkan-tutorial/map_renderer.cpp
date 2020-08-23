@@ -233,7 +233,7 @@ void MapRenderer::drawMap(const MapView &mapView)
     drawPreviewCursor(mapView);
   }
 
-  if (mapView.selection.moving)
+  if (mapView.isSelectionMoving())
   {
     drawMovingSelection(mapView);
   }

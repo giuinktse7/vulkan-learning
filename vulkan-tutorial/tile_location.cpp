@@ -26,7 +26,7 @@ Tile *TileLocation::getTile() const
   return tile ? tile.get() : nullptr;
 }
 
-const bool TileLocation::hasTile() const
+bool TileLocation::hasTile() const
 {
   if (tile)
   {
@@ -36,6 +36,24 @@ const bool TileLocation::hasTile() const
   {
     return false;
   }
+}
+
+bool TileLocation::hasGround() const
+{
+  return tile && tile->getGround();
+}
+
+void TileLocation::setEmptyTile()
+{
+  setTile(std::make_unique<Tile>(*this));
+}
+
+Item *TileLocation::getGround() const
+{
+  if (!tile)
+    return nullptr;
+
+  return tile->getGround();
 }
 
 void TileLocation::removeTile()

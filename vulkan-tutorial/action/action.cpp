@@ -71,18 +71,30 @@ void MapAction::commit()
                      Tile *tile = mapView.getTile(data.position);
                      for (const auto i : data.indices)
                      {
-                       tile->selectItemAtIndex(i);
+                       if (data.select)
+                       {
+                         tile->selectItemAtIndex(i);
+                       }
+                       else
+                       {
+                         tile->deselectItemAtIndex(i);
+                       }
                      }
-                     Item *ground = tile->getGround();
-                     if (ground)
+                     if (data.includesGround)
                      {
-                       ground->selected = data.groundSelected;
+                       tile->selectGround();
                      }
 
                      if (tile->hasSelection())
                      {
                        mapView.selection.select(data.position);
                      }
+                     else
+                     {
+                       mapView.selection.deselect(data.position);
+                     }
+
+                     data.select = !data.select;
                    },
                    [](auto &arg) {
                      ABORT_PROGRAM("Unknown change!");
@@ -144,18 +156,30 @@ void MapAction::undo()
                      Tile *tile = mapView.getTile(data.position);
                      for (const auto i : data.indices)
                      {
-                       tile->deselectItemAtIndex(i);
+                       if (data.select)
+                       {
+                         tile->selectItemAtIndex(i);
+                       }
+                       else
+                       {
+                         tile->deselectItemAtIndex(i);
+                       }
                      }
-                     Item *ground = tile->getGround();
-                     if (ground)
+                     if (data.includesGround)
                      {
-                       ground->selected = !data.groundSelected;
+                       tile->deselectGround();
                      }
 
-                     if (!tile->hasSelection())
+                     if (tile->hasSelection())
+                     {
+                       mapView.selection.select(data.position);
+                     }
+                     else
                      {
                        mapView.selection.deselect(data.position);
                      }
+
+                     data.select = !data.select;
                    },
                    [](auto &arg) {
                      ABORT_PROGRAM("Unknown change!");
@@ -194,7 +218,7 @@ Change Change::selection(const Tile &tile)
   data.position = tile.getPosition();
 
   Item *ground = tile.getGround();
-  data.groundSelected = ground && ground->selected;
+  data.includesGround = ground && ground->selected;
 
   auto &items = tile.getItems();
   for (size_t i = 0; i < items.size(); ++i)
@@ -202,7 +226,7 @@ Change Change::selection(const Tile &tile)
     const Item &item = items.at(i);
     if (item.selected)
     {
-      data.indices.emplace_back(i);
+      data.indices.emplace_back(static_cast<uint16_t>(i));
     }
   }
 
@@ -229,6 +253,34 @@ Change Change::deselection(std::unordered_set<Position, PositionHash> positions)
   data.isDeselect = true;
 
   change.data = data;
+  return change;
+}
+
+Change Change::selectTopItem(Tile &tile)
+{
+  Change::SelectionData data{};
+  data.position = tile.getPosition();
+  data.select = true;
+
+  if (tile.getTopItem() == tile.getGround())
+  {
+    data.includesGround = true;
+  }
+  else
+  {
+    data.includesGround = false;
+    data.indices.emplace_back(static_cast<uint16_t>(tile.getItemCount() - 1));
+  }
+
+  Change change;
+  change.data = data;
+  return change;
+}
+
+Change Change::deselectTopItem(Tile &tile)
+{
+  Change change = selectTopItem(tile);
+  std::get<Change::SelectionData>(change.data).select = false;
   return change;
 }
 

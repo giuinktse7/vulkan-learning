@@ -98,7 +98,7 @@ void handleSelection(Input *input, Position &pos)
     {
       if (!input->ctrl())
       {
-        mapView.selection.deselectAll();
+        mapView.clearSelection();
       }
 
       mapView.setDragStart(input->getCursorPos().worldPos(mapView));
@@ -117,20 +117,20 @@ void handleSelection(Input *input, Position &pos)
         {
           if (!input->ctrl())
           {
-            mapView.selection.deselectAll();
+            mapView.clearSelection();
           }
           mapView.selection.blockDeselect = true;
 
           if (input->shift())
           {
-            tile->selectAll();
+            mapView.selectAll(*tile);
           }
           else // Shift is not down
           {
-            tile->selectTopItem();
+            mapView.history.startGroup(ActionGroupType::Selection);
+            mapView.selectTopItem(*tile);
+            mapView.history.endGroup(ActionGroupType::Selection);
           }
-
-          mapView.selection.select(tile->getPosition());
         }
       }
     }
@@ -142,7 +142,7 @@ void handleSelection(Input *input, Position &pos)
       mapView.setDragEnd(input->getCursorPos().worldPos(mapView));
     }
 
-    if (mapView.selection.moveOrigin.has_value() && !mapView.selection.moving)
+    if (mapView.hasSelectionMoveOrigin() && !mapView.isSelectionMoving())
     {
       if (mapView.selection.moveOrigin.value() != pos)
       {
@@ -154,19 +154,10 @@ void handleSelection(Input *input, Position &pos)
   {
     if (mapView.isDragging())
     {
-      auto [from, to] = mapView.getDragPoints().value();
-      std::cout << "Drag finished! " << from << " to " << to << std::endl;
-
       mapView.endDragging();
-      mapView.selection.blockDeselect = true;
     }
 
-    if (mapView.selection.moving)
-    {
-      // TODO: Implement moving the selection to the new position on the map.
-      mapView.selection.moving = false;
-      mapView.selection.moveOrigin.reset();
-    }
+    mapView.finishMoveSelection(pos);
 
     if (mapView.selection.blockDeselect)
     {
@@ -177,7 +168,9 @@ void handleSelection(Input *input, Position &pos)
       Tile *tile = map->getTile(pos);
       if (tile && tile->topItemSelected())
       {
+        mapView.history.startGroup(ActionGroupType::Selection);
         mapView.deselectTopItem(*tile);
+        mapView.history.endGroup(ActionGroupType::Selection);
       }
     }
   }

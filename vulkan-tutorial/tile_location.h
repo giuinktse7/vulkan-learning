@@ -4,6 +4,7 @@
 #include "position.h"
 
 class Tile;
+class Item;
 
 class TileLocation
 {
@@ -18,8 +19,11 @@ public:
 	std::unique_ptr<Tile> replaceTile(Tile &&tile);
 
 	Tile *getTile() const;
-	const bool hasTile() const;
+	Item *getGround() const;
+	bool hasTile() const;
+	bool hasGround() const;
 
+	void setEmptyTile();
 	void removeTile();
 	std::unique_ptr<Tile> dropTile();
 

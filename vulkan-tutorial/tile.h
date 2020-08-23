@@ -7,6 +7,7 @@
 #include "item.h"
 
 class MapView;
+class MapAction;
 class TileLocation;
 
 class Tile
@@ -22,14 +23,9 @@ public:
 
 	Tile deepCopy() const;
 
-	/*
-		Deselect entire tile
-	*/
-	void deselectAll();
-	void deselectTopItem();
-	void selectTopItem();
-
 	bool hasSelection() const;
+	bool topItemSelected() const;
+	bool allSelected() const;
 
 	Item *getTopItem() const;
 	bool hasTopItem() const;
@@ -38,6 +34,10 @@ public:
 	void addItem(Item &&item);
 	void removeItem(size_t index);
 	void removeGround();
+	std::unique_ptr<Item> dropGround();
+	void setGround(std::unique_ptr<Item> ground);
+	void moveItems(Tile &other);
+	void moveSelected(Tile &other);
 
 	bool isEmpty() const;
 
@@ -63,22 +63,16 @@ public:
 
 	void setLocation(TileLocation &location);
 
-	void selectItemAtIndex(size_t index);
-	void deselectItemAtIndex(size_t index);
-	void selectAll();
-
 	const Position getPosition() const;
 
 	long getX() const;
 	long getY() const;
 	long getZ() const;
 
-	bool topItemSelected() const;
-
-	bool allSelected() const;
-
 private:
 	friend class MapView;
+	friend class MapAction;
+
 	Tile(Position position);
 
 	Position position;
@@ -97,6 +91,18 @@ private:
 		};
 		uint32_t flags;
 	};
+
+	/*
+		Deselect entire tile
+	*/
+	void deselectAll();
+	void deselectTopItem();
+	void selectTopItem();
+	void selectItemAtIndex(size_t index);
+	void deselectItemAtIndex(size_t index);
+	void selectGround();
+	void deselectGround();
+	void selectAll();
 };
 
 inline uint16_t Tile::getMapFlags() const

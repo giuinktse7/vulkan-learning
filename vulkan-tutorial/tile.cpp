@@ -37,37 +37,9 @@ Tile::~Tile()
 {
 }
 
-Item *Tile::getGround() const
+void Tile::setLocation(TileLocation &location)
 {
-  return ground.get();
-}
-
-bool Tile::hasTopItem() const
-{
-  return !isEmpty();
-}
-
-Item *Tile::getTopItem() const
-{
-  if (items.size() > 0)
-  {
-    return const_cast<Item *>(&items.back());
-  }
-  if (ground)
-  {
-    return ground.get();
-  }
-
-  return nullptr;
-}
-
-bool Tile::topItemSelected() const
-{
-  if (!hasTopItem())
-    return false;
-
-  const Item *topItem = getTopItem();
-  return allSelected() || topItem->selected;
+  this->position = location.position;
 }
 
 void Tile::removeItem(size_t index)
@@ -95,11 +67,51 @@ void Tile::deselectAll()
   selectionCount = 0;
 }
 
+void Tile::moveItems(Tile &other)
+{
+  // TODO
+  ABORT_PROGRAM("Not implemented.");
+}
+
+void Tile::moveSelected(Tile &other)
+{
+  if (ground && ground->selected)
+  {
+    other.items.clear();
+    other.ground = dropGround();
+  }
+
+  auto it = items.begin();
+  while (it != items.end()) {
+      Item& item = *it;
+      if (item.selected)
+      {
+          other.addItem(std::move(item));
+          it = items.erase(it);
+
+          --selectionCount;
+      }
+      else {
+          ++it;
+      }
+  }
+}
+
 void Tile::addItem(Item &&item)
 {
   if (item.isGround())
   {
+    bool oldSelected = ground && ground->selected;
+    bool newSelected = item.selected;
     this->ground = std::make_unique<Item>(std::move(item));
+    if (oldSelected && !newSelected)
+    {
+      --selectionCount;
+    }
+    else if (newSelected && !oldSelected)
+    {
+      ++selectionCount;
+    }
     return;
   }
 
@@ -148,12 +160,158 @@ void Tile::addItem(Item &&item)
     cursor = items.end();
   }
 
+  if (item.selected)
+  {
+    ++selectionCount;
+  }
+
   items.insert(cursor, std::move(item));
+}
+
+void Tile::setGround(std::unique_ptr<Item> ground)
+{
+  if (!ground)
+  {
+    this->ground = std::move(ground);
+  }
+  else
+  {
+    DEBUG_ASSERT(ground->itemType->isGroundTile(), "Tried to add a ground that is not a ground item.");
+  }
 }
 
 void Tile::removeGround()
 {
-  this->ground.reset();
+  if (ground->selected)
+  {
+    --selectionCount;
+  }
+  ground.reset();
+}
+
+void Tile::selectItemAtIndex(size_t index)
+{
+  if (!items.at(index).selected)
+  {
+    items.at(index).selected = true;
+    ++selectionCount;
+  }
+}
+
+void Tile::deselectItemAtIndex(size_t index)
+{
+  if (items.at(index).selected)
+  {
+    items.at(index).selected = false;
+    --selectionCount;
+  }
+}
+
+void Tile::selectAll()
+{
+  size_t count = 0;
+  if (ground)
+  {
+    ++count;
+    ground->selected = true;
+  }
+
+  count += items.size();
+  for (Item &item : items)
+  {
+    item.selected = true;
+  }
+
+  selectionCount = count;
+}
+
+void Tile::selectGround()
+{
+  if (ground && !ground->selected)
+  {
+    ++selectionCount;
+    ground->selected = true;
+  }
+}
+void Tile::deselectGround()
+{
+  if (ground && ground->selected)
+  {
+    --selectionCount;
+    ground->selected = false;
+  }
+}
+
+std::unique_ptr<Item> Tile::dropGround()
+{
+  if (ground)
+  {
+    std::unique_ptr<Item> ground = std::move(this->ground);
+    this->ground.reset();
+
+    return ground;
+  }
+  else
+  {
+    return {};
+  }
+}
+
+void Tile::selectTopItem()
+{
+  if (items.empty())
+  {
+    selectGround();
+  }
+  else
+  {
+    selectItemAtIndex(items.size() - 1);
+  }
+}
+
+void Tile::deselectTopItem()
+{
+  if (items.empty())
+  {
+    deselectGround();
+  }
+  else
+  {
+    deselectItemAtIndex(items.size() - 1);
+  }
+}
+
+Item *Tile::getGround() const
+{
+  return ground.get();
+}
+
+bool Tile::hasTopItem() const
+{
+  return !isEmpty();
+}
+
+Item *Tile::getTopItem() const
+{
+  if (items.size() > 0)
+  {
+    return const_cast<Item *>(&items.back());
+  }
+  if (ground)
+  {
+    return ground.get();
+  }
+
+  return nullptr;
+}
+
+bool Tile::topItemSelected() const
+{
+  if (!hasTopItem())
+    return false;
+
+  const Item *topItem = getTopItem();
+  return allSelected() || topItem->selected;
 }
 
 size_t Tile::getEntityCount()
@@ -187,12 +345,9 @@ Tile Tile::deepCopy() const
     tile.ground = std::make_unique<Item>(this->getGround()->deepCopy());
   }
 
-  return tile;
-}
+  tile.selectionCount = this->selectionCount;
 
-void Tile::setLocation(TileLocation &location)
-{
-  this->position = location.position;
+  return tile;
 }
 
 const Position Tile::getPosition() const
@@ -230,80 +385,4 @@ bool Tile::allSelected() const
 bool Tile::hasSelection() const
 {
   return selectionCount != 0;
-}
-
-void Tile::selectItemAtIndex(size_t index)
-{
-  items.at(index).selected = true;
-}
-
-void Tile::deselectItemAtIndex(size_t index)
-{
-  items.at(index).selected = false;
-}
-
-void Tile::selectAll()
-{
-  size_t count = 0;
-  if (ground)
-  {
-    ++count;
-    ground->selected = true;
-  }
-
-  count += items.size();
-  for (Item &item : items)
-  {
-    item.selected = true;
-  }
-
-  selectionCount = count;
-}
-
-void Tile::selectTopItem()
-{
-  if (items.empty())
-  {
-    if (ground)
-    {
-      if (!ground->selected)
-      {
-        ++selectionCount;
-      }
-      ground->selected = true;
-    }
-  }
-  else
-  {
-    if (!items.back().selected)
-    {
-      ++selectionCount;
-    }
-
-    items.back().selected = true;
-  }
-}
-
-void Tile::deselectTopItem()
-{
-  if (items.empty())
-  {
-    if (ground)
-    {
-      if (ground->selected)
-      {
-        --selectionCount;
-      }
-      ground->selected = false;
-    }
-  }
-  else
-  {
-    if (items.back().selected)
-    {
-      --selectionCount;
-    }
-
-    items.back().selected = false;
-  }
 }
