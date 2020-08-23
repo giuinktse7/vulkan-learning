@@ -505,6 +505,9 @@ inline std::ostream &operator<<(std::ostream &os, const Appearance &appearance)
   s << "{\n";
   s << "\tclientId: " << appearance.clientId << std::endl;
   s << "\tflags: " << appearance.flagData << std::endl;
+
+  os << s.str();
+  return os;
 }
 
 inline std::ostream &operator<<(std::ostream &os, const tibia::protobuf::appearances::SpriteInfo &info)
